@@ -4,6 +4,7 @@ namespace App\Payments;
 
 
 class BTCPay {
+    private $config;
     public function __construct($config) {
         $this->config = $config;
     }
@@ -61,44 +62,40 @@ class BTCPay {
     }
 
     public function notify($params) {
-        $payload = trim(request()->getContent() ?: json_encode($_POST));
-
-        $headers = getallheaders();
-
-        //IS Btcpay-Sig
-        //NOT BTCPay-Sig
-        //API doc is WRONG!
-        $headerName = 'Btcpay-Sig';
-        $signraturHeader = isset($headers[$headerName]) ? $headers[$headerName] : '';
+        if (empty($this->config['btcpay_webhook_key'])) abort(400, 'Webhook key is required');
+        $payload = request()->getContent();
+        $signraturHeader = (string)request()->header('BTCPay-Sig', '');
         $json_param = json_decode($payload, true);
 
         $computedSignature = "sha256=" . \hash_hmac('sha256', $payload, $this->config['btcpay_webhook_key']);
 
         if (!self::hashEqual($signraturHeader, $computedSignature)) {
             abort(400, 'HMAC signature does not match');
-            return false;
         }
+        if (!is_array($json_param) || empty($json_param['type'])) abort(400, 'Invalid event');
+        if ($json_param['type'] !== 'InvoiceSettled') return 'success';
+        if (empty($json_param['invoiceId'])) abort(400, 'Invalid invoice');
 
         //get order id store in metadata
         $context = stream_context_create(array(
             'http' => array(
                 'method' => 'GET',
+                'timeout' => 10,
                 'header' => "Authorization:" . "token " . $this->config['btcpay_api_key'] . "\r\n"
             )
         ));
 
-        $invoiceDetail = file_get_contents($this->config['btcpay_url'] . 'api/v1/stores/' . $this->config['btcpay_storeId'] . '/invoices/' . $json_param['invoiceId'], false, $context);
+        $invoiceDetail = file_get_contents($this->config['btcpay_url'] . 'api/v1/stores/' . rawurlencode($this->config['btcpay_storeId']) . '/invoices/' . rawurlencode($json_param['invoiceId']), false, $context);
         $invoiceDetail = json_decode($invoiceDetail, true);
-
-    
-        $out_trade_no = $invoiceDetail['metadata']["orderId"];
-        $pay_trade_no=$json_param['invoiceId'];
+        if (!is_array($invoiceDetail) || ($invoiceDetail['status'] ?? '') !== 'Settled') return false;
+        if (empty($invoiceDetail['metadata']['orderId']) || !isset($invoiceDetail['amount'], $invoiceDetail['currency'])) return false;
         return [
-            'trade_no' => $out_trade_no,
-            'callback_no' => $pay_trade_no
+            'trade_no' => $invoiceDetail['metadata']['orderId'],
+            'callback_no' => $json_param['invoiceId'],
+            'amount' => $invoiceDetail['amount'],
+            'currency' => $invoiceDetail['currency'],
+            'expected_currency' => 'CNY'
         ];
-        http_response_code(200);
-        return('success');
     }
 
 

@@ -1,0 +1,43 @@
+{
+    "name": "v2board-admin",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "vite --host 127.0.0.1",
+        "typecheck": "tsc --noEmit",
+        "build": "npm run typecheck && vite build",
+        "publish:assets": "node scripts/publish-assets.mjs",
+        "test": "node --test tests/*.test.mjs",
+        "test:browser": "node tests/browser.mjs",
+        "test:audit": "node tests/subscription-audit.mjs",
+        "test:leak-probe": "node tests/leak-probe.mjs",
+        "test:payments": "node tests/payment-regression.mjs",
+        "test:parity": "node tests/ui-parity.mjs && node tests/resource-parity.mjs && node tests/editor-layout.mjs && node tests/user-controls.mjs && node tests/filter-payment-ui.mjs"
+    },
+    "dependencies": {
+        "@ant-design/icons": "5.6.1",
+        "antd": "5.27.6",
+        "dayjs": "1.11.23",
+        "dompurify": "3.4.17",
+        "echarts": "6.1.0",
+        "markdown-it": "15.0.2",
+        "react": "18.3.1",
+        "react-dom": "18.3.1",
+        "react-markdown-editor-lite": "1.4.2"
+    },
+    "overrides": {
+        "react-markdown-editor-lite": {
+            "nanoid": "5.1.16"
+        }
+    },
+    "devDependencies": {
+        "@types/markdown-it": "14.2.0",
+        "@types/react": "18.3.24",
+        "@types/react-dom": "18.3.7",
+        "playwright": "1.58.2",
+        "prettier": "3.6.2",
+        "typescript": "5.9.3",
+        "vite": "7.3.7"
+    }
+}

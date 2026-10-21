@@ -54,10 +54,13 @@ class ConfigController extends Controller
         ]);
     }
 
-    public function setTelegramWebhook(Request $request)
+    public function setTelegramWebhook(Request $request, TelegramService $telegramService)
     {
-        $hookUrl = secure_url('/api/v1/guest/telegram/webhook?access_token=' . md5(config('v2board.telegram_bot_token', $request->input('telegram_bot_token'))));
-        $telegramService = new TelegramService($request->input('telegram_bot_token'));
+        $domain = TelegramService::normalizeWebhookDomain(config('v2board.telegram_webhook_domain'));
+        if (!$domain) abort(422, '请先填写并保存有效的 HTTPS Webhook 域名');
+        $token = config('v2board.telegram_bot_token');
+        if (!is_string($token) || trim($token) === '') abort(422, '请先填写并保存 Bot Token');
+        $hookUrl = $domain . '/api/v1/guest/telegram/webhook?access_token=' . md5($token);
         $telegramService->getMe();
         $telegramService->setWebhook($hookUrl);
         return response([
@@ -97,6 +100,9 @@ class ConfigController extends Controller
                 'app_name' => config('v2board.app_name', 'V2Board'),
                 'app_description' => config('v2board.app_description', 'V2Board is best!'),
                 'app_url' => config('v2board.app_url'),
+                'payment_return_url' => config('v2board.payment_return_url'),
+                'payment_return_path' => config('v2board.payment_return_path') ?: \App\Services\PaymentReturnUrl::DEFAULT_PATH,
+                'payment_return_origins' => config('v2board.payment_return_origins', []) ?: [],
                 'subscribe_url' => config('v2board.subscribe_url'),
                 'subscribe_path' => config('v2board.subscribe_path'),
                 'try_out_plan_id' => (int)config('v2board.try_out_plan_id', 0),
@@ -145,6 +151,7 @@ class ConfigController extends Controller
             'telegram' => [
                 'telegram_bot_enable' => config('v2board.telegram_bot_enable', 0),
                 'telegram_bot_token' => config('v2board.telegram_bot_token'),
+                'telegram_webhook_domain' => config('v2board.telegram_webhook_domain'),
                 'telegram_discuss_link' => config('v2board.telegram_discuss_link')
             ],
             'app' => [

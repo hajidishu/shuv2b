@@ -7,6 +7,7 @@ namespace App\Payments;
 
 use Stripe\Source;
 use Stripe\Stripe;
+use App\Utils\StripeCurrency;
 
 class StripeCredit {
     public function __construct($config)
@@ -40,18 +41,29 @@ class StripeCredit {
         ];
     }
 
-    public function pay($order)
+    public function quote($cnyCents): array
     {
-        info($order);
         $currency = $this->config['currency'];
         $exchange = $this->exchange('CNY', strtoupper($currency));
-        if (!$exchange) {
-            abort(500, __('Currency conversion has timed out, please try again later'));
+        if (!$exchange) abort(500, __('Currency conversion has timed out, please try again later'));
+        $quote = StripeCurrency::quote(['total_amount' => $cnyCents], $currency, $exchange);
+        return ['amount_minor' => $quote['amount'], 'currency' => $quote['currency']];
+    }
+
+    public function pay($order)
+    {
+        $currency = $this->config['currency'];
+        if (StripeCurrency::hasFrozenQuote($order)) {
+            $quote = StripeCurrency::quote($order, $currency, null);
+        } else {
+            $fetchedQuote = $this->quote($order['total_amount']);
+            $quote = ['amount' => $fetchedQuote['amount_minor'], 'currency' => $fetchedQuote['currency']];
         }
+        $currency = $quote['currency'];
         Stripe::setApiKey($this->config['stripe_sk_live']);
         try {
             $charge = \Stripe\Charge::create([
-                'amount' => floor($order['total_amount'] * $exchange),
+                'amount' => $quote['amount'],
                 'currency' => $currency,
                 'source' => $order['stripe_token'],
                 'metadata' => [
@@ -59,7 +71,7 @@ class StripeCredit {
                     'out_trade_no' => $order['trade_no'],
                     'identifier' => ''
                 ]
-            ]);
+            ], StripeCurrency::idempotencyOptions($order, 'charge'));
         } catch (\Exception $e) {
             info($e);
             abort(500, __('Payment failed. Please check your credit card information'));
@@ -93,7 +105,7 @@ class StripeCredit {
                     'currency' => $object->currency,
                     'source' => $object->id,
                     'metadata' => json_decode($object->metadata, true)
-                ]);
+                ], ['idempotency_key' => 'stripe-source-charge:' . $object->id]);
                 break;
             case 'charge.succeeded':
                 $object = $event->data->object;
@@ -105,7 +117,9 @@ class StripeCredit {
                     $tradeNo = $metaData->out_trade_no;
                     return [
                         'trade_no' => $tradeNo,
-                        'callback_no' => $object->id
+                        'callback_no' => $object->id,
+                        'amount_minor' => (int)$object->amount,
+                        'currency' => strtolower((string)$object->currency),
                     ];
                 }
                 break;

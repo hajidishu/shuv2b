@@ -22,15 +22,13 @@ class OrderController extends Controller
     {
         if ($request->input('filter')) {
             foreach ($request->input('filter') as $filter) {
-                if ($filter['key'] === 'email') {
-                    $user = User::where('email', "%{$filter['value']}%")->first();
-                    if (!$user) continue;
-                    $builder->where('user_id', $user->id);
-                    continue;
-                }
                 if ($filter['condition'] === '模糊') {
                     $filter['condition'] = 'like';
                     $filter['value'] = "%{$filter['value']}%";
+                }
+                if ($filter['key'] === 'email') {
+                    $builder->whereIn('user_id', User::select('id')->where('email', $filter['condition'], $filter['value']));
+                    continue;
                 }
                 $builder->where($filter['key'], $filter['condition'], $filter['value']);
             }
@@ -41,6 +39,7 @@ class OrderController extends Controller
     {
         $order = Order::find($request->input('id'));
         if (!$order) abort(500, '订单不存在');
+        $order['payment_adjustments'] = \App\Services\PaymentAttemptService::adjustments($order->id);
         $order['commission_log'] = CommissionLog::where('trade_no', $order->trade_no)->get();
         if ($order->surplus_order_ids) {
             $order['surplus_orders'] = Order::whereIn('id', $order->surplus_order_ids)->get();

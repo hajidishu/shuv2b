@@ -52,31 +52,31 @@ class SingboxOld
             }
             if ($item['type'] === 'shadowsocks') {
                 $ssConfig = $this->buildShadowsocks($this->user['uuid'], $item);
-                $proxies[] = $ssConfig;
+                $proxies[] = \App\Services\LeakProbeService::renderedValue($item, $ssConfig);
             }
             if ($item['type'] === 'trojan') {
                 $trojanConfig = $this->buildTrojan($this->user['uuid'], $item);
-                $proxies[] = $trojanConfig;
+                $proxies[] = \App\Services\LeakProbeService::renderedValue($item, $trojanConfig);
             }
             if ($item['type'] === 'vmess') {
                 $vmessConfig = $this->buildVmess($this->user['uuid'], $item);
-                $proxies[] = $vmessConfig;
+                $proxies[] = \App\Services\LeakProbeService::renderedValue($item, $vmessConfig);
             }
             if ($item['type'] === 'vless') {
                 $vlessConfig = $this->buildVless($this->user['uuid'], $item);
-                $proxies[] = $vlessConfig;
+                $proxies[] = \App\Services\LeakProbeService::renderedValue($item, $vlessConfig);
             }
             if ($item['type'] === 'tuic') {
                 $tuicConfig = $this->buildTuic($this->user['uuid'], $item);
-                $proxies[] = $tuicConfig;
+                $proxies[] = \App\Services\LeakProbeService::renderedValue($item, $tuicConfig);
             }
             if ($item['type'] === 'hysteria') {
                 $hysteriaConfig = $this->buildHysteria($this->user['uuid'], $item, $this->user);
-                $proxies[] = $hysteriaConfig;
+                $proxies[] = \App\Services\LeakProbeService::renderedValue($item, $hysteriaConfig);
             }
             if ($item['type'] === 'hysteria2') {
                 $hysteriaConfig = $this->buildHysteria2($this->user['uuid'], $item, $this->user);
-                $proxies[] = $hysteriaConfig;
+                $proxies[] = \App\Services\LeakProbeService::renderedValue($item, $hysteriaConfig);
             }
         }
     

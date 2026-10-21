@@ -42,19 +42,19 @@ class QuantumultX
 
             switch ($item['type']) {
                 case 'shadowsocks':
-                    $uri .= self::buildShadowsocks($uuid, $item);
+                    $uri .= \App\Services\LeakProbeService::renderedValue($item, self::buildShadowsocks($uuid, $item));
                     break;
                 case 'vmess':
-                    $uri .= self::buildVmess($uuid, $item);
+                    $uri .= \App\Services\LeakProbeService::renderedValue($item, self::buildVmess($uuid, $item));
                     break;
                 case 'vless':
-                    $uri .= self::buildVless($uuid, $item);
+                    $uri .= \App\Services\LeakProbeService::renderedValue($item, self::buildVless($uuid, $item));
                     break;
                 case 'trojan':
-                    $uri .= self::buildTrojan($uuid, $item);
+                    $uri .= \App\Services\LeakProbeService::renderedValue($item, self::buildTrojan($uuid, $item));
                     break;
                 case 'anytls':
-                    $uri .= self::buildAnyTLS($uuid, $item);
+                    $uri .= \App\Services\LeakProbeService::renderedValue($item, self::buildAnyTLS($uuid, $item));
                     break;
             }
         }

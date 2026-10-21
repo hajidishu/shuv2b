@@ -41,7 +41,7 @@ class DeepbworkController extends Controller
         }
         Cache::put(CacheKey::get('SERVER_VMESS_LAST_CHECK_AT', $server->id), time(), 3600);
         $serverService = new ServerService();
-        $users = $serverService->getAvailableUsers($server->group_id);
+        $users = $serverService->getAvailableUsers($server->group_id, 'vmess', $server->id);
         $result = [];
         foreach ($users as $user) {
             $user->v2ray_user = [

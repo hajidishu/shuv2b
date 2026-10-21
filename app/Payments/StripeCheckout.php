@@ -4,6 +4,7 @@ namespace App\Payments;
 
 use Stripe\Stripe;
 use Stripe\Checkout\Session;
+use App\Utils\StripeCurrency;
 
 class StripeCheckout {
     public function __construct($config)
@@ -42,13 +43,25 @@ class StripeCheckout {
         ];
     }
 
-    public function pay($order)
+    public function quote($cnyCents): array
     {
         $currency = $this->config['currency'];
         $exchange = $this->exchange('CNY', strtoupper($currency));
-        if (!$exchange) {
-            abort(500, __('Currency conversion has timed out, please try again later'));
+        if (!$exchange) abort(500, __('Currency conversion has timed out, please try again later'));
+        $quote = StripeCurrency::quote(['total_amount' => $cnyCents], $currency, $exchange);
+        return ['amount_minor' => $quote['amount'], 'currency' => $quote['currency']];
+    }
+
+    public function pay($order)
+    {
+        $currency = $this->config['currency'];
+        if (StripeCurrency::hasFrozenQuote($order)) {
+            $quote = StripeCurrency::quote($order, $currency, null);
+        } else {
+            $fetchedQuote = $this->quote($order['total_amount']);
+            $quote = ['amount' => $fetchedQuote['amount_minor'], 'currency' => $fetchedQuote['currency']];
         }
+        $currency = $quote['currency'];
         $customFieldName = isset($this->config['stripe_custom_field_name']) ? $this->config['stripe_custom_field_name'] : 'Contact Infomation';
 
         $params = [
@@ -62,7 +75,7 @@ class StripeCheckout {
                         'product_data' => [
                             'name' => $order['trade_no']
                         ],
-                        'unit_amount' => floor($order['total_amount'] * $exchange)
+                        'unit_amount' => $quote['amount']
                     ],
                     'quantity' => 1
                 ]
@@ -83,7 +96,7 @@ class StripeCheckout {
 
         Stripe::setApiKey($this->config['stripe_sk_live']);
         try {
-            $session = Session::create($params);
+            $session = Session::create($params, StripeCurrency::idempotencyOptions($order, 'checkout-session'));
         } catch (\Exception $e) {
             info($e);
             abort(500, "Failed to create order. Error: {$e->getMessage}");
@@ -113,7 +126,9 @@ class StripeCheckout {
                 if ($object->payment_status === 'paid') {
                     return [
                         'trade_no' => $object->client_reference_id,
-                        'callback_no' => $object->payment_intent
+                        'callback_no' => $object->payment_intent,
+                        'amount_minor' => (int)$object->amount_total,
+                        'currency' => strtolower((string)$object->currency),
                     ];
                 }
                 break;
@@ -121,7 +136,9 @@ class StripeCheckout {
                 $object = $event->data->object;
                 return [
                     'trade_no' => $object->client_reference_id,
-                    'callback_no' => $object->payment_intent
+                    'callback_no' => $object->payment_intent,
+                    'amount_minor' => (int)$object->amount_total,
+                    'currency' => strtolower((string)$object->currency),
                 ];
                 break;
             default:

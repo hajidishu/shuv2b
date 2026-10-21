@@ -2,6 +2,8 @@
 
 return [
 
+    // Select the source-built admin UI while retaining the legacy UI for rollback.
+
     /*
     |--------------------------------------------------------------------------
     | Application Name

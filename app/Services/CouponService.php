@@ -13,9 +13,9 @@ class CouponService
     public $userId;
     public $period;
 
-    public function __construct($code)
+    public function __construct($code = null)
     {
-        $this->coupon = Coupon::where('code', $code)
+        $this->coupon = $code === null ? null : Coupon::where('code', $code)
             ->lockForUpdate()
             ->first();
     }
@@ -55,6 +55,22 @@ class CouponService
     public function getCoupon()
     {
         return $this->coupon;
+    }
+
+    /**
+     * Restore a finite coupon use for an order being canceled.
+     * The caller must hold the order row lock and call this only for the
+     * first transition from pending to canceled.
+     */
+    public function release(Order $order):bool
+    {
+        if (!$order->coupon_id) return true;
+
+        $coupon = Coupon::where('id', $order->coupon_id)->lockForUpdate()->first();
+        if (!$coupon || $coupon->limit_use === null) return true;
+
+        $coupon->limit_use++;
+        return (bool)$coupon->save();
     }
 
     public function setPlanId($planId)

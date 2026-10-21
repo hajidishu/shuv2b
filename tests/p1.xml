@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="P1/bootstrap.php" colors="true" failOnWarning="true">
+    <testsuites>
+        <testsuite name="P1 billing and account regression">
+            <directory suffix="Test.php">P1</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>

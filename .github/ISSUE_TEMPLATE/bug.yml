@@ -1,0 +1,29 @@
+name: 问题反馈
+description: 报告可复现的问题
+title: "[Bug] "
+body:
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      description: 填写 release.json 的 source_commit 或 git rev-parse HEAD
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境
+      description: PHP、数据库版本，以及 PHP-FPM / Webman、源码或 release 部署方式
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 复现步骤及预期行为
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志与截图
+      description: 请移除密码、APP_KEY、token、订阅链接和支付密钥

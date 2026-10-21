@@ -14,10 +14,12 @@ class PaymentController extends Controller
     public function notify($method, $uuid, Request $request)
     {
         try {
-            $paymentService = new PaymentService($method, null, $uuid);
-            $verify = $paymentService->notify($request->input());
+            $verify = PaymentService::notifyRequest($method, $uuid, $request);
             if (!$verify) abort(500, 'verify error');
-            if (!$this->handle($verify['trade_no'], $verify['callback_no'])) {
+            // Signed non-payment events are acknowledgements, not settlements.
+            if (is_string($verify)) return $verify;
+            if (!is_array($verify) || empty($verify['trade_no']) || empty($verify['callback_no'])) abort(500, 'verify error');
+            if (!$this->handle($verify)) {
                 abort(500, 'handle error');
             }
             return(isset($verify['custom_result']) ? $verify['custom_result'] : 'success');
@@ -26,17 +28,17 @@ class PaymentController extends Controller
         }
     }
 
-    private function handle($tradeNo, $callbackNo)
+    private function handle(array $verify)
     {
-        $order = Order::where('trade_no', $tradeNo)->first();
+        $order = \App\Services\PaymentAttemptService::resolve($verify);
         if (!$order) {
             abort(500, 'order is not found');
         }
-        if ($order->status !== 0) return true;
         $orderService = new OrderService($order);
-        if (!$orderService->paid($callbackNo)) {
+        if (!$orderService->paid($verify['callback_no'], $verify)) {
             return false;
         }
+        if (!$orderService->order->wasChanged('status')) return true;
         $telegramService = new TelegramService();
         $message = sprintf(
             "💰成功收款%s元\n———————————————\n订单号：%s",

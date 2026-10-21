@@ -33,27 +33,27 @@ class Surge
             }
             if ($item['type'] === 'shadowsocks') {
                 // [Proxy]
-                $proxies .= self::buildShadowsocks($user['uuid'], $item);
+                $proxies .= \App\Services\LeakProbeService::renderedValue($item, self::buildShadowsocks($user['uuid'], $item));
                 // [Proxy Group]
                 $proxyGroup .= $item['name'] . ', ';
             }elseif ($item['type'] === 'vmess') {
                 // [Proxy]
-                $proxies .= self::buildVmess($user['uuid'], $item);
+                $proxies .= \App\Services\LeakProbeService::renderedValue($item, self::buildVmess($user['uuid'], $item));
                 // [Proxy Group]
                 $proxyGroup .= $item['name'] . ', ';
             }elseif ($item['type'] === 'trojan') {
                 // [Proxy]
-                $proxies .= self::buildTrojan($user['uuid'], $item);
+                $proxies .= \App\Services\LeakProbeService::renderedValue($item, self::buildTrojan($user['uuid'], $item));
                 // [Proxy Group]
                 $proxyGroup .= $item['name'] . ', ';
             }elseif ($item['type'] === 'hysteria' && $item['version'] === 2) { //surge只支持hysteria2
                 // [Proxy]
-                $proxies .= self::buildHysteria($user['uuid'], $item);
+                $proxies .= \App\Services\LeakProbeService::renderedValue($item, self::buildHysteria($user['uuid'], $item));
                 // [Proxy Group]
                 $proxyGroup .= $item['name'] . ', ';
             }elseif ($item['type'] === 'anytls') {
                 // [Proxy]
-                $proxies .= self::buildAnyTLS($user['uuid'], $item);
+                $proxies .= \App\Services\LeakProbeService::renderedValue($item, self::buildAnyTLS($user['uuid'], $item));
                 // [Proxy Group]
                 $proxyGroup .= $item['name'] . ', ';
             }

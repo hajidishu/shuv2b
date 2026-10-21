@@ -38,7 +38,7 @@ class ShadowsocksTidalabController extends Controller
         }
         Cache::put(CacheKey::get('SERVER_SHADOWSOCKS_LAST_CHECK_AT', $server->id), time(), 3600);
         $serverService = new ServerService();
-        $users = $serverService->getAvailableUsers($server->group_id);
+        $users = $serverService->getAvailableUsers($server->group_id, 'shadowsocks', $server->id);
         $result = [];
         foreach ($users as $user) {
             array_push($result, [

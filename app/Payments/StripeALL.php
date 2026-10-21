@@ -3,6 +3,7 @@
 namespace App\Payments;
 use Stripe\Stripe;
 use App\Models\User;
+use App\Utils\StripeCurrency;
 
 class StripeALL {
     public function __construct($config)
@@ -35,14 +36,26 @@ class StripeALL {
             ]
         ];
     }
+
+    public function quote($cnyCents): array
+    {
+        $currency = $this->config['currency'];
+        $exchange = $this->exchange('CNY', strtoupper($currency));
+        if (!$exchange) abort(500, 'Currency conversion API failed');
+        $quote = StripeCurrency::quote(['total_amount' => $cnyCents], $currency, $exchange);
+        return ['amount_minor' => $quote['amount'], 'currency' => $quote['currency']];
+    }
     
     public function pay($order)
     {
         $currency = $this->config['currency'];
-        $exchange = $this->exchange('CNY', strtoupper($currency));
-        if (!$exchange) {
-            throw new abort('Currency conversion API failed', 500);
+        if (StripeCurrency::hasFrozenQuote($order)) {
+            $quote = StripeCurrency::quote($order, $currency, null);
+        } else {
+            $fetchedQuote = $this->quote($order['total_amount']);
+            $quote = ['amount' => $fetchedQuote['amount_minor'], 'currency' => $fetchedQuote['currency']];
         }
+        $currency = $quote['currency'];
         //jump url
         $jumpUrl = null;
         $actionType = 0;
@@ -52,10 +65,10 @@ class StripeALL {
         if ($this->config['payment_method'] != "cards"){
         $stripePaymentMethod = $stripe->paymentMethods->create([
             'type' => $this->config['payment_method'],
-        ]);
+        ], StripeCurrency::idempotencyOptions($order, 'payment-method'));
         // 准备支付意图的基础参数
         $params = [
-            'amount' => floor($order['total_amount'] * $exchange),
+            'amount' => $quote['amount'],
             'currency' => $currency,
             'confirm' => true,
             'payment_method' => $stripePaymentMethod->id,
@@ -78,7 +91,7 @@ class StripeALL {
             ];
         }
         //更新支持最新的paymentIntents方法，Sources API将在今年被彻底替
-        $stripeIntents = $stripe->paymentIntents->create($params);
+        $stripeIntents = $stripe->paymentIntents->create($params, StripeCurrency::idempotencyOptions($order, 'payment-intent'));
 
         $nextAction = null;
         
@@ -113,7 +126,7 @@ class StripeALL {
                 [
                     'price_data' => [
                         'currency' => $currency,
-                        'unit_amount' => floor($order['total_amount'] * $exchange),
+                        'unit_amount' => $quote['amount'],
                         'product_data' => [
                             'name' => 'user-#' . $order['user_id'] . '-' . substr($order['trade_no'], -8),
                         ]
@@ -125,7 +138,7 @@ class StripeALL {
             'invoice_creation' => ['enabled' => true],
             'phone_number_collection' => ['enabled' => false],
             'customer_email' => $userEmail, 
-        ]);
+        ], StripeCurrency::idempotencyOptions($order, 'checkout-session'));
         $jumpUrl = $creditCheckOut['url'];
         $actionType = 1;
     }
@@ -158,7 +171,9 @@ class StripeALL {
                     $tradeNo = $metaData->out_trade_no;
                     return [
                         'trade_no' => $tradeNo,
-                        'callback_no' => $object->id
+                        'callback_no' => $object->id,
+                        'amount_minor' => (int)(isset($object->amount_received) && $object->amount_received > 0 ? $object->amount_received : $object->amount),
+                        'currency' => strtolower((string)$object->currency),
                     ];
                 }
                 break;
@@ -167,7 +182,9 @@ class StripeALL {
                     if ($object->payment_status === 'paid') {
                         return [
                             'trade_no' => $object->client_reference_id,
-                            'callback_no' => $object->payment_intent
+                            'callback_no' => $object->payment_intent,
+                            'amount_minor' => (int)$object->amount_total,
+                            'currency' => strtolower((string)$object->currency),
                         ];
                     }
                     break;
@@ -175,7 +192,9 @@ class StripeALL {
                     $object = $event->data->object;
                     return [
                         'trade_no' => $object->client_reference_id,
-                        'callback_no' => $object->payment_intent
+                        'callback_no' => $object->payment_intent,
+                        'amount_minor' => (int)$object->amount_total,
+                        'currency' => strtolower((string)$object->currency),
                     ];
                     break;
             default:

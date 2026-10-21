@@ -21,6 +21,12 @@ composer.lock
 yarn.lock
 docker-compose.yml
 .DS_Store
+/.local/
 public/clients/*
 workerman.webman.php.pid
 workerman.log
+
+# Local verification output and disposable databases
+/tests/reports/
+/tests/*.sqlite
+/tests/*.sqlite-*

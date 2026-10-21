@@ -3,6 +3,7 @@
 namespace App\Payments;
 
 class CoinPayments {
+    private $config;
     public function __construct($config) {
         $this->config = $config;
     }
@@ -34,7 +35,7 @@ class CoinPayments {
         // IPN notifications are slow, when the transaction is successful, we should return to the user center to avoid user confusion
         $parseUrl = parse_url($order['return_url']);
         $port = isset($parseUrl['port']) ? ":{$parseUrl['port']}" : '';
-        $successUrl = "{$parseUrl['scheme']}://{$parseUrl['host']}{$port}";
+        $successUrl = $order['return_home_url'] ?? "{$parseUrl['scheme']}://{$parseUrl['host']}{$port}";
 
         $params = [
             'cmd' => '_pay_simple',
@@ -60,19 +61,10 @@ class CoinPayments {
 
     public function notify($params)
     {
+        if (empty($this->config['coinpayments_ipn_secret'])) abort(400, 'IPN secret is required');
 
-        if (!isset($params['merchant']) || $params['merchant'] != trim($this->config['coinpayments_merchant_id'])) {
-            abort(500, 'No or incorrect Merchant ID passed');
-        }
-
-        $headers = getallheaders();
-
-        ksort($params);
-        reset($params);
-        $request = stripslashes(http_build_query($params));
-
-        $headerName = 'Hmac';
-        $signHeader = isset($headers[$headerName]) ? $headers[$headerName] : '';
+        $request = request()->getContent();
+        $signHeader = (string)request()->header('HMAC', '');
 
         $hmac = hash_hmac("sha512", $request, trim($this->config['coinpayments_ipn_secret']));
 
@@ -84,14 +76,24 @@ class CoinPayments {
             abort(400, 'HMAC signature does not match');
         }
 
+        // Only the raw, signed form body is trusted; never merge query parameters.
+        parse_str($request, $params);
+        if (($params['merchant'] ?? '') !== trim($this->config['coinpayments_merchant_id'])) return false;
+        if (($params['ipn_type'] ?? '') !== 'simple' || ($params['ipn_mode'] ?? '') !== 'hmac') return false;
+
         // HMAC Signature verified at this point, load some variables.
-        $status = $params['status'];
+        $status = $params['status'] ?? null;
+        if (!is_scalar($status) || !preg_match('/\A-?[0-9]+\z/', (string)$status)) return false;
         if ($status >= 100 || $status == 2) {
+            if (!isset($params['amount1'], $params['currency1']) || empty($params['item_number']) || empty($params['txn_id'])) return false;
             // payment is complete or queued for nightly payout, success
             return [
                 'trade_no' => $params['item_number'],
                 'callback_no' => $params['txn_id'],
-                'custom_result' => 'IPN OK'
+                'custom_result' => 'IPN OK',
+                'amount' => $params['amount1'],
+                'currency' => $params['currency1'],
+                'expected_currency' => $this->config['coinpayments_currency']
             ];
         } else if ($status < 0) {
             //payment error, this is usually final but payments will sometimes be reopened if there was no exchange rate conversion or with seller consent

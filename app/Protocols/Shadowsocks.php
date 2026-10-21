@@ -32,7 +32,7 @@ class Shadowsocks
             if ($item['type'] === 'shadowsocks'
                 && in_array($item['cipher'], ['aes-128-gcm', 'aes-256-gcm', 'aes-192-gcm', 'chacha20-ietf-poly1305'])
             ) {
-                array_push($configs, self::SIP008($item, $user));
+                array_push($configs, \App\Services\LeakProbeService::renderedValue($item, self::SIP008($item, $user)));
             }
         }
 

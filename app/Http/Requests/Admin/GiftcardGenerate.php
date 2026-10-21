@@ -17,7 +17,7 @@ class GiftcardGenerate extends FormRequest
             'generate_count' => 'nullable|integer|max:500',
             'name' => 'required',
             'type' => 'required|in:1,2,3,4,5',
-            'value' => ['required_if:type,1,2,3,5', 'nullable', 'integer'],
+            'value' => ['required_if:type,1,2,3,5', 'nullable', 'integer', 'min:0'],
             'plan_id' => ['required_if:type,5', 'nullable','integer'],
             'started_at' => 'required|integer',
             'ended_at' => 'required|integer',

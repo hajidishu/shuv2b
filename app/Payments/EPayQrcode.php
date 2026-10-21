@@ -111,7 +111,13 @@ class EPayQrcode
 
     public function notify($params)
     {
-        if (!is_array($params) || empty($params['sign'])) {
+        if (!$this->hasSecret() || !$this->hasPid() || !$this->hasScalarValues($params) ||
+            !isset($params['sign']) || !is_string($params['sign']) ||
+            !preg_match('/\A[0-9a-fA-F]{32}\z/', $params['sign'])) {
+            return false;
+        }
+
+        if (isset($params['sign_type']) && (!is_string($params['sign_type']) || strtoupper($params['sign_type']) !== 'MD5')) {
             return false;
         }
 
@@ -120,7 +126,8 @@ class EPayQrcode
             return false;
         }
 
-        if ((string) ($params['pid'] ?? '') !== (string) ($this->config['pid'] ?? '')) {
+        if (!$this->hasIdentifier($params['pid'] ?? null) ||
+            (string) $params['pid'] !== trim((string) $this->config['pid'])) {
             return false;
         }
 
@@ -128,13 +135,13 @@ class EPayQrcode
             return false;
         }
 
-        if (empty($params['out_trade_no']) || empty($params['trade_no'])) {
+        if (!$this->hasIdentifier($params['out_trade_no'] ?? null) || !$this->hasIdentifier($params['trade_no'] ?? null)) {
             return false;
         }
 
         return [
-            'trade_no' => (string) $params['out_trade_no'],
-            'callback_no' => (string) $params['trade_no'],
+            'trade_no' => trim((string) $params['out_trade_no']),
+            'callback_no' => trim((string) $params['trade_no']),
         ];
     }
 
@@ -152,7 +159,7 @@ class EPayQrcode
             $pairs[] = $key . '=' . $value;
         }
 
-        return strtolower(md5(implode('&', $pairs) . $this->config['key']));
+        return strtolower(md5(implode('&', $pairs) . (string) $this->config['key']));
     }
 
     private function mapiUrl()
@@ -173,6 +180,32 @@ class EPayQrcode
         if (!filter_var($this->mapiUrl(), FILTER_VALIDATE_URL)) {
             abort(500, 'EPay URL 格式错误');
         }
+    }
+
+    private function hasSecret()
+    {
+        $key = $this->config['key'] ?? null;
+        return (is_string($key) || is_int($key)) && trim((string) $key) !== '';
+    }
+
+    private function hasPid()
+    {
+        $pid = $this->config['pid'] ?? null;
+        return (is_string($pid) || is_int($pid)) && trim((string) $pid) !== '';
+    }
+
+    private function hasScalarValues($params)
+    {
+        if (!is_array($params)) return false;
+        foreach ($params as $value) {
+            if (!is_scalar($value) && $value !== null) return false;
+        }
+        return true;
+    }
+
+    private function hasIdentifier($value)
+    {
+        return (is_string($value) || is_int($value)) && trim((string) $value) !== '';
     }
 
     private function clientIp()

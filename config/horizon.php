@@ -5,6 +5,19 @@ use Linfo\Linfo;
 
 $lInfo = new Linfo();
 $parser = $lInfo->getParser();
+$subscriptionAuditWorker = [
+    'connection' => 'redis', 'queue' => ['subscription_audit'], 'balance' => 'simple',
+    'processes' => 1, 'minProcesses' => 1, 'maxProcesses' => 1,
+    'tries' => 3, 'timeout' => 30, 'memory' => 128,
+];
+$v2boardWorker = [
+    'connection' => 'redis',
+    'queue' => ['order_handle', 'traffic_fetch', 'stat', 'send_email', 'send_email_mass', 'send_telegram'],
+    'balance' => 'auto', 'minProcesses' => 1,
+    'maxProcesses' => min((int)ceil($parser->getRam()['total'] / 1024 / 1024 / 1024 * 6), (int)env('HORIZON_MAX_PROCESSES', 128)),
+    'tries' => 1, 'balanceCooldown' => 3,
+];
+$v2boardSupervisors = ['V2board' => $v2boardWorker, 'SubscriptionAudit' => $subscriptionAuditWorker];
 
 return [
 
@@ -169,26 +182,9 @@ return [
     */
 
     'environments' => [
-        'local' => [
-            'V2board' => [
-                'connection' => 'redis',
-                'queue' => [
-                    'order_handle',
-                    'traffic_fetch',
-                    'stat',
-                    'send_email',
-                    'send_email_mass',
-                    'send_telegram',
-                ],
-                'balance' => 'auto',
-                'minProcesses' => 1,
-                'maxProcesses' => min(
-                    (int)ceil($parser->getRam()['total'] / 1024 / 1024 / 1024 * 6),
-                    (int)env('HORIZON_MAX_PROCESSES', 128)
-                ),
-                'tries' => 1,
-                'balanceCooldown' => 3,
-            ],
-        ],
+        // Horizon uses the first matching environment; keep the wildcard last.
+        'local' => $v2boardSupervisors,
+        'production' => $v2boardSupervisors,
+        '*' => $v2boardSupervisors,
     ],
 ];

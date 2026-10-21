@@ -32,7 +32,7 @@ class ClientController extends Controller
                         $file = 'App\\Protocols\\' . basename($file, '.php');
                         $class = new $file($user, $servers);
                         if (strpos($flag, $class->flag) !== false) {
-                            return $class->handle();
+                            return $this->renderSubscription($request, $class);
                         }
                     }
                 }
@@ -46,12 +46,20 @@ class ClientController extends Controller
                     } else {
                         $class = new SingboxOld($user, $servers);
                     }
-                    return $class->handle();
+                    return $this->renderSubscription($request, $class);
                 }
             }
             $class = new General($user, $servers);
-            return $class->handle();
+            return $this->renderSubscription($request, $class);
         }
+    }
+
+    private function renderSubscription(Request $request, $protocol)
+    {
+        $request->attributes->set('subscription_audit_format', class_basename($protocol));
+        $content = $protocol->handle();
+        $request->attributes->set('subscription_audit_result', 'success');
+        return $content;
     }
 
     private function setSubscribeInfoToServers(&$servers, $user)

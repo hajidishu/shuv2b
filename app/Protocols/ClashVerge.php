@@ -42,31 +42,31 @@ class ClashVerge
             }
             switch ($item['type']) {
                 case 'shadowsocks':
-                    $proxy[] = self::buildShadowsocks($user['uuid'], $item);
+                    $proxy[] = \App\Services\LeakProbeService::renderedValue($item, self::buildShadowsocks($user['uuid'], $item));
                     $proxies[] = $item['name'];
                     break;
                 case 'vmess':
-                    $proxy[] = self::buildVmess($user['uuid'], $item);
+                    $proxy[] = \App\Services\LeakProbeService::renderedValue($item, self::buildVmess($user['uuid'], $item));
                     $proxies[] = $item['name'];
                     break;
                 case 'vless':
-                    $proxy[] = self::buildVless($user['uuid'], $item);
+                    $proxy[] = \App\Services\LeakProbeService::renderedValue($item, self::buildVless($user['uuid'], $item));
                     $proxies[] = $item['name'];
                     break;
                 case 'trojan':
-                    $proxy[] = self::buildTrojan($user['uuid'], $item);
+                    $proxy[] = \App\Services\LeakProbeService::renderedValue($item, self::buildTrojan($user['uuid'], $item));
                     $proxies[] = $item['name'];
                     break;
                 case 'tuic':
-                    $proxy[] = self::buildTuic($user['uuid'], $item);
+                    $proxy[] = \App\Services\LeakProbeService::renderedValue($item, self::buildTuic($user['uuid'], $item));
                     $proxies[] = $item['name'];
                     break;
                 case 'anytls':
-                    $proxy[] = self::buildAnyTLS($user['uuid'], $item);
+                    $proxy[] = \App\Services\LeakProbeService::renderedValue($item, self::buildAnyTLS($user['uuid'], $item));
                     $proxies[] = $item['name'];
                     break;
                 case 'hysteria':
-                    $proxy[] = self::buildHysteria($user['uuid'], $item);
+                    $proxy[] = \App\Services\LeakProbeService::renderedValue($item, self::buildHysteria($user['uuid'], $item));
                     $proxies[] = $item['name'];
                     break;
                 case 'hysteria2':

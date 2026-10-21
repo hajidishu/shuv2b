@@ -1,0 +1,561 @@
+{
+    "app_name": {
+        "group": "site",
+        "label": "站点名称",
+        "help": "用于显示需要站点名称的地方。",
+        "placeholder": "请输入站点名称",
+        "order": 0
+    },
+    "app_description": {
+        "group": "site",
+        "label": "站点描述",
+        "help": "用于显示需要站点描述的地方。",
+        "placeholder": "请输入站点描述",
+        "order": 1
+    },
+    "app_url": {
+        "group": "site",
+        "label": "站点网址",
+        "help": "当前网站最新网址，将会在邮件等需要用于网址处体现。",
+        "placeholder": "请输入站点URL，末尾不要/",
+        "order": 2
+    },
+    "payment_return_url": {
+        "group": "site",
+        "label": "支付回跳前端地址",
+        "help": "支付后返回的用户前端地址，可包含子目录。留空使用站点网址；也未设置则使用当前站点。不会修改支付异步通知地址。",
+        "placeholder": "https://panel.example.com/customer",
+        "order": 2.1
+    },
+    "payment_return_path": {
+        "group": "site",
+        "label": "支付回跳路径模板",
+        "help": "保留一个 {trade_no} 代表用户订单号。原版：/#/order/{trade_no}；EZ Theme：/#/payment?trade_no={trade_no}。",
+        "placeholder": "/#/order/{trade_no}",
+        "order": 2.2
+    },
+    "payment_return_origins": {
+        "group": "site",
+        "label": "支付回跳允许域名",
+        "help": "多个前端时可逐项填写完整来源，如 https://panel2.example.com。仅白名单内的 Origin 或 Referer 可切换回跳域名，各前端共用路径模板。留空固定使用前端地址。",
+        "placeholder": "https://panel2.example.com",
+        "order": 2.3
+    },
+    "force_https": {
+        "group": "site",
+        "label": "强制HTTPS",
+        "help": "当站点没有使用HTTPS，CDN或反代开启强制HTTPS时需要开启。",
+        "placeholder": "",
+        "order": 3
+    },
+    "logo": {
+        "group": "site",
+        "label": "LOGO",
+        "help": "用于显示需要LOGO的地方。",
+        "placeholder": "请输入LOGO URL，末尾不要/",
+        "order": 4
+    },
+    "subscribe_url": {
+        "group": "site",
+        "label": "订阅URL",
+        "help": "用于订阅所使用，留空则为站点URL。如需多个订阅URL随机获取请使用逗号进行分割。",
+        "placeholder": "请输入订阅URL，末尾不要/。逗号分割支持多域名",
+        "order": 5
+    },
+    "subscribe_path": {
+        "group": "site",
+        "label": "订阅路径",
+        "help": "用于订阅所使用，留空则为/api/v1/client/subscribe。如需更换不同的订阅路径请设置。",
+        "placeholder": "/api/v1/client/subscribe",
+        "order": 6
+    },
+    "tos_url": {
+        "group": "site",
+        "label": "用户条款(TOS)URL",
+        "help": "用于跳转到用户条款(TOS)",
+        "placeholder": "请输入用户条款URL，末尾不要/",
+        "order": 7
+    },
+    "stop_register": {
+        "group": "site",
+        "label": "停止新用户注册",
+        "help": "开启后任何人都将无法进行注册。",
+        "placeholder": "",
+        "order": 8
+    },
+    "try_out_plan_id": {
+        "group": "site",
+        "label": "注册试用",
+        "help": "选择需要试用的订阅，如果没有选项请先前往订阅管理添加。",
+        "placeholder": "请选择试用订阅",
+        "order": 9
+    },
+    "try_out_hour": {
+        "group": "site",
+        "label": "试用时间(小时)",
+        "placeholder": "请输入",
+        "order": 10
+    },
+    "currency": {
+        "group": "site",
+        "label": "货币单位",
+        "help": "仅用于展示使用，更改后系统中所有的货币单位都将发生变更。",
+        "placeholder": "CNY",
+        "order": 11
+    },
+    "currency_symbol": {
+        "group": "site",
+        "label": "货币符号",
+        "help": "仅用于展示使用，更改后系统中所有的货币单位都将发生变更。",
+        "placeholder": "¥",
+        "order": 12
+    },
+    "email_verify": {
+        "group": "safe",
+        "label": "邮箱验证",
+        "help": "开启后将会强制要求用户进行邮箱验证。",
+        "placeholder": "",
+        "order": 13
+    },
+    "email_gmail_limit_enable": {
+        "group": "safe",
+        "label": "禁止使用Gmail多别名",
+        "help": "开启后Gmail多别名将无法注册。",
+        "placeholder": "",
+        "order": 14
+    },
+    "safe_mode_enable": {
+        "group": "safe",
+        "label": "安全模式",
+        "help": "开启后除了站点URL以外的绑定本站点的域名访问都将会被403。",
+        "placeholder": "",
+        "order": 15
+    },
+    "secure_path": {
+        "group": "safe",
+        "label": "后台路径",
+        "help": "后台管理路径，修改后将会改变原有的admin路径",
+        "placeholder": "admin",
+        "order": 16
+    },
+    "email_whitelist_enable": {
+        "group": "safe",
+        "label": "邮箱后缀白名单",
+        "help": "开启后在名单中的邮箱后缀才允许进行注册。",
+        "placeholder": "",
+        "order": 17
+    },
+    "email_whitelist_suffix": {
+        "group": "safe",
+        "label": "白名单后缀",
+        "help": "请使用逗号进行分割，如：qq.com,gmail.com。",
+        "placeholder": "请输入后缀域名，逗号分割 如：qq.com,gmail.com",
+        "order": 18
+    },
+    "recaptcha_enable": {
+        "group": "safe",
+        "label": "防机器人",
+        "help": "开启后将会使用Google reCAPTCHA防止机器人。",
+        "placeholder": "",
+        "order": 19
+    },
+    "recaptcha_key": {
+        "group": "safe",
+        "label": "密钥",
+        "help": "在Google reCAPTCHA申请的密钥。",
+        "placeholder": "请输入",
+        "order": 20
+    },
+    "recaptcha_site_key": {
+        "group": "safe",
+        "label": "网站密钥",
+        "help": "在Google reCAPTCH申请的网站密钥。",
+        "placeholder": "请输入",
+        "order": 21
+    },
+    "register_limit_by_ip_enable": {
+        "group": "safe",
+        "label": "IP注册限制",
+        "help": "开启后如果IP注册账户达到规则要求将会被限制注册，请注意IP判断可能因为CDN或前置代理导致问题。",
+        "placeholder": "",
+        "order": 22
+    },
+    "register_limit_count": {
+        "group": "safe",
+        "label": "次数",
+        "help": "达到注册次数后开启惩罚。",
+        "placeholder": "请输入",
+        "order": 23
+    },
+    "register_limit_expire": {
+        "group": "safe",
+        "label": "惩罚时间(分钟)",
+        "help": "需要等待惩罚时间过后才可以再次注册。",
+        "placeholder": "请输入",
+        "order": 24
+    },
+    "password_limit_enable": {
+        "group": "safe",
+        "label": "防爆破限制",
+        "help": "开启后如果该账户尝试登陆失败次数过多将会被限制。",
+        "placeholder": "",
+        "order": 25
+    },
+    "password_limit_count": {
+        "group": "safe",
+        "label": "次数",
+        "help": "达到失败次数后开启惩罚。",
+        "placeholder": "请输入",
+        "order": 26
+    },
+    "password_limit_expire": {
+        "group": "safe",
+        "label": "惩罚时间(分钟)",
+        "help": "需要等待惩罚时间过后才可以再次登陆。",
+        "placeholder": "请输入",
+        "order": 27
+    },
+    "plan_change_enable": {
+        "group": "subscribe",
+        "label": "允许用户更改订阅",
+        "help": "开启后用户将会可以对订阅计划进行变更。",
+        "placeholder": "",
+        "order": 28
+    },
+    "reset_traffic_method": {
+        "group": "subscribe",
+        "label": "月流量重置方式",
+        "help": "全局流量重置方式，默认每月1号。可以在订阅管理为订阅单独设置。",
+        "placeholder": "请选择订阅重置方式",
+        "order": 29
+    },
+    "surplus_enable": {
+        "group": "subscribe",
+        "label": "开启折抵方案",
+        "help": "开启后用户更换订阅将会由系统对原有订阅进行折抵，方案参考文档。",
+        "placeholder": "",
+        "order": 30
+    },
+    "allow_new_period": {
+        "group": "subscribe",
+        "label": "允许提前开启流量周期",
+        "help": "开启后用户流量用尽时可以选择扣除订阅时长为代价重置流量，按月重置时扣除本周期剩余订阅时长，每月1号重置时扣除整月时间30天。",
+        "placeholder": "",
+        "order": 31
+    },
+    "new_order_event_id": {
+        "group": "subscribe",
+        "label": "当订阅新购时触发事件",
+        "help": "新购订阅完成时将触发该任务。",
+        "placeholder": "请选择事件",
+        "order": 32
+    },
+    "renew_order_event_id": {
+        "group": "subscribe",
+        "label": "当订阅续费时触发事件",
+        "help": "续费订阅完成时将触发该任务。",
+        "placeholder": "请选择事件",
+        "order": 33
+    },
+    "change_order_event_id": {
+        "group": "subscribe",
+        "label": "当订阅变更时触发事件",
+        "help": "变更订阅完成时将触发该任务。",
+        "placeholder": "请选择事件",
+        "order": 34
+    },
+    "show_info_to_server_enable": {
+        "group": "subscribe",
+        "label": "在订阅中展示订阅信息",
+        "help": "开启后将会在用户订阅节点时输出订阅信息。",
+        "placeholder": "",
+        "order": 35
+    },
+    "show_subscribe_method": {
+        "group": "subscribe",
+        "label": "订阅链接生效模式",
+        "help": "用户获取订阅链接后的有效期。",
+        "placeholder": "请选择",
+        "order": 36
+    },
+    "show_subscribe_expire": {
+        "group": "safe",
+        "label": "订阅链接有效时间(分钟)",
+        "help": "订阅链接获取后经过该时间将失效。",
+        "placeholder": "请输入",
+        "order": 37
+    },
+    "deposit_bounus": {
+        "group": "deposit",
+        "label": "充值奖励",
+        "help": "充值一定金额可以获得的奖励。",
+        "placeholder": "请输入 充值金额:奖励金额,逗号分割\n如 50:18,100:38, 200:88",
+        "order": 38
+    },
+    "ticket_status": {
+        "group": "ticket",
+        "label": "工单设置",
+        "help": "请选择工单的状态。",
+        "placeholder": "",
+        "order": 39
+    },
+    "invite_force": {
+        "group": "invite",
+        "label": "开启强制邀请",
+        "help": "开启后只有被邀请的用户才可以进行注册。",
+        "placeholder": "",
+        "order": 40
+    },
+    "invite_commission": {
+        "group": "invite",
+        "label": "邀请佣金百分比",
+        "help": "默认全局的佣金分配比例，你可以在用户管理单独配置单个比例。",
+        "placeholder": "请输入",
+        "order": 41
+    },
+    "invite_gen_limit": {
+        "group": "invite",
+        "label": "用户可创建邀请码上限",
+        "placeholder": "请输入",
+        "order": 42
+    },
+    "invite_never_expire": {
+        "group": "invite",
+        "label": "邀请码永不失效",
+        "help": "开启后邀请码被使用后将不会失效，否则使用过后即失效。",
+        "placeholder": "",
+        "order": 43
+    },
+    "commission_first_time_enable": {
+        "group": "invite",
+        "label": "佣金仅首次发放",
+        "help": "开启后被邀请人首次支付时才会产生佣金，可以在用户管理对用户进行单独配置。",
+        "placeholder": "",
+        "order": 44
+    },
+    "commission_auto_check_enable": {
+        "group": "invite",
+        "label": "佣金自动确认",
+        "help": "开启后佣金将会在订单完成3日后自动进行确认。",
+        "placeholder": "",
+        "order": 45
+    },
+    "commission_withdraw_limit": {
+        "group": "invite",
+        "label": "提现单申请门槛(元)",
+        "help": "小于门槛金额的提现单将不会被提交。",
+        "placeholder": "请输入",
+        "order": 46
+    },
+    "commission_withdraw_method": {
+        "group": "invite",
+        "label": "提现方式",
+        "help": "可以支持的提现方式。",
+        "placeholder": "请输入后缀域名，逗号分割 如：支付宝,USDT,贝宝",
+        "order": 47
+    },
+    "withdraw_close_enable": {
+        "group": "invite",
+        "label": "关闭提现",
+        "help": "关闭后将禁止用户申请提现，且邀请佣金将会直接进入用户余额。",
+        "placeholder": "",
+        "order": 48
+    },
+    "commission_distribution_enable": {
+        "group": "invite",
+        "label": "三级分销",
+        "help": "开启后将佣金将按照设置的3成比例进行分成，三成比例合计请不要>100%。",
+        "placeholder": "",
+        "order": 49
+    },
+    "commission_distribution_l1": {
+        "group": "invite",
+        "label": "一级邀请人比例",
+        "placeholder": "请输入比例如：50",
+        "order": 50
+    },
+    "commission_distribution_l2": {
+        "group": "invite",
+        "label": "二级邀请人比例",
+        "placeholder": "请输入比例如：30",
+        "order": 51
+    },
+    "commission_distribution_l3": {
+        "group": "invite",
+        "label": "三级邀请人比例",
+        "placeholder": "请输入比例如：20",
+        "order": 52
+    },
+    "frontend_theme_sidebar": {
+        "group": "site",
+        "label": "边栏风格",
+        "placeholder": "",
+        "order": 53
+    },
+    "frontend_theme_header": {
+        "group": "site",
+        "label": "头部风格",
+        "placeholder": "",
+        "order": 54
+    },
+    "frontend_theme_color": {
+        "group": "frontend",
+        "label": "主题色",
+        "placeholder": "",
+        "order": 55
+    },
+    "frontend_background_url": {
+        "group": "frontend",
+        "label": "背景",
+        "help": "将会在后台登录页面进行展示。",
+        "placeholder": "https://xxxxx.com/wallpaper.png",
+        "order": 56
+    },
+    "server_api_url": {
+        "group": "server",
+        "label": "节点对接API地址",
+        "help": "v2node节点一键对接专用地址。",
+        "placeholder": "请输入",
+        "order": 57
+    },
+    "server_token": {
+        "group": "server",
+        "label": "通讯密钥",
+        "help": "V2board与节点通讯的密钥，以便数据不会被他人获取。",
+        "placeholder": "请输入",
+        "order": 58
+    },
+    "server_pull_interval": {
+        "group": "server",
+        "label": "节点拉取动作轮询间隔",
+        "help": "节点从面板获取数据的间隔频率。",
+        "placeholder": "请输入",
+        "order": 59
+    },
+    "server_push_interval": {
+        "group": "server",
+        "label": "节点推送动作轮询间隔",
+        "help": "节点推送数据到面板的间隔频率。",
+        "placeholder": "请输入",
+        "order": 60
+    },
+    "server_node_report_min_traffic": {
+        "group": "server",
+        "label": "节点用户流量上报最低阈值",
+        "help": "每次推送动作仅累计使用流量高于阈值的用户信息会被上报，未上报流量会累计",
+        "placeholder": "请输入",
+        "order": 61
+    },
+    "server_device_online_min_traffic": {
+        "group": "server",
+        "label": "节点用户设备数统计最低阈值",
+        "help": "每次推送动作仅上报流量高于阈值的在线设备IP地址会被节点统计",
+        "placeholder": "请输入",
+        "order": 62
+    },
+    "device_limit_mode": {
+        "group": "server",
+        "label": "全局设备数限制采用宽松模式",
+        "help": "开启后同一IP地址使用多个节点只统计为一个设备",
+        "placeholder": "",
+        "order": 63
+    },
+    "email_host": {
+        "group": "email",
+        "label": "SMTP服务器地址",
+        "help": "由邮件服务商提供的服务地址",
+        "placeholder": "请输入",
+        "order": 64
+    },
+    "email_port": {
+        "group": "email",
+        "label": "SMTP服务端口",
+        "help": "常见的端口有25, 465, 587",
+        "placeholder": "请输入",
+        "order": 65
+    },
+    "email_encryption": {
+        "group": "email",
+        "label": "SMTP加密方式",
+        "help": "465端口加密方式一般为SSL，587端口加密方式一般为TLS",
+        "placeholder": "请输入",
+        "order": 66
+    },
+    "email_username": {
+        "group": "email",
+        "label": "SMTP账号",
+        "help": "由邮件服务商提供的账号",
+        "placeholder": "请输入",
+        "order": 67
+    },
+    "email_password": {
+        "group": "email",
+        "label": "SMTP密码",
+        "help": "由邮件服务商提供的密码",
+        "placeholder": "请输入",
+        "order": 68
+    },
+    "email_from_address": {
+        "group": "email",
+        "label": "发件地址",
+        "help": "由邮件服务商提供的发件地址",
+        "placeholder": "请输入",
+        "order": 69
+    },
+    "email_template": {
+        "group": "email",
+        "label": "邮件模板",
+        "help": "你可以在文档查看如何自定义邮件模板",
+        "placeholder": "",
+        "order": 70
+    },
+    "telegram_bot_token": {
+        "group": "telegram",
+        "label": "机器人Token",
+        "help": "请输入由Botfather提供的token。",
+        "placeholder": "0000000000:xxxxxxxxx_xxxxxxxxxxxxxxx",
+        "order": 71
+    },
+    "telegram_webhook_domain": {
+        "group": "telegram",
+        "label": "Webhook 域名",
+        "help": "填写 Telegram 可访问的 HTTPS 域名，例如 https://bot.example.com，不含路径。点击一键设置后生效，不再使用当前后台域名。",
+        "placeholder": "https://bot.example.com",
+        "order": 71.1
+    },
+    "telegram_bot_enable": {
+        "group": "telegram",
+        "label": "开启机器人通知",
+        "help": "开启后bot将会对绑定了telegram的管理员和用户进行基础通知。",
+        "placeholder": "",
+        "order": 72
+    },
+    "telegram_discuss_link": {
+        "group": "telegram",
+        "label": "群组地址",
+        "help": "填写后将会在用户端展示，或者被用于需要的地方。",
+        "placeholder": "https://t.me/xxxxxx",
+        "order": 73
+    },
+    "windows_version": {
+        "group": "app",
+        "label": "Windows",
+        "help": "Windows端版本号及下载地址",
+        "placeholder": "https://xxxx.com/xxx.exe",
+        "order": 74
+    },
+    "macos_version": {
+        "group": "app",
+        "label": "macOS",
+        "help": "macOS端版本号及下载地址",
+        "placeholder": "https://xxxx.com/xxx.dmg",
+        "order": 75
+    },
+    "android_version": {
+        "group": "app",
+        "label": "Android",
+        "help": "Android端版本号及下载地址",
+        "placeholder": "https://xxxx.com/xxx.apk",
+        "order": 76
+    }
+}

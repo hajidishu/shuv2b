@@ -7,6 +7,7 @@ namespace App\Payments;
 
 use Stripe\Source;
 use Stripe\Stripe;
+use App\Utils\StripeCurrency;
 
 class StripeWepay {
     public function __construct($config)
@@ -35,16 +36,28 @@ class StripeWepay {
         ];
     }
 
-    public function pay($order)
+    public function quote($cnyCents): array
     {
         $currency = $this->config['currency'];
         $exchange = $this->exchange('CNY', strtoupper($currency));
-        if (!$exchange) {
-            abort(500, __('Currency conversion has timed out, please try again later'));
+        if (!$exchange) abort(500, __('Currency conversion has timed out, please try again later'));
+        $quote = StripeCurrency::quote(['total_amount' => $cnyCents], $currency, $exchange);
+        return ['amount_minor' => $quote['amount'], 'currency' => $quote['currency']];
+    }
+
+    public function pay($order)
+    {
+        $currency = $this->config['currency'];
+        if (StripeCurrency::hasFrozenQuote($order)) {
+            $quote = StripeCurrency::quote($order, $currency, null);
+        } else {
+            $fetchedQuote = $this->quote($order['total_amount']);
+            $quote = ['amount' => $fetchedQuote['amount_minor'], 'currency' => $fetchedQuote['currency']];
         }
+        $currency = $quote['currency'];
         Stripe::setApiKey($this->config['stripe_sk_live']);
         $source = Source::create([
-            'amount' => floor($order['total_amount'] * $exchange),
+            'amount' => $quote['amount'],
             'currency' => $currency,
             'type' => 'wechat',
             'statement_descriptor' => $order['trade_no'],
@@ -56,7 +69,7 @@ class StripeWepay {
             'redirect' => [
                 'return_url' => $order['return_url']
             ]
-        ]);
+        ], StripeCurrency::idempotencyOptions($order, 'source'));
         if (!$source['wechat']['qr_code_url']) {
             abort(500, __('Payment gateway request failed'));
         }
@@ -86,7 +99,7 @@ class StripeWepay {
                     'currency' => $object->currency,
                     'source' => $object->id,
                     'metadata' => json_decode($object->metadata, true)
-                ]);
+                ], ['idempotency_key' => 'stripe-source-charge:' . $object->id]);
                 break;
             case 'charge.succeeded':
                 $object = $event->data->object;
@@ -98,7 +111,9 @@ class StripeWepay {
                     $tradeNo = $metaData->out_trade_no;
                     return [
                         'trade_no' => $tradeNo,
-                        'callback_no' => $object->id
+                        'callback_no' => $object->id,
+                        'amount_minor' => (int)$object->amount,
+                        'currency' => strtolower((string)$object->currency),
                     ];
                 }
                 break;
@@ -110,8 +125,8 @@ class StripeWepay {
 
     private function exchange($from, $to)
     {
-        $result = file_get_contents('https://api.exchangerate.host/latest?symbols=' . $to . '&base=' . $from);
+        $result = file_get_contents('https://api.exchangerate-api.com/v4/latest/' . $from);
         $result = json_decode($result, true);
-        return $result['rates'][$to];
+        return $result['rates'][$to] ?? null;
     }
 }

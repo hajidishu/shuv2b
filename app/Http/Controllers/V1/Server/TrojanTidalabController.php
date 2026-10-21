@@ -41,7 +41,7 @@ class TrojanTidalabController extends Controller
         }
         Cache::put(CacheKey::get('SERVER_TROJAN_LAST_CHECK_AT', $server->id), time(), 3600);
         $serverService = new ServerService();
-        $users = $serverService->getAvailableUsers($server->group_id);
+        $users = $serverService->getAvailableUsers($server->group_id, 'trojan', $server->id);
         $result = [];
         foreach ($users as $user) {
             $user->trojan_user = [

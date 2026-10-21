@@ -5,6 +5,8 @@ namespace App\Payments;
 use \Curl\Curl;
 
 class BEasyPaymentUSDT {
+    private $config;
+
     public function __construct($config)
     {
         $this->config = $config;
@@ -33,6 +35,10 @@ class BEasyPaymentUSDT {
 
     public function pay($order)
     {
+        $apiToken = $this->apiToken();
+        if ($apiToken === null) {
+            abort(500, 'BEPUSDT API token is required');
+        }
         $params = [
             'amount' => $order['total_amount'] / 100,
             'trade_type' => $this->config['bepusdt_trade_type'],
@@ -42,12 +48,13 @@ class BEasyPaymentUSDT {
         ];
         ksort($params);
         reset($params);
-        $str = stripslashes(urldecode(http_build_query($params))) . $this->config['bepusdt_apitoken'];
+        $str = stripslashes(urldecode(http_build_query($params))) . $apiToken;
         $params['signature'] = md5($str);
 
         $curl = new Curl();
         $curl->setUserAgent('BEPUSDT');
-        $curl->setOpt(CURLOPT_SSL_VERIFYPEER, 0);
+        $curl->setOpt(CURLOPT_SSL_VERIFYPEER, true);
+        $curl->setOpt(CURLOPT_SSL_VERIFYHOST, 2);
         $curl->setOpt(CURLOPT_HTTPHEADER, array('Content-Type:application/json'));
         $curl->post($this->config['bepusdt_url'] . '/api/v1/order/create-transaction', json_encode($params));
         $result = $curl->response;
@@ -66,24 +73,59 @@ class BEasyPaymentUSDT {
 
     public function notify($params)
     {
-        $sign = $params['signature'];
+        $apiToken = $this->apiToken();
+        if ($apiToken === null || !$this->hasScalarValues($params) ||
+            !isset($params['signature']) || !is_string($params['signature']) ||
+            !preg_match('/\A[0-9a-fA-F]{32}\z/', $params['signature'])) {
+            return false;
+        }
+
+        $sign = strtolower($params['signature']);
         unset($params['signature']);
         ksort($params);
         reset($params);
-        $str = stripslashes(urldecode(http_build_query($params))) . $this->config['bepusdt_apitoken'];
+        $str = stripslashes(urldecode(http_build_query($params))) . $apiToken;
         $generateSignature = md5($str);
         if (!hash_equals($generateSignature, $sign)) {
-            return('cannot pass verification');
+            return false;
         }
-        $status = $params['status'];
+        $status = $params['status'] ?? null;
+        if ((!is_string($status) && !is_int($status)) || !preg_match('/\A[0-9]+\z/', (string) $status)) {
+            return false;
+        }
         // 1: pending 2: success 3: expired
-        if ($status != 2) {
+        if ((string) $status !== '2') {
             return('failed');
         }
+        if (!$this->hasIdentifier($params['order_id'] ?? null) || !$this->hasIdentifier($params['trade_id'] ?? null)) {
+            return false;
+        }
         return [
-            'trade_no' => $params['order_id'],
-            'callback_no' => $params['trade_id'],
+            'trade_no' => (string) $params['order_id'],
+            'callback_no' => (string) $params['trade_id'],
             'custom_result' => 'ok'
         ];
+    }
+
+    private function apiToken()
+    {
+        $token = $this->config['bepusdt_apitoken'] ?? null;
+        if (!is_string($token) && !is_int($token)) return null;
+        if (trim((string) $token) === '') return null;
+        return (string) $token;
+    }
+
+    private function hasScalarValues($params)
+    {
+        if (!is_array($params)) return false;
+        foreach ($params as $value) {
+            if (!is_scalar($value) && $value !== null) return false;
+        }
+        return true;
+    }
+
+    private function hasIdentifier($value)
+    {
+        return (is_string($value) || is_int($value)) && trim((string) $value) !== '';
     }
 }

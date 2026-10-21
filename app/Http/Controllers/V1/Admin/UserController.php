@@ -35,6 +35,9 @@ class UserController extends Controller
 
     private function filter(Request $request, $builder)
     {
+        // Exports and bulk actions must use exactly the same validated filter as fetch.
+        $request->validate((new UserFetch())->rules());
+        if ($request->input('ids')) $builder->whereIn('id', $request->input('ids'));
         $filters = $request->input('filter');
         if ($filters) {
             foreach ($filters as $k => $filter) {
@@ -42,8 +45,12 @@ class UserController extends Controller
                     $filter['condition'] = 'like';
                     $filter['value'] = "%{$filter['value']}%";
                 }
-                if ($filter['key'] === 'd' || $filter['key'] === 'transfer_enable') {
+                if (in_array($filter['key'], ['u', 'd', 'transfer_enable', 'total_used'], true)) {
                     $filter['value'] = $filter['value'] * 1073741824;
+                }
+                if ($filter['key'] === 'total_used') {
+                    $builder->whereRaw('(u + d) ' . $filter['condition'] . ' ?', [$filter['value']]);
+                    continue;
                 }
                 if ($filter['key'] === 'invite_by_email') {
                     $user = User::where('email', $filter['condition'], $filter['value'])->first();
@@ -163,6 +170,9 @@ class UserController extends Controller
 
         try {
             $user->update($params);
+            if ($user->wasChanged(['password', 'is_admin', 'is_staff'])) {
+                (new AuthService($user))->removeAllSession();
+            }
         } catch (\Exception $e) {
             abort(500, '保存失败');
         }
@@ -191,7 +201,7 @@ class UserController extends Controller
             $balance = $user['balance'] / 100;
             $commissionBalance = $user['commission_balance'] / 100;
             $transferEnable = $user['transfer_enable'] ? $user['transfer_enable'] / 1073741824 : 0;
-            $deviceLimit = $user['devce_limit'] ? $user['devce_limit'] : NULL;
+            $deviceLimit = $user['device_limit'] ?? null;
             $notUseFlow = (($user['transfer_enable'] - ($user['u'] + $user['d'])) / 1073741824) ?? 0;
             $planName = $user['plan_name'] ?? '无订阅';
             $subscribeUrl =  Helper::getSubscribeUrl($user['token']);

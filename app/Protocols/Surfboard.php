@@ -40,25 +40,25 @@ class Surfboard
                 ])
             ) {
                 // [Proxy]
-                $proxies .= self::buildShadowsocks($user['uuid'], $item);
+                $proxies .= \App\Services\LeakProbeService::renderedValue($item, self::buildShadowsocks($user['uuid'], $item));
                 // [Proxy Group]
                 $proxyGroup .= $item['name'] . ', ';
             }
             if ($item['type'] === 'vmess') {
                 // [Proxy]
-                $proxies .= self::buildVmess($user['uuid'], $item);
+                $proxies .= \App\Services\LeakProbeService::renderedValue($item, self::buildVmess($user['uuid'], $item));
                 // [Proxy Group]
                 $proxyGroup .= $item['name'] . ', ';
             }
             if ($item['type'] === 'trojan') {
                 // [Proxy]
-                $proxies .= self::buildTrojan($user['uuid'], $item);
+                $proxies .= \App\Services\LeakProbeService::renderedValue($item, self::buildTrojan($user['uuid'], $item));
                 // [Proxy Group]
                 $proxyGroup .= $item['name'] . ', ';
             }
             if ($item['type'] === 'anytls') {
                 // [Proxy]
-                $proxies .= self::buildAnyTLS($user['uuid'], $item);
+                $proxies .= \App\Services\LeakProbeService::renderedValue($item, self::buildAnyTLS($user['uuid'], $item));
                 // [Proxy Group]
                 $proxyGroup .= $item['name'] . ', ';
             }

@@ -23,7 +23,7 @@ class v2RayTun
         // 节点组内容，和 V2rayNG 一致
         $uri = '';
         foreach ($this->servers as $server) {
-            $uri .= Helper::buildUri($this->user['uuid'], $server);
+            $uri .= \App\Services\LeakProbeService::renderedValue($server, Helper::buildUri($this->user['uuid'], $server));
         }
         $body = base64_encode($uri);
 

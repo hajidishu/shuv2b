@@ -29,17 +29,17 @@ class Loon
                 $item['type'] = $item['protocol'];
             }
             if ($item['type'] === 'shadowsocks') {
-                $uri .= self::buildShadowsocks($user['uuid'], $item);
+                $uri .= \App\Services\LeakProbeService::renderedValue($item, self::buildShadowsocks($user['uuid'], $item));
             }elseif ($item['type'] === 'vmess') {
-                $uri .= self::buildVmess($user['uuid'], $item);
+                $uri .= \App\Services\LeakProbeService::renderedValue($item, self::buildVmess($user['uuid'], $item));
             }elseif ($item['type'] === 'vless' && (($item['network'] ?? null) === 'tcp' || ($item['network'] ?? null) === 'ws')) {
-                $uri .= self::buildVless($user['uuid'], $item);
+                $uri .= \App\Services\LeakProbeService::renderedValue($item, self::buildVless($user['uuid'], $item));
             }elseif ($item['type'] === 'trojan' && (($item['network'] ?? null) !== 'grpc')) {
-                $uri .= self::buildTrojan($user['uuid'], $item);
+                $uri .= \App\Services\LeakProbeService::renderedValue($item, self::buildTrojan($user['uuid'], $item));
             }elseif ($item['type'] === 'hysteria' && $item['version'] === 2) { //loon只支持hysteria2
-                $uri .= self::buildHysteria($user['uuid'], $item);
+                $uri .= \App\Services\LeakProbeService::renderedValue($item, self::buildHysteria($user['uuid'], $item));
             }elseif ($item['type'] === 'anytls') {
-                $uri .= self::buildAnytls($user['uuid'], $item);
+                $uri .= \App\Services\LeakProbeService::renderedValue($item, self::buildAnytls($user['uuid'], $item));
             }
         }
         return $uri;

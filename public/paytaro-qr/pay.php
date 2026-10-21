@@ -9,7 +9,7 @@
  * 只转发到固定的 Paytaro 上游、只允许上述两个动作，不含任何密钥，可安全放在公开目录。
  * Xboard 等无法执行 public/*.php 的部署，由插件路由 require 本文件（先 define('PAYTARO_QR_EMBED', true)）并调用下方函数。
  *
- * 文档：https://v3.paytaro.com/#/docs/install-script   客服：https://t.me/paytaro
+ * 文档：https://v3.paytaro.com/#/docs/install-script
  */
 
 if (!defined('PAYTARO_QR_API')) {

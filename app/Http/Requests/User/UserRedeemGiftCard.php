@@ -14,7 +14,7 @@ class UserRedeemGiftCard extends FormRequest
     public function rules()
     {
         return [
-            'giftcard' => 'required'
+            'giftcard' => 'required|string|max:255'
         ];
     }
 

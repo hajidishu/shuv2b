@@ -17,7 +17,7 @@ class CouponGenerate extends FormRequest
             'generate_count' => 'nullable|integer|max:500',
             'name' => 'required',
             'type' => 'required|in:1,2',
-            'value' => 'required|integer',
+            'value' => 'required|integer|min:0',
             'started_at' => 'required|integer',
             'ended_at' => 'required|integer',
             'limit_use' => 'nullable|integer',

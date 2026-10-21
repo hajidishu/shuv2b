@@ -1,34 +1,35 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
+cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
 
-if [ ! -d ".git" ]; then
-  echo "Please deploy using Git."
-  exit 1
+if ! command -v git >/dev/null 2>&1 || ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "Please deploy using Git and run this script from the application checkout." >&2
+    exit 1
 fi
-
-if ! command -v git &> /dev/null; then
-    echo "Git is not installed! Please install git and try again."
+branch=$(git symbolic-ref --quiet --short HEAD) || {
+    echo "Detached HEAD: select the intended deployment branch before updating." >&2
+    exit 1
+}
+if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+    echo "Tracked files have local changes. Back them up and resolve them before updating." >&2
+    exit 1
+fi
+if command -v composer >/dev/null 2>&1; then
+    composer_command=(composer)
+elif [ -f composer.phar ]; then
+    composer_command=(php composer.phar)
+else
+    echo "Install Composer before updating." >&2
     exit 1
 fi
 
-git config --global --add safe.directory $(pwd)
-git fetch --all && git reset --hard origin/master && git pull origin master
-rm -rf composer.lock composer.phar
-wget https://github.com/composer/composer/releases/latest/download/composer.phar -O composer.phar
-php composer.phar update -vvv
-
-php_main_version=$(php -v | head -n 1 | cut -d ' ' -f 2 | cut -d '.' -f 1)
-if [ $php_main_version -ge 8 ]; then
-    php composer.phar require joanhey/adapterman
-    if ! php -m | grep -q "pcntl"; then
-        echo "Adding pcntl extension to cli-php.ini"
-        sed -i '/extension=redis.so/a extension=pcntl.so' cli-php.ini
-    fi
-    php -c cli-php.ini webman.php stop
-    echo "Webman stopped.Please restart it by yourself."
-fi
-
+git fetch origin "$branch"
+git merge --ff-only FETCH_HEAD
+"${composer_command[@]}" install --no-dev --prefer-dist --optimize-autoloader
+"${composer_command[@]}" check-platform-reqs --no-dev
 php artisan v2board:update
+php artisan config:cache
+php artisan view:clear
+php artisan horizon:terminate
 
-if [ -f "/etc/init.d/bt" ]; then
-  chown -R www $(pwd);
-fi
+echo "Code and database update finished. Reload PHP-FPM or restart Webman, restore the scheduler and Horizon supervisor, then verify orders and subscriptions."

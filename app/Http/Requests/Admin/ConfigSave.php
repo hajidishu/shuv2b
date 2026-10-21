@@ -34,6 +34,10 @@ class ConfigSave extends FormRequest
         'app_name' => '',
         'app_description' => '',
         'app_url' => 'nullable|url',
+        'payment_return_url' => 'nullable|string|max:2048',
+        'payment_return_path' => 'nullable|string|max:512',
+        'payment_return_origins' => 'nullable|array|max:50',
+        'payment_return_origins.*' => 'required|string|max:2048',
         'subscribe_url' => 'nullable',
         'subscribe_path' => 'nullable|regex:/^\\//',
         'try_out_enable' => 'in:0,1',
@@ -78,6 +82,7 @@ class ConfigSave extends FormRequest
         // telegram
         'telegram_bot_enable' => 'in:0,1',
         'telegram_bot_token' => '',
+        'telegram_webhook_domain' => 'nullable|string|max:2048',
         'telegram_discuss_id' => '',
         'telegram_channel_id' => '',
         'telegram_discuss_link' => 'nullable|url',
@@ -113,6 +118,22 @@ class ConfigSave extends FormRequest
     public function rules()
     {
         $rules = self::RULES;
+
+        $rules['telegram_webhook_domain'] = ['nullable', 'string', 'max:2048', function ($attribute, $value, $fail) {
+            if (!\App\Services\TelegramService::normalizeWebhookDomain($value)) {
+                $fail('Webhook 域名必须为 https://域名，可选端口为 443、80、88、8443，不能包含路径、账号或查询参数');
+            }
+        }];
+
+        $rules['payment_return_url'] = ['nullable', 'string', 'max:2048', function ($attribute, $value, $fail) {
+            if (!\App\Services\PaymentReturnUrl::normalizeBase($value)) $fail('支付回跳前端地址必须为不含账号、查询参数和片段的 HTTP(S) 地址');
+        }];
+        $rules['payment_return_path'] = ['nullable', 'string', 'max:512', function ($attribute, $value, $fail) {
+            if (!\App\Services\PaymentReturnUrl::validPath($value)) $fail('支付回跳路径必须以单个 / 开头并包含一个 {trade_no}');
+        }];
+        $rules['payment_return_origins.*'] = ['required', 'string', 'max:2048', function ($attribute, $value, $fail) {
+            if (!\App\Services\PaymentReturnUrl::normalizeBase($value, true)) $fail('允许域名必须为完整 HTTP(S) 来源地址，不能包含子路径');
+        }];
 
         $rules['deposit_bounus'][] = function ($attribute, $value, $fail) {
             foreach ($value as $tier) {

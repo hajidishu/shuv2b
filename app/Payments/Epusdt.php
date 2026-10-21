@@ -51,6 +51,10 @@ class Epusdt
 
     public function pay($order)
     {
+        $apiToken = $this->apiToken();
+        if ($apiToken === null) {
+            abort(500, 'epusdt token is required');
+        }
         $network = strtolower(trim((string) ($this->config['epusdt_network'] ?? '')));
         $token = empty($this->config['epusdt_asset']) ? 'usdt' : strtolower(trim((string) $this->config['epusdt_asset']));
         $params = [
@@ -64,11 +68,12 @@ class Epusdt
             'redirect_url' => $order['return_url'],
         ];
 
-        $params['signature'] = $this->makeSignature($params, trim((string) ($this->config['epusdt_token'] ?? '')));
+        $params['signature'] = $this->makeSignature($params, $apiToken);
 
         $curl = new Curl();
         $curl->setUserAgent('epusdt');
-        $curl->setOpt(CURLOPT_SSL_VERIFYPEER, 0);
+        $curl->setOpt(CURLOPT_SSL_VERIFYPEER, true);
+        $curl->setOpt(CURLOPT_SSL_VERIFYHOST, 2);
         $curl->setOpt(CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
         $curl->post(
             rtrim((string) $this->config['epusdt_url'], '/') . '/payments/gmpay/v1/order/create-transaction',
@@ -97,7 +102,8 @@ class Epusdt
 
             $curl = new Curl();
             $curl->setUserAgent('epusdt');
-            $curl->setOpt(CURLOPT_SSL_VERIFYPEER, 0);
+            $curl->setOpt(CURLOPT_SSL_VERIFYPEER, true);
+            $curl->setOpt(CURLOPT_SSL_VERIFYHOST, 2);
             $curl->setOpt(CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
             $curl->post(
                 rtrim((string) $this->config['epusdt_url'], '/') . '/pay/switch-network',
@@ -126,26 +132,59 @@ class Epusdt
 
     public function notify($params)
     {
-        if (!isset($params['signature'])) {
+        $apiToken = $this->apiToken();
+        if ($apiToken === null || !$this->hasScalarValues($params) ||
+            !isset($params['signature']) || !is_string($params['signature']) ||
+            !preg_match('/\A[0-9a-fA-F]{32}\z/', $params['signature'])) {
             return false;
         }
 
         $signature = strtolower((string) $params['signature']);
         unset($params['signature']);
 
-        if (!hash_equals($this->makeSignature($params, trim((string) ($this->config['epusdt_token'] ?? ''))), $signature)) {
+        if (!hash_equals($this->makeSignature($params, $apiToken), $signature)) {
             return false;
         }
 
-        if (!isset($params['status']) || (int) $params['status'] !== 2) {
+        $status = $params['status'] ?? null;
+        if ((!is_string($status) && !is_int($status)) || !preg_match('/\A[0-9]+\z/', (string) $status)) {
+            return false;
+        }
+        if ((string) $status !== '2') {
             return 'failed';
         }
 
+        if (!$this->hasIdentifier($params['order_id'] ?? null) || !$this->hasIdentifier($params['trade_id'] ?? null)) {
+            return false;
+        }
+
         return [
-            'trade_no' => $params['order_id'],
-            'callback_no' => $params['trade_id'],
+            'trade_no' => (string) $params['order_id'],
+            'callback_no' => (string) $params['trade_id'],
             'custom_result' => 'ok',
         ];
+    }
+
+    private function apiToken()
+    {
+        $token = $this->config['epusdt_token'] ?? null;
+        if (!is_string($token) && !is_int($token)) return null;
+        if (trim((string) $token) === '') return null;
+        return trim($token);
+    }
+
+    private function hasScalarValues($params)
+    {
+        if (!is_array($params)) return false;
+        foreach ($params as $value) {
+            if (!is_scalar($value) && $value !== null) return false;
+        }
+        return true;
+    }
+
+    private function hasIdentifier($value)
+    {
+        return (is_string($value) || is_int($value)) && trim((string) $value) !== '';
     }
 
     private function makeSignature($params, $token)

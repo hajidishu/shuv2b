@@ -41,35 +41,35 @@ class Stash
                 $item['type'] = $item['protocol'];
             }
             if ($item['type'] === 'shadowsocks') {
-                array_push($proxy, self::buildShadowsocks($user['uuid'], $item));
+                array_push($proxy, \App\Services\LeakProbeService::renderedValue($item, self::buildShadowsocks($user['uuid'], $item)));
                 array_push($proxies, $item['name']);
             }
             if ($item['type'] === 'vmess') {
-                array_push($proxy, self::buildVmess($user['uuid'], $item));
+                array_push($proxy, \App\Services\LeakProbeService::renderedValue($item, self::buildVmess($user['uuid'], $item)));
                 array_push($proxies, $item['name']);
             }
             if ($item['type'] === 'vless') {
-                array_push($proxy, self::buildVless($user['uuid'], $item));
+                array_push($proxy, \App\Services\LeakProbeService::renderedValue($item, self::buildVless($user['uuid'], $item)));
                 array_push($proxies, $item['name']);
             }
             if ($item['type'] === 'trojan') {
-                array_push($proxy, self::buildTrojan($user['uuid'], $item));
+                array_push($proxy, \App\Services\LeakProbeService::renderedValue($item, self::buildTrojan($user['uuid'], $item)));
                 array_push($proxies, $item['name']);
             }
             if ($item['type'] === 'tuic') {
-                array_push($proxy, self::buildTuic($user['uuid'], $item));
+                array_push($proxy, \App\Services\LeakProbeService::renderedValue($item, self::buildTuic($user['uuid'], $item)));
                 array_push($proxies, $item['name']);
             }
             if ($item['type'] === 'hysteria') {
-                array_push($proxy, self::buildHysteria($user['uuid'], $item));
+                array_push($proxy, \App\Services\LeakProbeService::renderedValue($item, self::buildHysteria($user['uuid'], $item)));
                 array_push($proxies, $item['name']);
             }
             if ($item['type'] === 'hysteria2') {
-                array_push($proxy, self::buildHysteria2($user['uuid'], $item));
+                array_push($proxy, \App\Services\LeakProbeService::renderedValue($item, self::buildHysteria2($user['uuid'], $item)));
                 array_push($proxies, $item['name']);
             }
             if ($item['type'] === 'anytls') {
-                array_push($proxy, self::buildAnyTLS($user['uuid'], $item));
+                array_push($proxy, \App\Services\LeakProbeService::renderedValue($item, self::buildAnyTLS($user['uuid'], $item)));
                 array_push($proxies, $item['name']);
             }
         }

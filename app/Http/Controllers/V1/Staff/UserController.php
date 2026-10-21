@@ -8,7 +8,9 @@ use App\Http\Requests\Staff\UserUpdate;
 use App\Jobs\SendEmailJob;
 use App\Models\Plan;
 use App\Models\User;
+use App\Services\AuthService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
@@ -29,36 +31,42 @@ class UserController extends Controller
 
     public function update(UserUpdate $request)
     {
-        $params = $request->validated();
-        $user = User::find($request->input('id'));
-        if (!$user) {
-            abort(500, '用户不存在');
-        }
-        if (User::where('email', $params['email'])->first() && $user->email !== $params['email']) {
-            abort(500, '邮箱已被使用');
-        }
-        if (isset($params['password'])) {
-            $params['password'] = password_hash($params['password'], PASSWORD_DEFAULT);
-            $params['password_algo'] = NULL;
-        } else {
-            unset($params['password']);
-        }
-        if (isset($params['plan_id'])) {
-            $plan = Plan::find($params['plan_id']);
-            if (!$plan) {
-                abort(500, '订阅计划不存在');
+        return DB::transaction(function () use ($request) {
+            $params = $request->validated();
+            $user = User::where('id', $request->input('id'))
+                ->where('is_admin', 0)->where('is_staff', 0)->lockForUpdate()->first();
+            if (!$user) {
+                abort(500, '用户不存在');
             }
-            $params['group_id'] = $plan->group_id;
-        }
+            if (User::where('email', $params['email'])->first() && $user->email !== $params['email']) {
+                abort(500, '邮箱已被使用');
+            }
+            if (isset($params['password'])) {
+                $params['password'] = password_hash($params['password'], PASSWORD_DEFAULT);
+                $params['password_algo'] = NULL;
+            } else {
+                unset($params['password']);
+            }
+            if (isset($params['plan_id'])) {
+                $plan = Plan::find($params['plan_id']);
+                if (!$plan) {
+                    abort(500, '订阅计划不存在');
+                }
+                $params['group_id'] = $plan->group_id;
+            }
 
-        try {
-            $user->update($params);
-        } catch (\Exception $e) {
-            abort(500, '保存失败');
-        }
-        return response([
-            'data' => true
-        ]);
+            try {
+                $user->update($params);
+                if ($user->wasChanged('password') || (int)$user->banned === 1) {
+                    (new AuthService($user))->removeAllSession();
+                }
+            } catch (\Exception $e) {
+                abort(500, '保存失败');
+            }
+            return response([
+                'data' => true
+            ]);
+        });
     }
 
     public function sendMail(UserSendMail $request)

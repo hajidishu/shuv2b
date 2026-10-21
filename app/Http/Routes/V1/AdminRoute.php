@@ -32,6 +32,7 @@ class AdminRoute
             $router->post('/server/route/save', 'V1\\Admin\\Server\\RouteController@save');
             $router->post('/server/route/drop', 'V1\\Admin\\Server\\RouteController@drop');
             $router->get ('/server/manage/getNodes', 'V1\\Admin\\Server\\ManageController@getNodes');
+            $router->post('/server/manage/batch', 'V1\\Admin\\Server\\BatchController@execute');
             $router->post('/server/manage/sort', 'V1\\Admin\\Server\\ManageController@sort');
             $router->group([
                 'prefix' => 'server/trojan'
@@ -154,6 +155,19 @@ class AdminRoute
             $router->post('/knowledge/drop', 'V1\\Admin\\KnowledgeController@drop');
             $router->post('/knowledge/sort', 'V1\\Admin\\KnowledgeController@sort');
             // Payment
+            $router->get('/subscribe-audit/fetch', 'V1\\Admin\\SubscriptionAuditController@fetch');
+            $router->get('/leak-probe/fetch', 'V1\\Admin\\LeakProbeController@fetch');
+            $router->get('/leak-probe/detail', 'V1\\Admin\\LeakProbeController@detail');
+            $router->get('/leak-probe/members', 'V1\\Admin\\LeakProbeController@members');
+            $router->get('/leak-probe/nodes', 'V1\\Admin\\LeakProbeController@nodes');
+            $router->post('/leak-probe/nodes', 'V1\\Admin\\LeakProbeController@nodes');
+            $router->post('/leak-probe/preview', 'V1\\Admin\\LeakProbeController@preview');
+            $router->post('/leak-probe/create', 'V1\\Admin\\LeakProbeController@create');
+            $router->post('/leak-probe/update', 'V1\\Admin\\LeakProbeController@update');
+            $router->get('/subscribe-audit/detail', 'V1\\Admin\\SubscriptionAuditController@detail');
+            $router->get('/subscribe-audit/stats', 'V1\\Admin\\SubscriptionAuditController@stats');
+            $router->get('/subscribe-audit/settings', 'V1\\Admin\\SubscriptionAuditController@settings');
+            $router->post('/subscribe-audit/settings', 'V1\\Admin\\SubscriptionAuditController@saveSettings');
             $router->get ('/payment/fetch', 'V1\\Admin\\PaymentController@fetch');
             $router->get ('/payment/getPaymentMethods', 'V1\\Admin\\PaymentController@getPaymentMethods');
             $router->post('/payment/getPaymentForm', 'V1\\Admin\\PaymentController@getPaymentForm');

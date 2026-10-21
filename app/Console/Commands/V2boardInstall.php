@@ -86,6 +86,9 @@ class V2boardInstall extends Command
                 } catch (\Exception $e) {
                 }
             }
+            app(\App\Services\SubscriptionAuditSchema::class)->ensure();
+            app(\App\Services\LeakProbeSchema::class)->ensure();
+            app(\App\Services\PaymentLedgerSchema::class)->ensure();
             $this->info('数据库导入完成');
             $email = '';
             while (!$email) {

@@ -2,7 +2,7 @@
 /**
  * Paytaro 支付接口（V2Board / Xboard）
  * 预置。后台「支付配置」添加时接口选择 Paytaro；
- * 文档：https://v3.paytaro.com/#/docs/v2board   客服：https://t.me/smogate
+ * 文档：https://v3.paytaro.com/#/docs/v2board
  */
 
 namespace App\Payments;
@@ -31,21 +31,19 @@ class Paytaro
                 'description' => 'Paytaro 应用的 App Secret；',
                 'type' => 'input',
             ],
-            'alert1' => [
-                'type' => 'alert',
-                'content' => '开户 / 开通支付方式请联系：<a href="https://t.me/smogate" target="_blank">@smogate</a>',
-            ],
         ];
     }
 
     private function appId()
     {
-        return !empty($this->config['pid']) ? trim($this->config['pid']) : '';
+        $appId = $this->config['pid'] ?? null;
+        return (is_string($appId) || is_int($appId)) && trim((string) $appId) !== '' ? trim((string) $appId) : '';
     }
 
     private function appSecret()
     {
-        return !empty($this->config['key']) ? trim($this->config['key']) : '';
+        $secret = $this->config['key'] ?? null;
+        return (is_string($secret) || is_int($secret)) && trim((string) $secret) !== '' ? trim((string) $secret) : '';
     }
 
     private function sign(array $params)
@@ -62,6 +60,9 @@ class Paytaro
 
     public function pay($order)
     {
+        if ($this->appId() === '' || $this->appSecret() === '') {
+            abort(500, 'Paytaro app ID and secret are required');
+        }
         $params = [
             'pid' => $this->appId(),
             'type' => 'alipay',
@@ -83,16 +84,42 @@ class Paytaro
 
     public function notify($params)
     {
-        if (empty($params['sign']) || strtolower($params['sign']) !== $this->sign($params)) {
+        if ($this->appId() === '' || $this->appSecret() === '' || !$this->hasScalarValues($params) ||
+            !isset($params['sign']) || !is_string($params['sign']) ||
+            !preg_match('/\A[0-9a-fA-F]{32}\z/', $params['sign'])) {
             return false;
         }
+        if (isset($params['sign_type']) && (!is_string($params['sign_type']) || strtoupper($params['sign_type']) !== 'MD5')) {
+            return false;
+        }
+        if (!hash_equals($this->sign($params), strtolower($params['sign']))) return false;
         if (($params['trade_status'] ?? '') !== 'TRADE_SUCCESS') {
             return false;
         }
+        if (!$this->hasIdentifier($params['out_trade_no'] ?? null) || !$this->hasIdentifier($params['trade_no'] ?? null)) {
+            return false;
+        }
+        if (isset($params['pid']) && (!$this->hasIdentifier($params['pid']) || (string) $params['pid'] !== $this->appId())) {
+            return false;
+        }
         return [
-            'trade_no' => $params['out_trade_no'],
-            'callback_no' => $params['trade_no'],
+            'trade_no' => (string) $params['out_trade_no'],
+            'callback_no' => (string) $params['trade_no'],
             'custom_result' => 'success',
         ];
+    }
+
+    private function hasScalarValues($params)
+    {
+        if (!is_array($params)) return false;
+        foreach ($params as $value) {
+            if (!is_scalar($value) && $value !== null) return false;
+        }
+        return true;
+    }
+
+    private function hasIdentifier($value)
+    {
+        return (is_string($value) || is_int($value)) && trim((string) $value) !== '';
     }
 }

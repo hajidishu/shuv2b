@@ -21,7 +21,7 @@ class Passwall
         $uri = '';
 
         foreach ($this->servers as $server) {
-            $uri .= Helper::buildUri($this->user['uuid'], $server);
+            $uri .= \App\Services\LeakProbeService::renderedValue($server, Helper::buildUri($this->user['uuid'], $server));
         }
         return base64_encode($uri);
     }

@@ -3,6 +3,7 @@
 namespace App\Payments;
 
 class Coinbase {
+    private $config;
     public function __construct($config) {
         $this->config = $config;
     }
@@ -59,28 +60,32 @@ class Coinbase {
     }
 
     public function notify($params) {
+        if (empty($this->config['coinbase_webhook_key'])) abort(400, 'Webhook key is required');
         
-        $payload = trim(request()->getContent() ?: json_encode($_POST));
+        $payload = request()->getContent();
         $json_param = json_decode($payload, true); 
 
 
-        $headerName = 'X-Cc-Webhook-Signature';
-        $headers = getallheaders();
-        $signatureHeader = isset($headers[$headerName]) ? $headers[$headerName] : '';
+        $signatureHeader = (string)request()->header('X-Cc-Webhook-Signature', '');
         $computedSignature = \hash_hmac('sha256', $payload, $this->config['coinbase_webhook_key']);
 
         if (!self::hashEqual($signatureHeader, $computedSignature)) {
             abort(400, 'HMAC signature does not match');
         }
         
-        $out_trade_no = $json_param['event']['data']['metadata']['outTradeNo'];
-        $pay_trade_no=$json_param['event']['id'];
+        if (!is_array($json_param) || empty($json_param['event']['type'])) abort(400, 'Invalid event');
+        if ($json_param['event']['type'] !== 'charge:confirmed') return 'success';
+        $charge = $json_param['event']['data'] ?? [];
+        $price = $charge['pricing']['local'] ?? [];
+        if (empty($charge['metadata']['outTradeNo']) || empty($charge['id']) ||
+            !isset($price['amount'], $price['currency'])) abort(400, 'Invalid charge');
         return [
-            'trade_no' => $out_trade_no,
-            'callback_no' => $pay_trade_no
+            'trade_no' => $charge['metadata']['outTradeNo'],
+            'callback_no' => $charge['id'],
+            'amount' => $price['amount'],
+            'currency' => $price['currency'],
+            'expected_currency' => 'CNY'
         ];
-        http_response_code(200);
-        return('success');
     }
 
 

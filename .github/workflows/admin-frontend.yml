@@ -1,0 +1,98 @@
+name: Admin frontend
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/admin/package-lock.json
+      - name: Check non-destructive update workflow
+        run: node tests/update-script.mjs
+      - name: Build and check admin frontend
+        working-directory: frontend/admin
+        run: |
+          npm ci
+          npm run build
+          npm test
+          npm run publish:assets
+          npx playwright install --with-deps chromium
+      - name: Check admin pages with local fixtures
+        working-directory: frontend/admin
+        run: |
+          export ADMIN_BROWSER_PATH="$(node -e 'console.log(require("playwright").chromium.executablePath())')"
+          node tests/browser.mjs
+          node tests/ui-parity.mjs
+          node tests/resource-parity.mjs
+          node tests/editor-layout.mjs
+          node tests/user-controls.mjs
+          node tests/filter-payment-ui.mjs
+          node tests/telegram-webhook.mjs
+          node tests/subscription-audit.mjs
+          node tests/leak-probe.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: admin-runtime-assets
+          path: public/assets/admin-v2/
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: admin-verification
+          path: frontend/admin/test-results/
+          retention-days: 14
+
+  release:
+    if: github.repository == 'hajidishu/shuv2b' && github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: runtime-release
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: source
+      - uses: actions/download-artifact@v4
+        with:
+          name: admin-runtime-assets
+          path: source/public/assets/admin-v2
+      - uses: actions/checkout@v4
+        with:
+          path: deployment
+          fetch-depth: 0
+      - name: Select runtime branch
+        working-directory: deployment
+        run: |
+          if git show-ref --verify --quiet refs/remotes/origin/release; then
+            git checkout -B release origin/release
+          else
+            git switch --orphan release
+          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Export and publish runtime
+        run: |
+          node source/frontend/admin/scripts/export-deployment.mjs "$GITHUB_WORKSPACE/deployment"
+          git -C deployment config user.name 'github-actions[bot]'
+          git -C deployment config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -C deployment add --all
+          if ! git -C deployment diff --cached --quiet; then
+            git -C deployment commit -m "Deploy v2board runtime from $GITHUB_SHA"
+            git -C deployment push origin HEAD:release
+          fi

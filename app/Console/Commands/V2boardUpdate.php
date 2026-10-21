@@ -57,6 +57,10 @@ class V2boardUpdate extends Command
             } catch (\Exception $e) {
             }
         }
+        // Unlike legacy SQL replay, audit schema errors must fail the upgrade visibly.
+        app(\App\Services\SubscriptionAuditSchema::class)->ensure();
+        app(\App\Services\LeakProbeSchema::class)->ensure();
+        app(\App\Services\PaymentLedgerSchema::class)->ensure();
         \Artisan::call('horizon:terminate');
         $this->info('更新完毕，队列服务已重启，你无需进行任何操作。');
     }

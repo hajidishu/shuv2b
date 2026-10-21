@@ -41,24 +41,18 @@ class AuthService
 
     public static function decryptAuthData($jwt)
     {
+        if (!is_string($jwt) || $jwt === '') return false;
         try {
-            if (!is_string($jwt) || $jwt === '') {
-                return false;
-            }
-            if (!Cache::has($jwt)) {
-                $data = (array)JWT::decode($jwt, new Key(config('app.key'), 'HS256'));
-                if (!self::checkSession($data['id'], $data['session'])) return false;
-                $user = User::select([
-                    'id',
-                    'email',
-                    'is_admin',
-                    'is_staff'
-                ])
-                    ->find($data['id']);
-                if (!$user) return false;
-                Cache::put($jwt, $user->toArray(), 3600);
-            }
-            return Cache::get($jwt);
+            $data = (array)JWT::decode($jwt, new Key(config('app.key'), 'HS256'));
+            if (!isset($data['id'], $data['session']) || !is_scalar($data['id']) ||
+                !ctype_digit((string)$data['id']) || (int)$data['id'] < 1 ||
+                !is_string($data['session'])) return false;
+            // Old identity caches may outlive a revoked session. Never use them
+            // to authorize a request, including during a rolling upgrade.
+            if (!self::checkSession($data['id'], $data['session'])) return false;
+            $user = User::select(['id', 'email', 'is_admin', 'is_staff', 'banned'])->find($data['id']);
+            if (!$user || $user->banned) return false;
+            return $user->only(['id', 'email', 'is_admin', 'is_staff']);
         } catch (\Exception $e) {
             return false;
         }
@@ -66,9 +60,8 @@ class AuthService
 
     private static function checkSession($userId, $session)
     {
-        $sessions = (array)Cache::get(CacheKey::get("USER_SESSIONS", $userId)) ?? [];
-        if (!in_array($session, array_keys($sessions))) return false;
-        return true;
+        $sessions = (array)Cache::get(CacheKey::get("USER_SESSIONS", $userId), []);
+        return isset($sessions[$session]);
     }
 
     private static function addSession($userId, $guid, $meta)
@@ -92,11 +85,13 @@ class AuthService
     {
         $cacheKey = CacheKey::get("USER_SESSIONS", $this->user->id);
         $sessions = (array)Cache::get($cacheKey, []);
+        $jwt = $sessions[$sessionId]['auth_data'] ?? null;
         unset($sessions[$sessionId]);
         if (!Cache::put(
             $cacheKey,
             $sessions
         )) return false;
+        if (is_string($jwt)) Cache::forget($jwt);
         return true;
     }
 

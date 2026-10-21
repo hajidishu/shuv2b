@@ -14,9 +14,14 @@ class OrderFetch extends FormRequest
     public function rules()
     {
         return [
-            'filter.*.key' => 'required|in:email,trade_no,status,commission_status,user_id,invite_user_id,callback_no,commission_balance',
+            'current' => 'nullable|integer|min:1',
+            'pageSize' => 'nullable|integer|min:10|max:500',
+            'filter' => 'nullable|array|max:30',
+            'filter.*.key' => 'required|in:email,trade_no,status,type,commission_status,user_id,invite_user_id,callback_no,commission_balance',
             'filter.*.condition' => 'required|in:>,<,=,>=,<=,模糊,!=',
-            'filter.*.value' => ''
+            'filter.*.value' => ['required', function ($attribute, $value, $fail) {
+                if (!is_scalar($value)) $fail('过滤值必须是文本或数值');
+            }]
         ];
     }
 

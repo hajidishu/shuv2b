@@ -21,6 +21,12 @@ class ServerController extends Controller
             $serverService = new ServerService();
             $servers = $serverService->getAvailableServers($user);
         }
+
+        foreach ($servers as &$server) {
+            \App\Services\LeakProbeService::rendered($server);
+            unset($server['_leak_probe']);
+        }
+        unset($server);
         $eTag = sha1(json_encode(array_column($servers, 'cache_key')));
         if (strpos($request->header('If-None-Match'), $eTag) !== false ) {
             abort(304);

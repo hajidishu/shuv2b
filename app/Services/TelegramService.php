@@ -47,6 +47,19 @@ class TelegramService {
         return $this->request('getMe');
     }
 
+    public static function normalizeWebhookDomain($value)
+    {
+        if (!is_string($value) || strlen($value) > 2048 ||
+            preg_match('/[\x00-\x20\x7f\\\\]/', $value) || !filter_var($value, FILTER_VALIDATE_URL)) return null;
+        $parts = parse_url($value);
+        if (!$parts || !isset($parts['scheme'], $parts['host']) || strtolower($parts['scheme']) !== 'https' ||
+            isset($parts['user']) || isset($parts['pass']) || isset($parts['query']) || isset($parts['fragment']) ||
+            !in_array($parts['path'] ?? '', ['', '/'], true)) return null;
+        $port = $parts['port'] ?? 443;
+        if (!in_array($port, [443, 80, 88, 8443], true)) return null;
+        return 'https://' . strtolower($parts['host']) . ($port === 443 ? '' : ':' . $port);
+    }
+
     public function setWebhook(string $url)
     {
         $commands = $this->discoverCommands(base_path('app/Plugins/Telegram/Commands'));

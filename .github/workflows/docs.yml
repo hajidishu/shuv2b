@@ -1,0 +1,60 @@
+name: Documentation
+
+on:
+  push:
+    branches: [master]
+    paths: ['frontend/docs/**', 'docs/**', 'readme.md', '.github/workflows/docs.yml']
+  pull_request:
+    paths: ['frontend/docs/**', 'docs/**', 'readme.md', '.github/workflows/docs.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/docs/package-lock.json
+      - name: Install documentation dependencies
+        working-directory: frontend/docs
+        run: npm ci
+      - name: Build documentation
+        working-directory: frontend/docs
+        env:
+          DOCS_BASE: ${{ vars.DOCS_BASE }}
+        run: |
+          if [ -z "$DOCS_BASE" ]; then
+            repository_name="${GITHUB_REPOSITORY#*/}"
+            if [[ "$repository_name" == *.github.io ]]; then
+              export DOCS_BASE=/
+            else
+              export DOCS_BASE="/$repository_name/"
+            fi
+          fi
+          npm run build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/docs/.vitepress/dist
+
+  deploy:
+    if: github.repository == 'hajidishu/shuv2b' && github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment

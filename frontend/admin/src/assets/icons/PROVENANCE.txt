@@ -1,0 +1,4 @@
+Reused from wyx2685/v2board commit 70371f756b392dc17ff8bb9105591b34d62deeb3, public/assets/admin/static.
+simple-line-icons.woff2 SHA256 104673f4859604362a18fc6294197d8fffb8cb24ad3211e92eb04f655e18cf4a
+fa-solid.woff2 SHA256 80fe90cb559538158bc235f4e539d9bcae203e19fab7c6970aad37b0154348ff
+Icon content mappings extracted from the same original umi/components CSS. No original application JavaScript is loaded.

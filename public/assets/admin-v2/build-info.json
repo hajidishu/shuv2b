@@ -1,0 +1,8 @@
+{
+  "version": "1.0.0",
+  "kind": "production",
+  "entry": "assets/index-yik7s7f4.js",
+  "entrySha256": "ff683045465bb205759fed6ec4d5b70cf319e448eaf4492d8507ed988ea55a58",
+  "apiVersion": "v1",
+  "legacyRuntime": false
+}

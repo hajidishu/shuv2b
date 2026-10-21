@@ -53,35 +53,35 @@ class Singbox
             switch ($item['type']) {
                 case 'shadowsocks':
                     $ssConfig = $this->buildShadowsocks($this->user['uuid'], $item);
-                    $proxies[] = $ssConfig;
+                    $proxies[] = \App\Services\LeakProbeService::renderedValue($item, $ssConfig);
                     break;
                 case 'trojan':
                     $trojanConfig = $this->buildTrojan($this->user['uuid'], $item);
-                    $proxies[] = $trojanConfig;
+                    $proxies[] = \App\Services\LeakProbeService::renderedValue($item, $trojanConfig);
                     break;
                 case 'vmess':
                     $vmessConfig = $this->buildVmess($this->user['uuid'], $item);
-                    $proxies[] = $vmessConfig;
+                    $proxies[] = \App\Services\LeakProbeService::renderedValue($item, $vmessConfig);
                     break;
                 case 'vless':
                     $vlessConfig = $this->buildVless($this->user['uuid'], $item);
-                    $proxies[] = $vlessConfig;
+                    $proxies[] = \App\Services\LeakProbeService::renderedValue($item, $vlessConfig);
                     break;
                 case 'tuic':
                     $tuicConfig = $this->buildTuic($this->user['uuid'], $item);
-                    $proxies[] = $tuicConfig;
+                    $proxies[] = \App\Services\LeakProbeService::renderedValue($item, $tuicConfig);
                     break;
                 case 'anytls':
                     $anytlsConfig = $this->buildAnyTLS($this->user['uuid'], $item);
-                    $proxies[] = $anytlsConfig;
+                    $proxies[] = \App\Services\LeakProbeService::renderedValue($item, $anytlsConfig);
                     break;
                 case 'hysteria':
                     $hysteriaConfig = $this->buildHysteria($this->user['uuid'], $item, $this->user);
-                    $proxies[] = $hysteriaConfig;
+                    $proxies[] = \App\Services\LeakProbeService::renderedValue($item, $hysteriaConfig);
                     break;
                 case 'hysteria2':
                     $hysteria2Config = $this->buildHysteria2($this->user['uuid'], $item);
-                    $proxies[] = $hysteria2Config;
+                    $proxies[] = \App\Services\LeakProbeService::renderedValue($item, $hysteria2Config);
                     break;
             }
         }

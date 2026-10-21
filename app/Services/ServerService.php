@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Cache;
 
 class ServerService
 {
-    public function getAvailableVless(User $user): array
+    public function getAvailableVless(User $user, $probeNodeId = null): array
     {
         $servers = [];
         $model = ServerVless::orderBy('sort', 'ASC');
@@ -27,7 +27,7 @@ class ServerService
         foreach ($server as $key => $v) {
             if (!$v['show']) continue;
             $server[$key]['type'] = 'vless';
-            if (!in_array($user->group_id, $server[$key]['group_id'])) continue;
+            if (!in_array($user->group_id, $server[$key]['group_id']) && (int)$v['id'] !== $probeNodeId) continue;
             if (strpos($server[$key]['port'], '-') !== false) {
                 $server[$key]['port'] = Helper::randomPort($server[$key]['port']);
             }
@@ -56,7 +56,7 @@ class ServerService
         return $servers;
     }
 
-    public function getAvailableVmess(User $user): array
+    public function getAvailableVmess(User $user, $probeNodeId = null): array
     {
         $servers = [];
         $model = ServerVmess::orderBy('sort', 'ASC');
@@ -64,7 +64,7 @@ class ServerService
         foreach ($vmess as $key => $v) {
             if (!$v['show']) continue;
             $vmess[$key]['type'] = 'vmess';
-            if (!in_array($user->group_id, $vmess[$key]['group_id'])) continue;
+            if (!in_array($user->group_id, $vmess[$key]['group_id']) && (int)$v['id'] !== $probeNodeId) continue;
             if (strpos($vmess[$key]['port'], '-') !== false) {
                 $vmess[$key]['port'] = Helper::randomPort($vmess[$key]['port']);
             }
@@ -80,7 +80,7 @@ class ServerService
         return $servers;
     }
 
-    public function getAvailableTrojan(User $user): array
+    public function getAvailableTrojan(User $user, $probeNodeId = null): array
     {
         $servers = [];
         $model = ServerTrojan::orderBy('sort', 'ASC');
@@ -88,7 +88,7 @@ class ServerService
         foreach ($trojan as $key => $v) {
             if (!$v['show']) continue;
             $trojan[$key]['type'] = 'trojan';
-            if (!in_array($user->group_id, $trojan[$key]['group_id'])) continue;
+            if (!in_array($user->group_id, $trojan[$key]['group_id']) && (int)$v['id'] !== $probeNodeId) continue;
             if (strpos($trojan[$key]['port'], '-') !== false) {
                 $trojan[$key]['port'] = Helper::randomPort($trojan[$key]['port']);
             }
@@ -102,7 +102,7 @@ class ServerService
         return $servers;
     }
 
-    public function getAvailableTuic(User $user)
+    public function getAvailableTuic(User $user, $probeNodeId = null)
     {
         $availableServers = [];
         $model = ServerTuic::orderBy('sort', 'ASC');
@@ -111,7 +111,7 @@ class ServerService
             if (!$v['show']) continue;
             $servers[$key]['type'] = 'tuic';
             $servers[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_TUIC_LAST_CHECK_AT', $v['id']));
-            if (!in_array($user->group_id, $v['group_id'])) continue;
+            if (!in_array($user->group_id, $v['group_id']) && (int)$v['id'] !== $probeNodeId) continue;
             if (isset($servers[$v['parent_id']])) {
                 $servers[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_TUIC_LAST_CHECK_AT', $v['parent_id']));
                 $servers[$key]['created_at'] = $servers[$v['parent_id']]['created_at'];
@@ -121,7 +121,7 @@ class ServerService
         return $availableServers;
     }
 
-    public function getAvailableHysteria(User $user)
+    public function getAvailableHysteria(User $user, $probeNodeId = null)
     {
         $availableServers = [];
         $model = ServerHysteria::orderBy('sort', 'ASC');
@@ -130,7 +130,7 @@ class ServerService
             if (!$v['show']) continue;
             $servers[$key]['type'] = 'hysteria';
             $servers[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_HYSTERIA_LAST_CHECK_AT', $v['id']));
-            if (!in_array($user->group_id, $v['group_id'])) continue;
+            if (!in_array($user->group_id, $v['group_id']) && (int)$v['id'] !== $probeNodeId) continue;
             if (isset($servers[$v['parent_id']])) {
                 $servers[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_HYSTERIA_LAST_CHECK_AT', $v['parent_id']));
                 $servers[$key]['created_at'] = $servers[$v['parent_id']]['created_at'];
@@ -141,7 +141,7 @@ class ServerService
         return $availableServers;
     }
 
-    public function getAvailableShadowsocks(User $user)
+    public function getAvailableShadowsocks(User $user, $probeNodeId = null)
     {
         $servers = [];
         $model = ServerShadowsocks::orderBy('sort', 'ASC');
@@ -150,7 +150,7 @@ class ServerService
             if (!$v['show']) continue;
             $shadowsocks[$key]['type'] = 'shadowsocks';
             $shadowsocks[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_SHADOWSOCKS_LAST_CHECK_AT', $v['id']));
-            if (!in_array($user->group_id, $v['group_id'])) continue;
+            if (!in_array($user->group_id, $v['group_id']) && (int)$v['id'] !== $probeNodeId) continue;
             if (strpos($v['port'], '-') !== false) {
                 $shadowsocks[$key]['port'] = Helper::randomPort($v['port']);
             }
@@ -168,7 +168,7 @@ class ServerService
         return $servers;
     }
 
-    public function getAvailableAnyTLS(User $user)
+    public function getAvailableAnyTLS(User $user, $probeNodeId = null)
     {
         $servers = [];
         $model = ServerAnytls::orderBy('sort', 'ASC');
@@ -177,7 +177,7 @@ class ServerService
             if (!$v['show']) continue;
             $anytls[$key]['type'] = 'anytls';
             $anytls[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_ANYTLS_LAST_CHECK_AT', $v['id']));
-            if (!in_array($user->group_id, $v['group_id'])) continue;
+            if (!in_array($user->group_id, $v['group_id']) && (int)$v['id'] !== $probeNodeId) continue;
             if (strpos($v['port'], '-') !== false) {
                 $anytls[$key]['port'] = Helper::randomPort($v['port']);
             }
@@ -190,7 +190,7 @@ class ServerService
         return $servers;
     }
 
-    public function getAvailableV2node(User $user)
+    public function getAvailableV2node(User $user, $probeNodeId = null)
     {
         $servers = [];
         $model = ServerV2node::orderBy('sort', 'ASC');
@@ -199,7 +199,7 @@ class ServerService
             if (!$v['show']) continue;
             $v2node[$key]['type'] = 'v2node';
             $v2node[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_V2NODE_LAST_CHECK_AT', $v['id']));
-            if (!in_array($user->group_id, $v['group_id'])) continue;
+            if (!in_array($user->group_id, $v['group_id']) && (int)$v['id'] !== $probeNodeId) continue;
             if (isset($v2node[$v['parent_id']])) {
                 $v2node[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_V2NODE_LAST_CHECK_AT', $v['parent_id']));
                 $v2node[$key]['created_at'] = $v2node[$v['parent_id']]['created_at'];
@@ -224,18 +224,22 @@ class ServerService
 
     public function getAvailableServers(User $user)
     {
+        $probe = new LeakProbeService();
+        $visibility = $probe->visibility($user);
+        $extra = $visibility['extra'];
         $servers = array_merge(
-            $this->getAvailableShadowsocks($user),
-            $this->getAvailableVmess($user),
-            $this->getAvailableTrojan($user),
-            $this->getAvailableTuic($user),
-            $this->getAvailableHysteria($user),
-            $this->getAvailableVless($user),
-            $this->getAvailableAnyTLS($user),
-            $this->getAvailableV2node($user)
+            $this->getAvailableShadowsocks($user, $extra['shadowsocks'] ?? null),
+            $this->getAvailableVmess($user, $extra['vmess'] ?? null),
+            $this->getAvailableTrojan($user, $extra['trojan'] ?? null),
+            $this->getAvailableTuic($user, $extra['tuic'] ?? null),
+            $this->getAvailableHysteria($user, $extra['hysteria'] ?? null),
+            $this->getAvailableVless($user, $extra['vless'] ?? null),
+            $this->getAvailableAnyTLS($user, $extra['anytls'] ?? null),
+            $this->getAvailableV2node($user, $extra['v2node'] ?? null)
         );
         $tmp = array_column($servers, 'sort');
         array_multisort($tmp, SORT_ASC, $servers);
+        $servers = $probe->filterServers($user, $servers, $visibility);
         return array_map(function ($server) {
             if (strpos($server['port'], '-')) {
                 $server['mport'] = (string)$server['port'];
@@ -248,10 +252,9 @@ class ServerService
         }, $servers);
     }
 
-    public function getAvailableUsers($groupId)
+    public function getAvailableUsers($groupId, $nodeType, $nodeId)
     {
-        return User::whereIn('group_id', $groupId)
-            ->whereRaw('u + d < transfer_enable')
+        $query = User::whereRaw('u + d < transfer_enable')
             ->where(function ($query) {
                 $query->where('expired_at', '>=', time())
                     ->orWhere('expired_at', NULL);
@@ -262,8 +265,11 @@ class ServerService
                 'uuid',
                 'speed_limit',
                 'device_limit'
-            ])
-            ->get();
+            ]);
+        $probe = new LeakProbeService();
+        $users = $probe->restrictUsers($query, $nodeType, $nodeId, $groupId)->get();
+        $probe->recordPull();
+        return $users;
     }
 
     public function log(int $userId, int $serverId, int $u, int $d, float $rate, string $method)

@@ -156,15 +156,13 @@ class UserController extends Controller
 
     public function redeemgiftcard(UserRedeemGiftCard $request)
     {
-        DB::beginTransaction();
-
-        try {
-            $user = User::find($request->user['id']);
+        return DB::transaction(function () use ($request) {
+            $user = User::where('id', $request->user['id'])->lockForUpdate()->first();
             if (!$user) {
                 abort(500, __('The user does not exist'));
             }
             $giftcard_input = $request->giftcard;
-            $giftcard = Giftcard::where('code', $giftcard_input)->first();
+            $giftcard = Giftcard::where('code', $giftcard_input)->lockForUpdate()->first();
 
             if (!$giftcard) {
                 abort(500, __('The gift card does not exist'));
@@ -185,7 +183,9 @@ class UserController extends Controller
                 }
             }
 
-            $usedUserIds = $giftcard->used_user_ids ? json_decode($giftcard->used_user_ids, true) : [];
+            $usedUserIds = $giftcard->used_user_ids;
+            // Accept legacy double-encoded JSON while writing native array casts.
+            if (is_string($usedUserIds)) $usedUserIds = json_decode($usedUserIds, true);
             if (!is_array($usedUserIds)) {
                 $usedUserIds = [];
             }
@@ -195,7 +195,9 @@ class UserController extends Controller
             }
 
             $usedUserIds[] = $user->id;
-            $giftcard->used_user_ids = json_encode($usedUserIds);
+            $giftcard->used_user_ids = $usedUserIds;
+
+            if ($giftcard->value !== null && (int)$giftcard->value < 0) abort(500, __('Invalid gift card value'));
 
             switch ($giftcard->type) {
                 case 1:
@@ -222,6 +224,7 @@ class UserController extends Controller
                 case 5:
                     if ($user->plan_id == null || ($user->expired_at !== null && $user->expired_at < $currentTime)) {
                         $plan = Plan::where('id', $giftcard->plan_id)->first();
+                        if (!$plan) abort(500, __('Subscription plan does not exist'));
                         $user->plan_id = $plan->id;
                         $user->group_id = $plan->group_id;
                         $user->transfer_enable = $plan->transfer_enable * 1073741824;
@@ -249,17 +252,12 @@ class UserController extends Controller
                 throw new \Exception(__('Save failed'));
             }
 
-            DB::commit();
-
             return response([
                 'data' => true,
                 'type' => $giftcard->type,
                 'value' => $giftcard->value
             ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            abort(500, $e->getMessage());
-        }
+        }, 3);
     }
 
     public function info(Request $request)
@@ -409,37 +407,27 @@ class UserController extends Controller
 
     public function transfer(UserTransfer $request)
     {
-        $user = User::find($request->user['id']);
-        if (!$user) {
-            abort(500, __('The user does not exist'));
-        }
-        if ($request->input('transfer_amount') > $user->commission_balance) {
-            abort(500, __('Insufficient commission balance'));
-        }
-        DB::beginTransaction();
-        $order = new Order();
-        $orderService = new OrderService($order);
-        $order->user_id = $request->user['id'];
-        $order->plan_id = 0;
-        $order->period = 'deposit';
-        $order->trade_no = Helper::generateOrderNo();
-        $order->total_amount = $request->input('transfer_amount');
-
-        $orderService->setOrderType($user);
-        $orderService->setInvite($user);
-
-        $user->commission_balance = $user->commission_balance - $request->input('transfer_amount');
-        $user->balance = $user->balance + $request->input('transfer_amount');
-        $order->status = 3;
-        $order->total_amount = 0;
-        $order->surplus_amount = $request->input('transfer_amount');
-        $order->callback_no = '佣金划转 Commission transfer';
-        if (!$order->save()||!$user->save()) {
-            DB::rollback();
-            abort(500, __('Transfer failed'));
-        }
-
-        DB::commit();
+        DB::transaction(function () use ($request) {
+            $user = User::where('id', $request->user['id'])->lockForUpdate()->first();
+            if (!$user) abort(500, __('The user does not exist'));
+            $amount = $request->input('transfer_amount');
+            if ($amount > $user->commission_balance) abort(500, __('Insufficient commission balance'));
+            $order = new Order();
+            $order->user_id = $user->id;
+            $order->plan_id = 0;
+            $order->period = 'deposit';
+            $order->type = 9;
+            $order->trade_no = Helper::generateOrderNo();
+            $order->status = 3;
+            $order->total_amount = 0;
+            $order->surplus_amount = $amount;
+            $order->commission_status = 3;
+            $order->commission_balance = 0;
+            $order->callback_no = '佣金划转 Commission transfer';
+            $user->commission_balance -= $amount;
+            $user->balance += $amount;
+            if (!$order->save() || !$user->save()) abort(500, __('Transfer failed'));
+        }, 3);
 
         return response([
             'data' => true

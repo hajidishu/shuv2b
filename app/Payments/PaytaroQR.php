@@ -3,7 +3,7 @@
  * Paytaro 弹窗显码支付接口（V2Board）—— 无收银台模式
  * 由 Paytaro 一键脚本 install-qr.sh 生成。可与收银台模式的 Paytaro.php 共存。
  * 后台「支付配置」添加时接口选择 PaytaroQR，每个 Paytaro 支付方式（支付宝 / USDT-TRC20 …）各添加一条，填对应的支付方式 UUID。
- * 文档：https://v3.paytaro.com/#/docs/install-script   客服：https://t.me/paytaro
+ * 文档：https://v3.paytaro.com/#/docs/install-script
  */
 
 namespace App\Payments;
@@ -38,25 +38,26 @@ class PaytaroQR
                 'description' => 'Paytaro 商户后台 → 应用管理 → 应用 → 付款方式 → 复制对应支付方式的 UUID（每个支付方式添加一条支付配置）',
                 'type' => 'input',
             ],
-            'alert1' => [
-                'type' => 'alert',
-                'content' => '弹窗显码模式：用户在本站页面内直接扫码 / 转账付款，不经过 Paytaro 收银台。开户与开通支付方式请联系 <a href="https://t.me/paytaro" target="_blank">@paytaro</a>',
-            ],
         ];
     }
 
     private function appId()
     {
-        return !empty($this->config['pid']) ? trim($this->config['pid']) : '';
+        $appId = $this->config['pid'] ?? null;
+        return (is_string($appId) || is_int($appId)) && trim((string) $appId) !== '' ? trim((string) $appId) : '';
     }
 
     private function appSecret()
     {
-        return !empty($this->config['key']) ? trim($this->config['key']) : '';
+        $secret = $this->config['key'] ?? null;
+        return (is_string($secret) || is_int($secret)) && trim((string) $secret) !== '' ? trim((string) $secret) : '';
     }
 
     public function pay($order)
     {
+        if ($this->appId() === '' || $this->appSecret() === '') {
+            abort(500, 'Paytaro app ID and secret are required');
+        }
         $methodUuid = trim((string) ($this->config['method_uuid'] ?? ''));
         if ($methodUuid === '') {
             abort(500, 'Paytaro：请在支付配置中填写支付方式 UUID');
@@ -97,8 +98,11 @@ class PaytaroQR
 
     public function notify($params)
     {
-        $secret = isset($_SERVER['HTTP_X_APP_SECRET']) ? (string) $_SERVER['HTTP_X_APP_SECRET'] : '';
-        if ($secret === '' || !hash_equals($this->appSecret(), $secret)) {
+        if ($this->appId() === '' || $this->appSecret() === '') {
+            return false;
+        }
+        $secret = $_SERVER['HTTP_X_APP_SECRET'] ?? null;
+        if (!is_string($secret) || trim($secret) === '' || !hash_equals($this->appSecret(), $secret)) {
             return false;
         }
         if (!is_array($params) || !isset($params['merchant_no'])) {
@@ -107,16 +111,24 @@ class PaytaroQR
                 $params = $raw;
             }
         }
-        if (!is_array($params)) {
+        if (!$this->hasScalarValues($params)) {
             return false;
         }
         if (!in_array($params['status'] ?? '', ['PAID', 'SUCCESS'], true)) {
             return false;
         }
-        $tradeNo = (string) ($params['merchant_no'] ?? '');
-        $callbackNo = (string) ($params['callback_no'] ?? '');
+        if (!$this->hasIdentifier($params['merchant_no'] ?? null)) {
+            return false;
+        }
+        $tradeNo = (string) $params['merchant_no'];
+        $callbackNo = '';
+        if (isset($params['callback_no'])) {
+            if (!$this->hasIdentifier($params['callback_no'])) return false;
+            $callbackNo = (string) $params['callback_no'];
+        }
         if ($callbackNo === '') {
-            $callbackNo = (string) ($params['transaction_no'] ?? '');
+            if (!$this->hasIdentifier($params['transaction_no'] ?? null)) return false;
+            $callbackNo = (string) $params['transaction_no'];
         }
         if ($tradeNo === '' || $callbackNo === '') {
             return false;
@@ -174,5 +186,19 @@ class PaytaroQR
     {
         $ua = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
         return preg_match('/Android|iPhone|iPad|iPod|Mobile|HarmonyOS/i', $ua) === 1;
+    }
+
+    private function hasScalarValues($params)
+    {
+        if (!is_array($params)) return false;
+        foreach ($params as $value) {
+            if (!is_scalar($value) && $value !== null) return false;
+        }
+        return true;
+    }
+
+    private function hasIdentifier($value)
+    {
+        return (is_string($value) || is_int($value)) && trim((string) $value) !== '';
     }
 }

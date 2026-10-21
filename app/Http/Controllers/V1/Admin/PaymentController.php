@@ -58,6 +58,7 @@ class PaymentController extends Controller
     {
         $payment = Payment::find($request->input('id'));
         if (!$payment) abort(500, '支付方式不存在');
+        if (!$payment->enable) PaymentService::validateConfiguration($payment->payment, $payment->config);
         $payment->enable = !$payment->enable;
         if (!$payment->save()) abort(500, '保存失败');
         return response([
@@ -74,9 +75,9 @@ class PaymentController extends Controller
             'name' => 'required',
             'icon' => 'nullable',
             'payment' => 'required',
-            'config' => 'required',
+            'config' => 'required|array',
             'notify_domain' => 'nullable|url',
-            'handling_fee_fixed' => 'nullable|integer',
+            'handling_fee_fixed' => 'nullable|integer|min:0',
             'handling_fee_percent' => 'nullable|numeric|between:0.1,100'
         ], [
             'name.required' => '显示名称不能为空',
@@ -86,6 +87,7 @@ class PaymentController extends Controller
             'handling_fee_fixed.integer' => '固定手续费格式有误',
             'handling_fee_percent.between' => '百分比手续费范围须在0.1-100之间'
         ]);
+        PaymentService::validateConfiguration($params['payment'], $params['config']);
         if ($request->input('id')) {
             $payment = Payment::find($request->input('id'));
             if (!$payment) abort(500, '支付方式不存在');
@@ -111,6 +113,7 @@ class PaymentController extends Controller
     {
         $payment = Payment::find($request->input('id'));
         if (!$payment) abort(500, '支付方式不存在');
+        if (\App\Services\PaymentLedgerSchema::installed() && DB::table(\App\Services\PaymentAttemptService::TABLE)->where('payment_id', $payment->id)->exists()) abort(409, '此支付方式已有付款记录，请停用并保留收款历史');
         return response([
             'data' => $payment->delete()
         ]);

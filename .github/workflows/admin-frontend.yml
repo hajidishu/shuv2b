@@ -88,6 +88,11 @@ jobs:
           node-version: '24'
       - name: Export and publish runtime
         run: |
+          git -C source fetch origin master
+          if [ "$(git -C source rev-parse origin/master)" != "$GITHUB_SHA" ]; then
+            echo "A newer source commit exists; skip this superseded runtime release."
+            exit 0
+          fi
           node source/frontend/admin/scripts/export-deployment.mjs "$GITHUB_WORKSPACE/deployment"
           git -C deployment config user.name 'github-actions[bot]'
           git -C deployment config user.email '41898282+github-actions[bot]@users.noreply.github.com'

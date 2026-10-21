@@ -103,6 +103,7 @@ const managedPaths = await Promise.all(
 );
 for (const output of managedPaths)
     await rm(output, { recursive: true, force: true });
+const published = new Set();
 for (const file of new Set(files)) {
     if (!roots.has(file.split("/")[0]) && !rootFiles.has(file)) continue;
     if (file.startsWith("storage/") && !file.endsWith(".gitignore")) continue;
@@ -114,6 +115,18 @@ for (const file of new Set(files)) {
     if (!(await stat(input).catch(() => null))?.isFile()) continue;
     await mkdir(dirname(output), { recursive: true });
     await cp(input, output);
+    published.add(file);
+}
+// Remove obsolete versioned runtime files, while preserving instance configuration
+// and untracked custom files in an existing deployment checkout.
+for (const file of git(target, "ls-files", "-z").split("\0").filter(Boolean)) {
+    if (published.has(file) || file === ".env" || file === "config/v2board.php") continue;
+    if (!roots.has(file.split("/")[0]) && !rootFiles.has(file)) continue;
+    const output = resolve(target, file);
+    const actual = await realpath(output).catch(() => null);
+    if (!output.startsWith(target + sep) || (actual && !actual.startsWith(actualTarget + sep)))
+        throw new Error("Obsolete runtime path escapes deployment checkout.");
+    await rm(output, { force: true });
 }
 await writeFile(
     resolve(target, "release.json"),

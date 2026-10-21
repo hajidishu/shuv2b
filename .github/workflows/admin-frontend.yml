@@ -33,15 +33,15 @@ jobs:
         working-directory: frontend/admin
         run: |
           export ADMIN_BROWSER_PATH="$(node -e 'console.log(require("playwright").chromium.executablePath())')"
-          node tests/browser.mjs
+          node tests/user-controls.mjs
           node tests/ui-parity.mjs
           node tests/resource-parity.mjs
           node tests/editor-layout.mjs
-          node tests/user-controls.mjs
           node tests/filter-payment-ui.mjs
           node tests/telegram-webhook.mjs
           node tests/subscription-audit.mjs
           node tests/leak-probe.mjs
+          node tests/browser.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: admin-runtime-assets

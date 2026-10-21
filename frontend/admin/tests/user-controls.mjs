@@ -117,8 +117,15 @@ const menuFor = (row) =>
     });
 const openUserMenu = async () => {
     await menuFor(userId).click();
-    const menu = page.locator(".ant-dropdown:visible").last();
+    const menu = page.locator(".ant-dropdown:visible").filter({
+        has: page.getByText("删除用户", { exact: true }),
+    }).last();
     await menu.locator(".ant-dropdown-menu-item").first().waitFor();
+    await menu.evaluate(async (element) => {
+        await Promise.all(element.getAnimations({ subtree: true }).map(
+            (animation) => animation.finished.catch(() => {}),
+        ));
+    });
     return menu;
 };
 const editor = () => page.locator(".ant-drawer:visible").last();
@@ -356,6 +363,7 @@ try {
             const result = await response;
             assert.ok(result.ok(), await result.text());
             assert.equal(new URL(result.url()).searchParams.get("sort"), key);
+            await result.finished();
         }
         // Finish the final sorted fetch before opening a row's transient menu.
         await page.waitForLoadState("networkidle");
@@ -365,6 +373,11 @@ try {
                     ".ant-table-wrapper .ant-spin-spinning",
                 ),
         );
+        // Network response headers can arrive before React replaces the table rows.
+        // Flush the render frames before opening a transient row dropdown.
+        await page.evaluate(() => new Promise((resolve) => {
+            requestAnimationFrame(() => requestAnimationFrame(resolve));
+        }));
     });
     await check("row-menu-original-order-labels-and-icons", async () => {
         const menu = await openUserMenu();

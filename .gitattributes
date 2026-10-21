@@ -1,0 +1,9 @@
+* text=auto
+*.css linguist-vendored
+*.scss linguist-vendored
+/public/**/*.js linguist-vendored
+CHANGELOG.md export-ignore
+
+*.sh text eol=lf
+*.yml text eol=lf
+*.mjs text eol=lf

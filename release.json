@@ -1,0 +1,6 @@
+{
+  "source_commit": "7cc0d0bdd98b57954af99343f42b974e3d97eb6b",
+  "frontend_version": "1.0.0",
+  "frontend_source_included": false,
+  "production_assets": "public/assets/admin-v2"
+}

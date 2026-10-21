@@ -1,0 +1,30 @@
+{
+  "_antd-TrKBRWZp.js": {
+    "file": "assets/antd-TrKBRWZp.js",
+    "name": "antd"
+  },
+  "index.html": {
+    "file": "assets/index-yik7s7f4.js",
+    "name": "index",
+    "src": "index.html",
+    "isEntry": true,
+    "imports": [
+      "_antd-TrKBRWZp.js"
+    ],
+    "css": [
+      "assets/index-eq8xFUL6.css"
+    ],
+    "assets": [
+      "assets/simple-line-icons-D0KobG-u.woff2",
+      "assets/fa-solid-BiazUjGD.woff2"
+    ]
+  },
+  "src/assets/icons/fa-solid.woff2": {
+    "file": "assets/fa-solid-BiazUjGD.woff2",
+    "src": "src/assets/icons/fa-solid.woff2"
+  },
+  "src/assets/icons/simple-line-icons.woff2": {
+    "file": "assets/simple-line-icons-D0KobG-u.woff2",
+    "src": "src/assets/icons/simple-line-icons.woff2"
+  }
+}

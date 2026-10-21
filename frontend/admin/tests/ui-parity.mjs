@@ -128,7 +128,10 @@ try {
         await page.waitForTimeout(350);
     };
     const chooseSelect = async (combo, option) => {
-        await combo.click();
+        await combo
+            .locator('xpath=ancestor::*[contains(concat(" ",normalize-space(@class)," ")," ant-select ")][1]')
+            .locator(".ant-select-selector")
+            .click();
         const dropdown = page.locator(".ant-select-dropdown:visible").last();
         await dropdown.waitFor({ state: "visible" });
         // Wait for popup placement/motion before clicking; a stale popup rectangle

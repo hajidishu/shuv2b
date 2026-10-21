@@ -381,9 +381,9 @@ try {
     });
     await check("row-menu-original-order-labels-and-icons", async () => {
         const menu = await openUserMenu();
-        const items = menu.locator(".ant-dropdown-menu-item");
-        const labels = await items.evaluateAll((nodes) =>
-            nodes.map((node) => node.innerText.trim().replace(/\s+/g, " ")),
+        const labels = await menu.evaluate((menu) =>
+            Array.from(menu.querySelectorAll(".ant-dropdown-menu-item"),
+                (node) => node.innerText.trim().replace(/\s+/g, " ")),
         );
         const expected = [
             "编辑",
@@ -396,8 +396,9 @@ try {
             "删除用户",
         ];
         assert.deepEqual(labels, expected);
-        const icons = await items.evaluateAll((nodes) =>
-            nodes.map((node) => node.querySelector("svg")?.dataset.icon),
+        const icons = await menu.evaluate((menu) =>
+            Array.from(menu.querySelectorAll(".ant-dropdown-menu-item"),
+                (node) => node.querySelector("svg")?.dataset.icon),
         );
         assert.deepEqual(icons, [
             "edit",
@@ -417,8 +418,9 @@ try {
         const contextItems = contextMenu.locator(".ant-dropdown-menu-item");
         await contextItems.first().waitFor();
         assert.deepEqual(
-            await contextItems.evaluateAll((nodes) =>
-                nodes.map((node) => node.innerText.trim().replace(/\s+/g, " ")),
+            await contextMenu.evaluate((menu) =>
+                Array.from(menu.querySelectorAll(".ant-dropdown-menu-item"),
+                    (node) => node.innerText.trim().replace(/\s+/g, " ")),
             ),
             expected,
         );

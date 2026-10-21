@@ -37,7 +37,7 @@ cd /var/www/v2board
 - MySQL / MariaDB、Redis、Composer；Horizon 需要 Linux CLI 的 `pcntl`、`posix`。
 - 节点服务端参考 [V2bX 修改版](https://github.com/wyx2685/V2bX)和 [v2node](https://github.com/wyx2685/v2node)，按所用协议与版本验证。
 
-前端构建见 [管理员 README](frontend/admin/README.md)，文档构建见 [文档 README](frontend/docs/README.md)。部署构建产物无需 Node.js。
+前端构建见 [管理员 README](https://github.com/hajidishu/shuv2b/blob/master/frontend/admin/README.md)，文档构建见 [文档 README](https://github.com/hajidishu/shuv2b/blob/master/frontend/docs/README.md)。部署构建产物无需 Node.js。
 
 ## 反馈与贡献
 

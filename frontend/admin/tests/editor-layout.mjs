@@ -291,8 +291,8 @@ try {
                     await page
                         .locator(".ant-select-dropdown:visible")
                         .getByText(label, { exact: true })
-                        .count(),
-                    1,
+                        .innerText(),
+                    label,
                 );
             await editor().locator(".ant-drawer-title").click();
             if (!live) {

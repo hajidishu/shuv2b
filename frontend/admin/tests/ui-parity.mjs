@@ -128,13 +128,20 @@ try {
         await page.waitForTimeout(350);
     };
     const chooseSelect = async (combo, option) => {
-        await combo.focus();
-        await combo.press("ArrowDown");
-        await page
-            .locator(".ant-select-dropdown:visible")
-            .getByText(option, { exact: true })
-            .last()
-            .click();
+        await combo.click();
+        const dropdown = page.locator(".ant-select-dropdown:visible").last();
+        await dropdown.waitFor({ state: "visible" });
+        // Wait for popup placement/motion before clicking; a stale popup rectangle
+        // can otherwise send the click to the button underneath on Linux Chromium.
+        await dropdown.evaluate(async (element) => {
+            await Promise.all(
+                element.getAnimations({ subtree: true }).map((animation) =>
+                    animation.finished.catch(() => {}),
+                ),
+            );
+        });
+        await dropdown.getByText(option, { exact: true }).last().click();
+        await dropdown.waitFor({ state: "hidden" });
     };
     const orderFilters = () => page.locator(".order-filter-drawer");
     const openOrderFilters = async () => {

@@ -39,7 +39,7 @@
 - Laravel
 
 ## Document
-[Click](https://v2board.com)
+[Click](https://hajidishu.github.io/shuv2b/)
 
 ## Sponsors
 Thanks to the open source project license provided by [Jetbrains](https://www.jetbrains.com/)

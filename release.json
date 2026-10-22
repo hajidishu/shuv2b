@@ -1,5 +1,5 @@
 {
-  "source_commit": "7cc0d0bdd98b57954af99343f42b974e3d97eb6b",
+  "source_commit": "7f653d70c8348ad9bd4d99a2f4966de3ec61b5ca",
   "frontend_version": "1.0.0",
   "frontend_source_included": false,
   "production_assets": "public/assets/admin-v2"

@@ -11,6 +11,16 @@ class UserRoute
             'prefix' => 'user',
             'middleware' => 'user'
         ], function ($router) {
+            $router->group(['prefix' => 'passkey', 'middleware' => 'passkey.request'], function ($router) {
+                $router->get('/fetch', 'V1\\Passport\\PasskeyController@listing');
+                $router->post('/reauth/password', 'V1\\Passport\\PasskeyController@passwordReauth');
+                $router->post('/reauth/options', 'V1\\Passport\\PasskeyController@reauthOptions');
+                $router->post('/reauth/verify', 'V1\\Passport\\PasskeyController@reauthVerify');
+                $router->post('/register/options', 'V1\\Passport\\PasskeyController@registerOptions');
+                $router->post('/register/verify', 'V1\\Passport\\PasskeyController@registerVerify');
+                $router->post('/rename', 'V1\\Passport\\PasskeyController@rename');
+                $router->post('/delete', 'V1\\Passport\\PasskeyController@delete');
+            });
             // User
             $router->get ('/unbindTelegram', 'V1\\User\\UserController@unbindTelegram');
             $router->get ('/resetSecurity', 'V1\\User\\UserController@resetSecurity');

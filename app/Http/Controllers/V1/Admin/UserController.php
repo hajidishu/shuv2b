@@ -131,54 +131,57 @@ class UserController extends Controller
 
     public function update(UserUpdate $request)
     {
-        $params = $request->validated();
-        $user = User::find($request->input('id'));
-        if (!$user) {
-            abort(500, '用户不存在');
-        }
-        if (User::where('email', $params['email'])->first() && $user->email !== $params['email']) {
-            abort(500, '邮箱已被使用');
-        }
-        if (isset($params['password'])) {
-            $params['password'] = password_hash($params['password'], PASSWORD_DEFAULT);
-            $params['password_algo'] = NULL;
-        } else {
-            unset($params['password']);
-        }
-        if (isset($params['plan_id'])) {
-            $plan = Plan::find($params['plan_id']);
-            if (!$plan) {
-                abort(500, '订阅计划不存在');
+        return DB::transaction(function () use ($request) {
+            $params = $request->validated();
+            $user = User::where('id', $request->input('id'))->lockForUpdate()->first();
+            if (!$user) {
+                abort(500, '用户不存在');
             }
-            $params['group_id'] = $plan->group_id;
-        } else {
-            $params['group_id'] = null;
-        }
-        if ($request->input('invite_user_email')) {
-            $inviteUser = User::where('email', $request->input('invite_user_email'))->first();
-            if ($inviteUser) {
-                $params['invite_user_id'] = $inviteUser->id;
+            if (User::where('email', $params['email'])->first() && $user->email !== $params['email']) {
+                abort(500, '邮箱已被使用');
             }
-        } else {
-            $params['invite_user_id'] = null;
-        }
+            if (isset($params['password'])) {
+                $params['password'] = password_hash($params['password'], PASSWORD_DEFAULT);
+                $params['password_algo'] = NULL;
+            } else {
+                unset($params['password']);
+            }
+            if (isset($params['plan_id'])) {
+                $plan = Plan::find($params['plan_id']);
+                if (!$plan) {
+                    abort(500, '订阅计划不存在');
+                }
+                $params['group_id'] = $plan->group_id;
+            } else {
+                $params['group_id'] = null;
+            }
+            if ($request->input('invite_user_email')) {
+                $inviteUser = User::where('email', $request->input('invite_user_email'))->first();
+                if ($inviteUser) {
+                    $params['invite_user_id'] = $inviteUser->id;
+                }
+            } else {
+                $params['invite_user_id'] = null;
+            }
 
-        if (isset($params['banned']) && (int)$params['banned'] === 1) {
-            $authService = new AuthService($user);
-            $authService->removeAllSession();
-        }
-
-        try {
-            $user->update($params);
-            if ($user->wasChanged(['password', 'is_admin', 'is_staff'])) {
-                (new AuthService($user))->removeAllSession();
+            if (isset($params['banned']) && (int)$params['banned'] === 1) {
+                $authService = new AuthService($user);
+                $authService->removeAllSession();
             }
-        } catch (\Exception $e) {
-            abort(500, '保存失败');
-        }
-        return response([
-            'data' => true
-        ]);
+
+            try {
+                $user->update($params);
+                if ($user->wasChanged(['password', 'is_admin', 'is_staff'])) {
+                    (new AuthService($user))->removeAllSession();
+                }
+                if ($user->wasChanged('password')) \App\Services\PasskeyService::revokeOnRecovery($user);
+            } catch (\Exception $e) {
+                abort(500, '保存失败');
+            }
+            return response([
+                'data' => true
+            ]);
+        }, 3);
     }
 
     public function dumpCSV(Request $request)
@@ -319,13 +322,14 @@ class UserController extends Controller
         $builder = User::orderBy($sort, $sortType);
         $this->filter($request, $builder);
         try {
-            $builder->each(function ($user){
-                $authService = new AuthService($user);
-                $authService->removeAllSession();
-            });
-            $builder->update([
-                'banned' => 1
-            ]);
+            DB::transaction(function () use ($builder) {
+                (clone $builder)->lockForUpdate()->each(function ($user) {
+                    (new AuthService($user))->removeAllSession();
+                });
+                // Keep the filter stable while paging through its sessions;
+                // changing banned inside each() would skip later pages.
+                $builder->update(['banned' => 1]);
+            }, 3);
         } catch (\Exception $e) {
             abort(500, '处理失败');
         }
@@ -344,7 +348,7 @@ class UserController extends Controller
 
         DB::beginTransaction();
         try {
-            $builder->each(function ($user){
+            $builder->lockForUpdate()->each(function ($user){
                 $authService = new AuthService($user);
                 $authService->removeAllSession();
                 Order::where('user_id', $user->id)->delete();
@@ -355,6 +359,7 @@ class UserController extends Controller
                 }
                 Ticket::where('user_id', $user->id)->delete();
                 User::where('invite_user_id', $user->id)->update(['invite_user_id' => null]);
+                \App\Services\PasskeyService::purgeUser((int)$user->id);
             });
             $builder->delete();
             DB::commit();
@@ -376,6 +381,7 @@ class UserController extends Controller
         }
         DB::beginTransaction();
         try {
+            $user = User::where('id', $user->id)->lockForUpdate()->firstOrFail();
             $authService = new AuthService($user);
             $authService->removeAllSession();
             Order::where('user_id', $request->input('id'))->delete();
@@ -388,6 +394,7 @@ class UserController extends Controller
             }
             Ticket::where('user_id', $request->input('id'))->delete();
     
+            \App\Services\PasskeyService::purgeUser((int)$user->id);
             $user->delete();
             DB::commit();
         } catch (\Exception $e) {

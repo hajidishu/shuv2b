@@ -19,5 +19,10 @@ class TrustProxies extends Middleware
      *
      * @var int
      */
-    protected $headers = Request::HEADER_X_FORWARDED_ALL;
+    protected function getTrustedHeaderNames()
+    {
+        // Fideloper 4 converts unknown bitmasks back to ALL. Return this mask
+        // directly so forwarding a client IP never grants control over Host.
+        return Request::HEADER_X_FORWARDED_FOR | Request::HEADER_X_FORWARDED_PROTO;
+    }
 }

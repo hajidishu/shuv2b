@@ -52,6 +52,7 @@ class Environment
         $app->instance('cache', new \Illuminate\Cache\Repository(new \Illuminate\Cache\ArrayStore()));
         $app->instance(\Illuminate\Contracts\Routing\ResponseFactory::class, new class {
             public function make($data = '', $status = 200, $headers = []) { return new JsonResponse($data, $status, $headers); }
+            public function json($data = [], $status = 200, $headers = [], $options = 0) { return new JsonResponse($data, $status, $headers, $options); }
         });
         $capsule = new Capsule($app);
         $capsule->addConnection($connection, 'p1');
@@ -78,7 +79,7 @@ class Environment
     private static function createSchema()
     {
         $schema = self::$capsule->getConnection('p1')->getSchemaBuilder();
-        foreach (['v2_payment_receipt', 'v2_payment_attempt', 'v2_commission_log', 'v2_giftcard', 'v2_coupon', 'v2_payment', 'v2_order', 'v2_plan', 'v2_user'] as $table) $schema->dropIfExists($table);
+        foreach (['v2_passkey_credential', 'v2_passkey_user', 'v2_payment_receipt', 'v2_payment_attempt', 'v2_commission_log', 'v2_giftcard', 'v2_coupon', 'v2_payment', 'v2_order', 'v2_plan', 'v2_user'] as $table) $schema->dropIfExists($table);
         $schema->create('v2_user', function (Blueprint $t) {
             $t->increments('id'); $t->string('email')->unique(); $t->string('password')->nullable();
             foreach (['is_admin', 'is_staff', 'banned', 'commission_type', 'auto_renewal'] as $key) $t->integer($key)->default(0);

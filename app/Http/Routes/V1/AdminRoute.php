@@ -11,8 +11,10 @@ class AdminRoute
             'prefix' => config('v2board.secure_path', config('v2board.frontend_admin_path', hash('crc32b', config('app.key')))),
             'middleware' => ['admin', 'log'],
         ], function ($router) {
+            $router->post('/passkey/revoke', 'V1\\Passport\\PasskeyController@adminRevoke')->middleware('passkey.request');
             // Config
             $router->get ('/config/fetch', 'V1\\Admin\\ConfigController@fetch');
+            $router->get ('/config/passkeyDeployment', 'V1\\Admin\\ConfigController@passkeyDeployment');
             $router->post('/config/save', 'V1\\Admin\\ConfigController@save');
             $router->get ('/config/getEmailTemplate', 'V1\\Admin\\ConfigController@getEmailTemplate');
             $router->get ('/config/getThemeTemplate', 'V1\\Admin\\ConfigController@getThemeTemplate');

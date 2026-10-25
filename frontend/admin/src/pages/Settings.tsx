@@ -18,6 +18,7 @@ import {
 } from "../components";
 import defaults from "../schema/config.json";
 import type { Field, Row } from "../types";
+import PasskeyDeployment from "./PasskeyDeployment";
 const configLabels: Record<string, string> = {
     ticket_status: "工单开关",
     deposit_bounus: "充值奖励（充值金额:奖励金额）",
@@ -118,6 +119,7 @@ const groupLabels: Record<string, string> = {
     safe: "安全",
 };
 const toggleKeys = new Set([
+    "passkey_enabled",
     "invite_force",
     "invite_never_expire",
     "commission_first_time_enable",
@@ -458,7 +460,10 @@ export default function Settings() {
                                 </Form.Item>
                             </div>
                         )}
-                        <Fields settings fields={items.slice(webhookIndex + 1)} />
+                        <Fields
+                            settings
+                            fields={items.slice(webhookIndex + 1)}
+                        />
                     </>
                 );
             }
@@ -557,6 +562,18 @@ export default function Settings() {
                             ]}
                         />
                     )}
+                    {group === "safe" && (
+                        <PasskeyDeployment
+                            beforeLoad={async () => {
+                                flush();
+                                await queue.current;
+                                if (Object.keys(pending.current).length)
+                                    throw new Error(
+                                        "配置尚未保存成功，请先重试保存",
+                                    );
+                            }}
+                        />
+                    )}
                 </Form>
                 <div className="settings-save-state">
                     <span>{saveState}</span>
@@ -594,16 +611,19 @@ export default function Settings() {
                     ]}
                     initial={{
                         telegram_bot_token:
-                            formValues.telegram_bot_token ?? values.telegram_bot_token,
+                            formValues.telegram_bot_token ??
+                            values.telegram_bot_token,
                         telegram_webhook_domain:
-                            formValues.telegram_webhook_domain ?? values.telegram_webhook_domain,
+                            formValues.telegram_webhook_domain ??
+                            values.telegram_webhook_domain,
                     }}
                     close={() => setWebhook(false)}
                     save={async (v) => {
                         flush();
                         await queue.current;
                         await api("/config/save", v, "POST");
-                        for (const key of Object.keys(v)) delete pending.current[key];
+                        for (const key of Object.keys(v))
+                            delete pending.current[key];
                         saved.current = { ...saved.current, ...v };
                         form.setFieldsValue(v);
                         setError("");

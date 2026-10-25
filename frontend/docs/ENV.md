@@ -5,7 +5,7 @@
 | 组件 | 要求 / 已验证环境 |
 | --- | --- |
 | 系统 | 支持 CLI `pcntl` 的 Linux；完整测试环境为 Debian 13 |
-| PHP | Composer 声明 `^7.3.0 \|\| ^8.0`；现有 PHP 8.3 迁移可先保留并验证。指定 PHP 8.4.26 + PHP-FPM 环境回归通过，不代表全面支持 8.4 / Webman |
+| PHP | Composer 声明 `^8.0`，Passkey 依赖要求 PHP 8.0+；已有锁文件可能要求更高版本。现有 PHP 8.3 可先保留并验证。指定 PHP 8.4.26 + PHP-FPM 环境回归通过，不代表全面支持 8.4 / Webman |
 | 数据库 | MySQL 驱动；完整测试环境为 MariaDB 11.8 |
 | Redis | 缓存、会话及 Horizon 队列，设置 `CACHE_DRIVER=redis` |
 | Web | Nginx + PHP-FPM 等，根目录指向 `public` |

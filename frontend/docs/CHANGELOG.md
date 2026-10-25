@@ -1,5 +1,9 @@
 # 分支变更记录
 
+## 2026 年 10 月 24 日
+
+新增可选 Passkey 登录、密钥管理和撤销；适配 EZ Theme 与 GeneralEncryptionMiddleware。新增两张表，原账号与订阅信息不变，功能默认关闭。PHP 最低声明调整为 8.0，详见 [Passkey 登录](./features/passkey)。
+
 ## 2026 年 10 月 22 日
 
 正式命名为 shuv2b。源码保存在 master，CI 验证后自动发布 release 运行分支和 GitHub Pages 文档站；更新脚本改为保留当前分支与本地配置，遇到冲突停止。代码标识继续使用 v2board。

@@ -21,7 +21,7 @@ bash update.sh
 
 脚本拉取当前分支，只允许快进更新，安装生产依赖并执行 `v2board:update`、缓存刷新及队列终止。遇到本地修改、分叉或命令失败会停止，不再硬重置或删除 Composer 锁文件，也不自动更换 Web 运行模式。
 
-服务器需预先安装 Composer，或已有 `composer.phar`。保持原 PHP 版本，结构更新报错时先处理再上线。
+服务器需预先安装 Composer，或已有 `composer.phar`。Passkey 版本要求 PHP 8.0+；首次更新会将新增的固定版本 WebAuthn 依赖补入旧锁文件，并创建两张 Passkey 表。原用户与订阅数据保留，功能默认关闭，配置方法见 [Passkey 登录](../features/passkey)。结构更新报错时先处理再上线。
 
 ## 3. 恢复服务
 
@@ -41,6 +41,8 @@ php artisan up
 ## 常见问题
 
 **拉取失败？** 先检查 origin 是否为 shuv2b、分支是否正确、本地修改及分叉；不要用硬重置跳过问题。
+
+**数据库更新失败？** 保持维护模式，根据报错修复后重新运行 `bash update.sh`。已存在的字段和索引会跳过，其他 SQL 错误会中止；历史统计的重复数据需先整理，更新不会再自动清空统计表来建立唯一索引。
 
 **更新没有变化？** 核对 `release.json`、资源 manifest、Web / Horizon 进程和 CDN 缓存。
 

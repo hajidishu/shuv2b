@@ -38,6 +38,9 @@ class RouteServiceProvider extends ServiceProvider
      */
     public function map()
     {
+        // Browser-managed ROR fetches send no credentials. This root endpoint
+        // must stay outside API encryption, authentication and session middleware.
+        Route::get('/.well-known/webauthn', [\App\Http\Controllers\V1\Passport\PasskeyController::class, 'relatedOrigins']);
         $this->mapApiRoutes();
         $this->mapWebRoutes();
 

@@ -1,15 +1,15 @@
 {
-  "_antd-TrKBRWZp.js": {
-    "file": "assets/antd-TrKBRWZp.js",
+  "_antd-BWMm2DLL.js": {
+    "file": "assets/antd-BWMm2DLL.js",
     "name": "antd"
   },
   "index.html": {
-    "file": "assets/index-yik7s7f4.js",
+    "file": "assets/index-Bv9Re2oU.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
     "imports": [
-      "_antd-TrKBRWZp.js"
+      "_antd-BWMm2DLL.js"
     ],
     "css": [
       "assets/index-eq8xFUL6.css"

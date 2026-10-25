@@ -94,6 +94,10 @@ class ConfigSave extends FormRequest
         'android_version' => '',
         'android_download_url' => '',
         // safe
+        'passkey_enabled' => 'in:0,1',
+        'passkey_rp_id' => 'nullable|string|max:253',
+        'passkey_origins' => 'nullable|array|max:30',
+        'passkey_origins.*' => 'required|string|max:2048',
         'email_whitelist_enable' => 'in:0,1',
         'email_whitelist_suffix' => 'nullable|array',
         'email_gmail_limit_enable' => 'in:0,1',
@@ -118,6 +122,12 @@ class ConfigSave extends FormRequest
     public function rules()
     {
         $rules = self::RULES;
+        $rules['passkey_rp_id'] = ['nullable', 'string', 'max:253', function ($attribute, $value, $fail) {
+            if (!\App\Services\PasskeySettings::rpId($value)) $fail('RP ID 必须为域名，不包含协议、端口或路径');
+        }];
+        $rules['passkey_origins.*'] = ['required', 'string', 'max:2048', function ($attribute, $value, $fail) {
+            if (!\App\Services\PasskeySettings::origin($value)) $fail('Passkey 来源必须为完整 HTTPS 来源地址，不含路径；仅 localhost 允许 HTTP');
+        }];
 
         $rules['telegram_webhook_domain'] = ['nullable', 'string', 'max:2048', function ($attribute, $value, $fail) {
             if (!\App\Services\TelegramService::normalizeWebhookDomain($value)) {
@@ -146,6 +156,17 @@ class ConfigSave extends FormRequest
             }
         };
         return $rules;
+    }
+
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            if ($validator->errors()->isNotEmpty()) return;
+            $values = array_merge((array)config('v2board', []), $this->only(['passkey_enabled', 'passkey_rp_id', 'passkey_origins']));
+            if (!empty($values['passkey_enabled']) && !\App\Services\PasskeySettings::validate($values)) {
+                $validator->errors()->add('passkey_enabled', '启用 Passkey 前请填写固定 RP ID 和完整 HTTPS 允许来源；修改 RP ID 前请先关闭功能');
+            }
+        });
     }
 
     public function messages()

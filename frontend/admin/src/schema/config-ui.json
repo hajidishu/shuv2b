@@ -364,7 +364,7 @@
     "commission_distribution_enable": {
         "group": "invite",
         "label": "三级分销",
-        "help": "开启后将佣金将按照设置的3成比例进行分成，三成比例合计请不要>100%。",
+        "help": "开启后将佣金将按照设置的3成比例进行分成，三成比例合计请不要\u003e100%。",
         "placeholder": "",
         "order": 49
     },
@@ -557,5 +557,25 @@
         "help": "Android端版本号及下载地址",
         "placeholder": "https://xxxx.com/xxx.apk",
         "order": 76
+    },
+    "passkey_enabled": {
+        "label": "启用 Passkey 登录",
+        "group": "safe",
+        "help": "passkey功能需要前端支持才可用",
+        "order": 95
+    },
+    "passkey_rp_id": {
+        "label": "Passkey RP ID",
+        "group": "safe",
+        "placeholder": "example.com",
+        "help": "所有前端固定共用此 RP ID，始终使用 ROR 支持关联域名。该域名须通过 HTTPS 443 提供 /.well-known/webauthn；不含协议、端口和路径。修改后原密钥需重新绑定。",
+        "order": 96
+    },
+    "passkey_origins": {
+        "label": "Passkey 允许来源",
+        "group": "safe",
+        "placeholder": "https://panel.example.com",
+        "help": "填写所有可信前端的完整 HTTPS 来源，可使用不同主域名，包含非默认端口，不含路径。自动生成 ROR 声明；浏览器对不同注册域标签数量有限制。仅本机 RP localhost 可使用 HTTP。",
+        "order": 97
     }
 }

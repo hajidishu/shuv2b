@@ -14,6 +14,19 @@ use Illuminate\Support\Facades\Cache;
 
 class ConfigController extends Controller
 {
+    public function passkeyDeployment()
+    {
+        $settings = \App\Services\PasskeySettings::class;
+        $rp = $settings::rpId(config('v2board.passkey_rp_id'));
+        return response(['data' => [
+            'enabled' => $settings::enabled(),
+            'configured' => $settings::configured(),
+            'rp_id' => $rp,
+            'well_known_url' => $rp && $rp !== 'localhost' ? 'https://' . $rp . '/.well-known/webauthn' : null,
+            'document' => $settings::relatedOriginsDocument(),
+        ]]);
+    }
+
     public function getEmailTemplate()
     {
         $path = resource_path('views/mail/');
@@ -163,6 +176,9 @@ class ConfigController extends Controller
                 'android_download_url' => config('v2board.android_download_url')
             ],
             'safe' => [
+                'passkey_enabled' => (int)config('v2board.passkey_enabled', 0),
+                'passkey_rp_id' => config('v2board.passkey_rp_id', ''),
+                'passkey_origins' => config('v2board.passkey_origins', []) ?: [],
                 'email_verify' => (int)config('v2board.email_verify', 0),
                 'safe_mode_enable' => (int)config('v2board.safe_mode_enable', 0),
                 'secure_path' => config('v2board.secure_path', config('v2board.frontend_admin_path', hash('crc32b', config('app.key')))),

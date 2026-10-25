@@ -69,6 +69,7 @@ class Kernel extends HttpKernel
         'user' => \App\Http\Middleware\User::class,
         'admin' => \App\Http\Middleware\Admin::class,
         'client' => \App\Http\Middleware\Client::class,
+        'passkey.request' => \App\Http\Middleware\PasskeyRequest::class,
         'subscription.audit' => \App\Http\Middleware\SubscriptionAudit::class,
         'leak.delivery' => \App\Http\Middleware\LeakProbeDelivery::class,
         'staff' => \App\Http\Middleware\Staff::class,

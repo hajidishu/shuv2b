@@ -72,3 +72,7 @@ php artisan config:cache
 ## 6. 检查运行
 
 登录后台，修改初始密码、设置站点网址；检查队列监控，再用测试用户验证套餐、订阅、节点、邮件与支付。独立用户前端需设置[支付回跳地址](../features/payment-return-url)。
+
+## 常见问题
+
+**安装中断？** 先修正 `.env` 中的数据库连接或报错原因，再运行 `php artisan v2board:install --resume`。此操作保留原 `APP_KEY` 和已有表数据；已有管理员的站点应运行 `v2board:update`，不要重新初始化。

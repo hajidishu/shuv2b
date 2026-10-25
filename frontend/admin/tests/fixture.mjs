@@ -155,6 +155,8 @@ export async function startFixture({ visual = false, settings = {} } = {}) {
                 data,
                 query: Object.fromEntries(url.searchParams),
             });
+            if (path === "/api/v1/passport/passkey/config")
+                return json(res, { data: { enabled: false } });
             if (path === "/api/v1/passport/auth/login")
                 return json(res, {
                     data: { auth_data: "Bearer fixture-admin", is_admin: true },

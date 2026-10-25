@@ -16,6 +16,7 @@ use App\Utils\Dict;
 use App\Utils\Helper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use ReCaptcha\ReCaptcha;
 
 class AuthController extends Controller
@@ -193,22 +194,8 @@ class AuthController extends Controller
         }
 
         if ($request->input('verify')) {
-            $key =  CacheKey::get('TEMP_TOKEN', $request->input('verify'));
-            $userId = Cache::get($key);
-            if (!$userId) {
-                abort(500, __('Token error'));
-            }
-            $user = User::find($userId);
-            if (!$user) {
-                abort(500, __('The user does not '));
-            }
-            if ($user->banned) {
-                abort(500, __('Your account has been suspended'));
-            }
-            Cache::forget($key);
-            $authService = new AuthService($user);
             return response([
-                'data' => $authService->generateAuthData($request)
+                'data' => AuthService::redeemQuickLoginCode($request, $request->input('verify'))
             ]);
         }
     }
@@ -218,12 +205,7 @@ class AuthController extends Controller
         $authorization = $request->input('auth_data') ?? $request->header('authorization');
         if (!$authorization) abort(403, '未登录或登陆已过期');
 
-        $user = AuthService::decryptAuthData($authorization);
-        if (!$user) abort(403, '未登录或登陆已过期');
-
-        $code = Helper::guid();
-        $key = CacheKey::get('TEMP_TOKEN', $code);
-        Cache::put($key, $user['id'], 60);
+        $code = AuthService::issueQuickLoginCode($authorization);
         $redirect = '/#/login?verify=' . $code . '&redirect=' . ($request->input('redirect') ? $request->input('redirect') : 'dashboard');
         if (config('v2board.app_url')) {
             $url = config('v2board.app_url') . $redirect;
@@ -260,18 +242,23 @@ class AuthController extends Controller
             Cache::put($forgetRequestLimitKey, $forgetRequestLimit + 1, 300);
             abort(500, __('Incorrect email verification code'));
         }
-        $user = User::where('email', $email)->first();
-        if (!$user) {
-            abort(500, __('This email is not registered in the system'));
-        }
-        $user->password      = password_hash($password, PASSWORD_DEFAULT);
-        $user->password_algo = null;
-        $user->password_salt = null;
-        if (!$user->save()) {
-            abort(500, __('Reset failed'));
-        }
-        Cache::forget(CacheKey::get('EMAIL_VERIFY_CODE', $cacheKeyEmail));
-        (new AuthService($user))->removeAllSession();
+        DB::transaction(function () use ($email, $password, $cacheKeyEmail, $inputCode) {
+            $user = User::where('email', $email)->lockForUpdate()->first();
+            if (!$user) {
+                abort(500, __('This email is not registered in the system'));
+            }
+            // Another reset may have consumed the code while this request waited.
+            $currentCode = Cache::get(CacheKey::get('EMAIL_VERIFY_CODE', $cacheKeyEmail));
+            if (!is_scalar($currentCode) || !hash_equals((string)$currentCode, $inputCode)) abort(500, __('Incorrect email verification code'));
+            $user->password      = password_hash($password, PASSWORD_DEFAULT);
+            $user->password_algo = null;
+            $user->password_salt = null;
+            if (!$user->save()) {
+                abort(500, __('Reset failed'));
+            }
+            Cache::forget(CacheKey::get('EMAIL_VERIFY_CODE', $cacheKeyEmail));
+            \App\Services\PasskeyService::revokeOnRecovery($user);
+        }, 3);
         return response([
             'data' => true
         ]);

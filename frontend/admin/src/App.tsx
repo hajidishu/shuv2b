@@ -51,6 +51,8 @@ import Payments from "./pages/Payments";
 import Orders from "./pages/Orders";
 import SubscriptionAudit from "./pages/SubscriptionAudit";
 import LeakProbe from "./pages/LeakProbe";
+import Passkeys from "./pages/Passkeys";
+import { passkeyAvailable, passkeyLogin } from "./passkey";
 import Tickets from "./pages/Tickets";
 import { Overview, Queue } from "./pages/Overview";
 type UiTheme = { sidebar: string; header: string; color: string };
@@ -124,6 +126,12 @@ function usePath() {
     return path;
 }
 function Login({ done }: { done: () => void }) {
+    const [passkeyEnabled, setPasskeyEnabled] = useState(false);
+    useEffect(() => {
+        api("/api/v1/passport/passkey/config")
+            .then((r) => setPasskeyEnabled(!!r.data?.enabled))
+            .catch(() => {});
+    }, []);
     const [error, setError] = useState(""),
         [busy, setBusy] = useState(false),
         [recoveryOpen, setRecoveryOpen] = useState(false);
@@ -217,6 +225,36 @@ function Login({ done }: { done: () => void }) {
                     >
                         忘记密码
                     </Button>
+                    {passkeyEnabled && (
+                        <Button
+                            block
+                            disabled={!passkeyAvailable()}
+                            loading={busy}
+                            onClick={async () => {
+                                setBusy(true);
+                                setError("");
+                                try {
+                                    const data = await passkeyLogin();
+                                    if (!data?.is_admin || !data.auth_data)
+                                        throw new Error("此账号没有管理员权限");
+                                    session.set(data.auth_data);
+                                    location.hash = "/dashboard";
+                                    done();
+                                } catch (e: any) {
+                                    setError(
+                                        e.name === "NotAllowedError"
+                                            ? "Passkey 操作已取消或超时，请重试"
+                                            : e.message,
+                                    );
+                                } finally {
+                                    setBusy(false);
+                                }
+                            }}
+                        >
+                            使用 Passkey 登录
+                            {!passkeyAvailable() ? "（需要 HTTPS）" : ""}
+                        </Button>
+                    )}
                 </Form>
             </div>
             <Modal
@@ -307,6 +345,9 @@ function Shell({
     if (resourceSchemas[selected]) page = <Resources path={selected} />;
     else
         switch (selected) {
+            case "/passkey":
+                page = <Passkeys />;
+                break;
             case "/dashboard":
                 page = <Overview />;
                 break;
@@ -452,10 +493,13 @@ function Shell({
                             menu={{
                                 items: [
                                     { key: "fullscreen", label: "全屏" },
+                                    { key: "passkey", label: "Passkey 管理" },
                                     { key: "logout", label: "退出登录" },
                                 ],
                                 onClick: async ({ key }) => {
-                                    if (key === "logout") {
+                                    if (key === "passkey")
+                                        location.hash = "/passkey";
+                                    else if (key === "logout") {
                                         session.clear();
                                         setAuth(false);
                                         location.hash = "/login";

@@ -15,7 +15,7 @@ class V2boardInstall extends Command
      *
      * @var string
      */
-    protected $signature = 'v2board:install';
+    protected $signature = 'v2board:install {--resume : 使用原有 .env 继续未完成的安装}';
 
     /**
      * The console command description.
@@ -47,16 +47,17 @@ class V2boardInstall extends Command
             $this->info(" \ \ / /  __) |  _ \ / _ \ / _` | '__/ _` | ");
             $this->info("  \ V /  / __/| |_) | (_) | (_| | | | (_| | ");
             $this->info("   \_/  |_____|____/ \___/ \__,_|_|  \__,_| ");
-            if (\File::exists(base_path() . '/.env')) {
+            $resuming = \File::exists(base_path() . '/.env');
+            if ($resuming && !$this->option('resume')) {
                 $securePath = config('v2board.secure_path', config('v2board.frontend_admin_path', hash('crc32b', config('app.key'))));
                 $this->info("访问 http(s)://你的站点/{$securePath} 进入管理面板，你可以在用户中心修改你的密码。");
-                abort(500, '如需重新安装请删除目录下.env文件');
+                abort(500, '已有环境文件。更新请运行 v2board:update；未完成的安装可运行 v2board:install --resume，无需删除 .env。');
             }
 
-            if (!copy(base_path() . '/.env.example', base_path() . '/.env')) {
+            if (!$resuming && !copy(base_path() . '/.env.example', base_path() . '/.env')) {
                 abort(500, '复制环境文件失败，请检查目录权限');
             }
-            $this->saveToEnv([
+            if (!$resuming) $this->saveToEnv([
                 'APP_KEY' => 'base64:' . base64_encode(Encrypter::generateKey('AES-256-CBC')),
                 'DB_HOST' => $this->ask('请输入数据库地址（默认:localhost）', 'localhost'),
                 'DB_DATABASE' => $this->ask('请输入数据库名'),
@@ -65,30 +66,28 @@ class V2boardInstall extends Command
             ]);
             \Artisan::call('config:clear');
             \Artisan::call('config:cache');
+            config()->set(require app()->getCachedConfigPath());
+            DB::purge();
             try {
                 DB::connection()->getPdo();
             } catch (\Exception $e) {
                 abort(500, '数据库连接失败');
             }
+            if ($resuming && DB::getSchemaBuilder()->hasTable('v2_user') && User::where('is_admin', 1)->exists()) {
+                abort(500, '管理员已存在，请使用 v2board:update 更新，不能继续初始化安装。');
+            }
             $file = \File::get(base_path() . '/database/install.sql');
             if (!$file) {
                 abort(500, '数据库文件不存在');
             }
-            $sql = str_replace("\n", "", $file);
-            $sql = preg_split("/;/", $sql);
-            if (!is_array($sql)) {
-                abort(500, '数据库文件格式有误');
-            }
             $this->info('正在导入数据库请稍等...');
-            foreach ($sql as $item) {
-                try {
-                    DB::select(DB::raw($item));
-                } catch (\Exception $e) {
-                }
-            }
+            $upgrade = app(\App\Services\DatabaseUpgrade::class);
+            $upgrade->run($file, false);
+            $upgrade->verify($file);
             app(\App\Services\SubscriptionAuditSchema::class)->ensure();
             app(\App\Services\LeakProbeSchema::class)->ensure();
             app(\App\Services\PaymentLedgerSchema::class)->ensure();
+            app(\App\Services\PasskeySchema::class)->ensure();
             $this->info('数据库导入完成');
             $email = '';
             while (!$email) {
@@ -105,8 +104,10 @@ class V2boardInstall extends Command
 
             $defaultSecurePath = hash('crc32b', config('app.key'));
             $this->info("访问 http(s)://你的站点/{$defaultSecurePath} 进入管理面板，你可以在用户中心修改你的密码。");
-        } catch (\Exception $e) {
+            return 0;
+        } catch (\Throwable $e) {
             $this->error($e->getMessage());
+            return 1;
         }
     }
 

@@ -16,6 +16,17 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class AdminManagementTest extends DatabaseTestCase
 {
+    public function testBulkBanKeepsItsFilterStableAcrossMoreThanOneChunk()
+    {
+        $users = [];
+        for ($i = 0; $i < 1002; $i++) $users[] = ['email' => 'bulk-ban-' . $i . '@example.test', 'banned' => 0];
+        foreach (array_chunk($users, 200) as $chunk) DB::table('v2_user')->insert($chunk);
+        $request = Request::create('/', 'POST', ['filter' => [['key' => 'banned', 'condition' => '=', 'value' => 0]]]);
+        (new UserController())->ban($request);
+        $this->assertSame(1002, User::where('banned', 1)->count());
+        $this->assertSame(0, User::where('banned', 0)->count());
+    }
+
     private $factory;
     protected function setUp(): void
     {

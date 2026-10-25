@@ -2,16 +2,16 @@ import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { chromium } from "playwright";
+import { liveTarget } from "./live-target.mjs";
 
-const origin = process.env.ADMIN_LIVE_URL;
-if (origin !== "http://192.168.198.137" || !process.env.ADMIN_LIVE_PASSWORD) throw new Error("Set the authorized VM and test password");
+const origin = liveTarget();
 const output = resolve(import.meta.dirname, "../test-results/telegram-webhook");
 await mkdir(output, { recursive: true });
-const browser = await chromium.launch({ executablePath: process.env.ADMIN_BROWSER_PATH ?? "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe", args: ["--no-proxy-server"] });
+const browser = await chromium.launch({ executablePath: process.env.ADMIN_BROWSER_PATH || undefined, args: ["--no-proxy-server"] });
 const context = await browser.newContext({ serviceWorkers: "block", viewport: { width: 1440, height: 1000 } });
 await context.route("**/*", route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
 const page = await context.newPage();
-const report = { host: "192.168.198.137", passed: [], failures: [], cleanup: [] };
+const report = { host: new URL(origin).host, passed: [], failures: [], cleanup: [] };
 let admin, original;
 const request = async (path, data, method = "POST") => {
     const url = new URL("/api/v1/" + path, origin); assert.equal(url.origin, origin);

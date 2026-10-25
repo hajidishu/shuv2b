@@ -62,29 +62,31 @@ class UserController extends Controller
 
     public function changePassword(UserChangePassword $request)
     {
-        $user = User::find($request->user['id']);
-        if (!$user) {
-            abort(500, __('The user does not exist'));
-        }
-        if (!Helper::multiPasswordVerify(
-            $user->password_algo,
-            $user->password_salt,
-            $request->input('old_password'),
-            $user->password
-        )) {
-            abort(500, __('The old password is wrong'));
-        }
-        $user->password = password_hash($request->input('new_password'), PASSWORD_DEFAULT);
-        $user->password_algo = NULL;
-        $user->password_salt = NULL;
-        if (!$user->save()) {
-            abort(500, __('Save failed'));
-        }
-        $authService = new AuthService($user);
-        $authService->removeAllSession();
-        return response([
-            'data' => true
-        ]);
+        return DB::transaction(function () use ($request) {
+            $user = User::where('id', $request->user['id'])->lockForUpdate()->first();
+            if (!$user) {
+                abort(500, __('The user does not exist'));
+            }
+            if (!Helper::multiPasswordVerify(
+                $user->password_algo,
+                $user->password_salt,
+                $request->input('old_password'),
+                $user->password
+            )) {
+                abort(500, __('The old password is wrong'));
+            }
+            $user->password = password_hash($request->input('new_password'), PASSWORD_DEFAULT);
+            $user->password_algo = NULL;
+            $user->password_salt = NULL;
+            if (!$user->save()) {
+                abort(500, __('Save failed'));
+            }
+            $authService = new AuthService($user);
+            $authService->removeAllSession();
+            return response([
+                'data' => true
+            ]);
+        }, 3);
     }
 
     public function newPeriod(Request $request) 
@@ -441,9 +443,8 @@ class UserController extends Controller
             abort(500, __('The user does not exist'));
         }
 
-        $code = Helper::guid();
-        $key = CacheKey::get('TEMP_TOKEN', $code);
-        Cache::put($key, $user->id, 60);
+        $authorization = $request->input('auth_data') ?? $request->header('authorization');
+        $code = AuthService::issueQuickLoginCode($authorization);
         $redirect = '/#/login?verify=' . $code . '&redirect=' . ($request->input('redirect') ? $request->input('redirect') : 'dashboard');
         if (config('v2board.app_url')) {
             $url = config('v2board.app_url') . $redirect;

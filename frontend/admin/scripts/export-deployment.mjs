@@ -9,6 +9,7 @@ import {
 } from "node:fs/promises";
 import { resolve, sep, dirname } from "node:path";
 import { execFileSync } from "node:child_process";
+import { runtimeFiles } from "./runtime-files.mjs";
 const source = resolve(import.meta.dirname, "../../.."),
     target = resolve(process.argv[2] ?? "");
 if (!process.argv[2] || target === source || target.startsWith(source + sep))
@@ -69,6 +70,7 @@ const manifest = JSON.parse(
         "utf8",
     ),
 );
+const adminRuntimeFiles = runtimeFiles(manifest);
 if (
     !manifest["index.html"]?.file ||
     !(
@@ -108,6 +110,7 @@ for (const file of new Set(files)) {
     if (!roots.has(file.split("/")[0]) && !rootFiles.has(file)) continue;
     if (file.startsWith("storage/") && !file.endsWith(".gitignore")) continue;
     if (file.startsWith("public/assets/admin/")) continue;
+    if (file.startsWith("public/assets/admin-v2/") && !adminRuntimeFiles.has(file.slice("public/assets/admin-v2/".length))) continue;
     const input = resolve(source, file),
         output = resolve(target, file);
     if (!input.startsWith(source + sep) || !output.startsWith(target + sep))

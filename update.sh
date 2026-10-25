@@ -25,6 +25,10 @@ fi
 
 git fetch origin "$branch"
 git merge --ff-only FETCH_HEAD
+if [ -f composer.lock ] && ! grep -q '"name": "lbuchs/webauthn"' composer.lock; then
+    # Add this new, pinned dependency without updating the existing framework.
+    "${composer_command[@]}" update lbuchs/webauthn --with-dependencies --no-dev --prefer-dist --optimize-autoloader
+fi
 "${composer_command[@]}" install --no-dev --prefer-dist --optimize-autoloader
 "${composer_command[@]}" check-platform-reqs --no-dev
 php artisan v2board:update

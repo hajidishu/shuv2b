@@ -42,12 +42,16 @@ class ResetPassword extends Command
      */
     public function handle()
     {
-        $user = User::where('email', $this->argument('email'))->first();
-        if (!$user) abort(500, '邮箱不存在');
         $password = Helper::guid(false);
-        $user->password = password_hash($password, PASSWORD_DEFAULT);
-        $user->password_algo = null;
-        if (!$user->save()) abort(500, '重置失败');
+        DB::transaction(function () use ($password) {
+            $user = User::where('email', $this->argument('email'))->lockForUpdate()->first();
+            if (!$user) abort(500, '邮箱不存在');
+            $user->password = password_hash($password, PASSWORD_DEFAULT);
+            $user->password_algo = null;
+            $user->password_salt = null;
+            if (!$user->save()) abort(500, '重置失败');
+            \App\Services\PasskeyService::revokeOnRecovery($user);
+        }, 3);
         $this->info("!!!重置成功!!!");
         $this->info("新密码为：{$password}，请尽快修改密码。");
     }

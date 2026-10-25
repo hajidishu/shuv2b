@@ -10,6 +10,11 @@ class PassportRoute
         $router->group([
             'prefix' => 'passport'
         ], function ($router) {
+            $router->group(['prefix' => 'passkey', 'middleware' => 'passkey.request'], function ($router) {
+                $router->get('/config', 'V1\\Passport\\PasskeyController@config');
+                $router->post('/login/options', 'V1\\Passport\\PasskeyController@loginOptions');
+                $router->post('/login/verify', 'V1\\Passport\\PasskeyController@loginVerify');
+            });
             // Auth
             $router->post('/auth/register', 'V1\\Passport\\AuthController@register');
             $router->post('/auth/login', 'V1\\Passport\\AuthController@login');

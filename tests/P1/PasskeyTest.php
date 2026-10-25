@@ -273,6 +273,50 @@ class PasskeyTest extends DatabaseTestCase
         $this->assertNotFalse(AuthService::decryptAuthData($this->session));
     }
 
+    public function testDeleteRevokesChainedQuickLoginsButKeepsPasswordAndOtherKeySessions(): void
+    {
+        $this->register();
+        $target = $this->credentialId;
+        $direct = $this->service->loginVerify($this->request($this->loginPayload()));
+        $child = AuthService::redeemQuickLoginCode($this->request(['login_method' => 'password', 'passkey_id' => 999]), AuthService::issueQuickLoginCode($direct['auth_data']));
+        $grandchild = AuthService::redeemQuickLoginCode($this->request(), AuthService::issueQuickLoginCode($child['auth_data']));
+        $unusedCode = AuthService::issueQuickLoginCode($grandchild['auth_data']);
+        $passwordChild = AuthService::redeemQuickLoginCode($this->request(), AuthService::issueQuickLoginCode($this->session));
+
+        $this->rawId = random_bytes(32);
+        $this->register();
+        $otherKey = $this->service->loginVerify($this->request($this->loginPayload()));
+        foreach ((new AuthService($this->account))->getSessions() as $meta) {
+            if (in_array($meta['auth_data'], [$child['auth_data'], $grandchild['auth_data']], true)) {
+                $this->assertSame('passkey', $meta['login_method'] ?? null);
+                $this->assertSame($target, $meta['passkey_id'] ?? null);
+            }
+        }
+        $result = $this->service->delete($this->request(['action' => 'delete', 'target_id' => $target, 'reauth_token' => $this->grant('delete', $target)]));
+        $this->assertFalse($result['sign_out']);
+        foreach ([$direct, $child, $grandchild] as $revoked) $this->assertFalse(AuthService::decryptAuthData($revoked['auth_data']));
+        foreach ([$this->session, $passwordChild['auth_data'], $otherKey['auth_data']] as $retained) $this->assertIsArray(AuthService::decryptAuthData($retained));
+        $this->reject(function () use ($unusedCode) { AuthService::redeemQuickLoginCode($this->request(), $unusedCode); });
+        $this->assertSame('subscription-token', $this->account->fresh()->token);
+        $this->assertSame('unchanged-uuid', $this->account->fresh()->uuid);
+    }
+
+    public function testDeleteAlsoRevokesUnattributedLegacySessionsAndTheirQuickLoginDescendants(): void
+    {
+        $this->register();
+        $legacy = (new AuthService($this->account))->generateAuthData($this->request());
+        $cacheKey = \App\Utils\CacheKey::get('USER_SESSIONS', $this->account->id);
+        $sessions = \Illuminate\Support\Facades\Cache::get($cacheKey);
+        foreach ($sessions as &$meta) if ($meta['auth_data'] === $legacy['auth_data']) unset($meta['login_method'], $meta['passkey_id']);
+        unset($meta);
+        \Illuminate\Support\Facades\Cache::put($cacheKey, $sessions);
+        $child = AuthService::redeemQuickLoginCode($this->request(), AuthService::issueQuickLoginCode($legacy['auth_data']));
+        $grandchild = AuthService::redeemQuickLoginCode($this->request(), AuthService::issueQuickLoginCode($child['auth_data']));
+        $this->service->delete($this->request(['action' => 'delete', 'target_id' => $this->credentialId, 'reauth_token' => $this->grant('delete', $this->credentialId)]));
+        foreach ([$legacy, $child, $grandchild] as $revoked) $this->assertFalse(AuthService::decryptAuthData($revoked['auth_data']));
+        $this->assertIsArray(AuthService::decryptAuthData($this->session));
+    }
+
     public function testRecoveryRevokesKeysAndSessionsWithoutChangingSubscription(): void
     {
         $this->register(); PasskeyService::revokeOnRecovery($this->account);

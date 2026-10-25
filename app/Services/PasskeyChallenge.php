@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Carbon;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 
 class PasskeyChallenge
 {
@@ -31,10 +33,23 @@ class PasskeyChallenge
 
     public function limit(string $scope, int $maximum, int $seconds): void
     {
-        $key = 'PASSKEY_RATE_' . hash('sha256', $scope);
-        Cache::add($key, 0, $seconds);
-        $count = Cache::increment($key);
-        if ($count === false || $count === null) abort(503, 'Passkey 暂时不可用');
-        if ($count > $maximum) abort(429, '操作过于频繁，请稍后再试');
+        // Version the value format so old workers cannot INCR a new record.
+        $key = 'PASSKEY_RATE_V2_' . hash('sha256', $scope);
+        try {
+            Cache::lock($key . '_MUTEX', 5)->block(2, function () use ($key, $maximum, $seconds) {
+                $window = Cache::get($key);
+                $now = Carbon::now()->getTimestamp();
+                if (!is_array($window) || !isset($window['count'], $window['expires_at']) || $window['expires_at'] <= $now) {
+                    $window = ['count' => 0, 'expires_at' => $now + $seconds];
+                }
+                if ($window['count'] >= $maximum) abort(429, '操作过于频繁，请稍后再试');
+                $window['count']++;
+                // Always write with a bounded TTL; keep the original fixed
+                // deadline, even when a key expires during this operation.
+                if (!Cache::put($key, $window, max(1, $window['expires_at'] - $now))) abort(503, 'Passkey 暂时不可用');
+            });
+        } catch (LockTimeoutException $error) {
+            abort(503, 'Passkey 暂时不可用，请重试');
+        }
     }
 }

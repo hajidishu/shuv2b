@@ -741,6 +741,7 @@ try {
             await modal
                 .getByRole("button", { name: "取消", exact: true })
                 .click();
+            await modal.waitFor({ state: "hidden" });
         },
     );
 
@@ -748,31 +749,37 @@ try {
         "mail-modal-recipient-subject-and-12-row-textarea",
         async () => {
             await page
+                .locator(".table-toolbar")
                 .getByRole("button", { name: "操作", exact: true })
-                .click();
-            const actionMenu = page.locator(".ant-dropdown:visible").last();
+                .hover();
+            const actionMenu = page.locator(".ant-dropdown:visible").filter({
+                has: page.getByText("导出CSV", { exact: true }),
+            });
             await actionMenu
                 .locator(".ant-dropdown-menu-item")
                 .first()
                 .waitFor();
-            const actionLabels = await actionMenu
-                .locator(".ant-dropdown-menu-item")
-                .evaluateAll((items) =>
-                    items.map((item) => item.innerText.trim()),
-                );
+            // This toolbar menu opens on hover. Keep the pointer inside it and
+            // read labels/icons from one snapshot of the same visible menu.
+            await actionMenu.hover();
+            const { labels: actionLabels, icons: actionIcons } =
+                await actionMenu.evaluate((menu) => {
+                    const items = Array.from(
+                        menu.querySelectorAll(".ant-dropdown-menu-item"),
+                    );
+                    return {
+                        labels: items.map((item) => item.innerText.trim()),
+                        icons: items.map(
+                            (item) => item.querySelector("svg")?.dataset.icon,
+                        ),
+                    };
+                });
             assert.deepEqual(actionLabels, [
                 "导出CSV",
                 "发送邮件",
                 "批量封禁",
                 "批量删除",
             ]);
-            const actionIcons = await actionMenu
-                .locator(".ant-dropdown-menu-item")
-                .evaluateAll((items) =>
-                    items.map(
-                        (item) => item.querySelector("svg")?.dataset.icon,
-                    ),
-                );
             assert.deepEqual(actionIcons, [
                 "file-excel",
                 "mail",
@@ -806,6 +813,7 @@ try {
             await modal
                 .getByRole("button", { name: "取消", exact: true })
                 .click();
+            await modal.waitFor({ state: "hidden" });
         },
     );
 

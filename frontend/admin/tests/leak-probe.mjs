@@ -62,6 +62,7 @@ const check = async (name, fn) => {
         console.log("PASS " + name);
     } catch (error) {
         report.failures.push({ name, error: error.stack ?? error.message });
+        console.error("FAIL " + name + ": " + error.message);
         await page?.screenshot({
             path: resolve(out, "failure-" + name + ".png"),
             fullPage: true,
@@ -599,10 +600,21 @@ try {
         await taskDrawer().locator(".ant-drawer-close").click();
         await taskDrawer().waitFor({ state: "hidden" });
         await page.setViewportSize({ width: 390, height: 844 });
+        // Resize observers and table measurements finish after the viewport
+        // change. Require the responsive layout to fit before inspecting it.
+        await page.waitForFunction(
+            () => document.documentElement.scrollWidth <= innerWidth + 1,
+            null,
+            { timeout: 5000 },
+        );
+        const layout = await page.evaluate(() => ({
+            width: document.documentElement.scrollWidth,
+            viewport: innerWidth,
+        }));
+        report.mobileLayout = layout;
         assert.ok(
-            await page.evaluate(
-                () => document.documentElement.scrollWidth <= innerWidth + 1,
-            ),
+            layout.width <= layout.viewport + 1,
+            JSON.stringify(layout),
         );
         await page.screenshot({
             path: resolve(out, "probe-mobile.png"),

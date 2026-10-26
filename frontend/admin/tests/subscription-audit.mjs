@@ -51,6 +51,7 @@ const check = async (name, fn) => {
         console.log("PASS " + name);
     } catch (error) {
         report.failures.push({ name, error: error.stack ?? error.message });
+        console.error("FAIL " + name + ": " + error.message);
         await page?.screenshot({
             path: resolve(out, "failure-" + name + ".png"),
             fullPage: true,
@@ -429,12 +430,29 @@ try {
         await drawer.getByRole("button", { name: "重置", exact: true }).click();
         await page.waitForLoadState("networkidle");
         if (!live) {
+            await page.waitForFunction(
+                () =>
+                    document.querySelectorAll(".audit-records .ant-table-row")
+                        .length === 20,
+            );
             assert.equal(
                 await page.locator(".audit-records .ant-table-row").count(),
                 20,
             );
+            const nextPage = page.waitForResponse((response) => {
+                const url = new URL(response.url());
+                return (
+                    url.pathname.endsWith("/subscribe-audit/fetch") &&
+                    url.searchParams.get("current") === "2"
+                );
+            });
             await page.locator(".ant-pagination-item-2").click();
-            await page.waitForLoadState("networkidle");
+            assert.equal((await (await nextPage).json()).data.length, 5);
+            await page.waitForFunction(
+                () =>
+                    document.querySelectorAll(".audit-records .ant-table-row")
+                        .length === 5,
+            );
             assert.equal(
                 await page.locator(".audit-records .ant-table-row").count(),
                 5,

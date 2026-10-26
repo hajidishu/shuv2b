@@ -14,7 +14,12 @@ class TelegramController extends Controller
 
     public function __construct(Request $request)
     {
-        if ($request->input('access_token') !== md5(config('v2board.telegram_bot_token'))) {
+        $token = config('v2board.telegram_bot_token');
+        $accessToken = $request->input('access_token');
+        // Never turn an unconfigured bot into a publicly predictable credential.
+        // Keep the registered webhook URL format compatible with existing bots.
+        if (!is_string($token) || trim($token) === '' || !is_string($accessToken) ||
+            !hash_equals(md5($token), $accessToken)) {
             abort(401);
         }
 

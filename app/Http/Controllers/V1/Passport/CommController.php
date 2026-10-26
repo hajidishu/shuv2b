@@ -14,7 +14,7 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
-use ReCaptcha\ReCaptcha;
+use App\Services\CaptchaService;
 use Illuminate\Support\Facades\RateLimiter;
 
 use function PHPUnit\Framework\isEmpty;
@@ -36,13 +36,7 @@ class CommController extends Controller
         }
         RateLimiter::hit($ip, 60);
 
-        if ((int)config('v2board.recaptcha_enable', 0)) {
-            $recaptcha = new ReCaptcha(config('v2board.recaptcha_key'));
-            $recaptchaResp = $recaptcha->verify($request->input('recaptcha_data'));
-            if (!$recaptchaResp->isSuccess()) {
-                abort(500, __('Invalid code is incorrect'));
-            }
-        }
+        app(CaptchaService::class)->verify($request);
         $email = $request->input('email');
         $cacheKeyEmail = strtolower(trim((string)$email));
         $isforget = $request->input('isforget');

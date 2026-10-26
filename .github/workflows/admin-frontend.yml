@@ -39,6 +39,7 @@ jobs:
           node tests/editor-layout.mjs
           node tests/filter-payment-ui.mjs
           node tests/telegram-webhook.mjs
+          node tests/captcha-settings.mjs
           node tests/subscription-audit.mjs
           node tests/leak-probe.mjs
           node tests/browser.mjs

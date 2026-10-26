@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict';
+import {chromium} from 'playwright';
+import {startFixture} from './fixture.mjs';
+const fixture=await startFixture();
+const browser=await chromium.launch({executablePath:process.env.ADMIN_BROWSER_PATH ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
+try {
+  const page=await browser.newPage();
+  await page.route('**/*',route=>new URL(route.request().url()).origin===fixture.origin?route.continue():route.abort());
+  await page.goto(fixture.origin+'/#/login');
+  await page.getByLabel('邮箱',{exact:true}).fill('admin@example.test');
+  await page.getByLabel('密码',{exact:true}).fill('fixture');
+  await page.getByRole('button',{name:'登录',exact:true}).click();
+  await page.waitForURL('**#/dashboard');
+  await page.goto(fixture.origin+'/#/config/system');
+  await page.getByRole('tab',{name:'安全',exact:true}).click();
+  const choose=async label=>{await page.locator('#captcha_provider').locator('xpath=ancestor::div[contains(concat(" ",normalize-space(@class)," ")," ant-select ")][1]').click();await page.locator('.ant-select-dropdown:visible').getByText(label,{exact:true}).click();};
+  await choose('Cloudflare Turnstile');
+  await page.locator('#turnstile_site_key').fill('fixture-public-site');
+  await page.locator('#turnstile_secret_key').fill('fixture-private-secret');
+  assert.equal(await page.locator('#turnstile_secret_key').getAttribute('type'),'password');
+  assert.equal(await page.locator('#recaptcha_key').count(),0);
+  await page.getByText('已保存',{exact:true}).waitFor();
+  assert(fixture.calls.some(c=>c.path==='/config/save' && c.data.captcha_provider==='turnstile' && c.data.turnstile_site_key==='fixture-public-site'));
+  await choose('Google reCAPTCHA');
+  await page.locator('#recaptcha_key').waitFor();
+  assert.equal(await page.locator('#turnstile_secret_key').count(),0);
+  await choose('关闭');
+  assert.equal(await page.locator('#recaptcha_key').count(),0);
+  assert.equal(await page.locator('#turnstile_site_key').count(),0);
+  await page.getByText('已保存',{exact:true}).waitFor();
+  console.log('PASS CAPTCHA provider selection, conditional keys, secret masking and autosave');
+} finally {await browser.close();await fixture.close();}

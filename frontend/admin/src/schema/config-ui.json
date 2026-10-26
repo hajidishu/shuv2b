@@ -161,14 +161,14 @@
     },
     "recaptcha_key": {
         "group": "safe",
-        "label": "密钥",
+        "label": "reCAPTCHA 私钥",
         "help": "在Google reCAPTCHA申请的密钥。",
         "placeholder": "请输入",
         "order": 20
     },
     "recaptcha_site_key": {
         "group": "safe",
-        "label": "网站密钥",
+        "label": "reCAPTCHA 网站密钥",
         "help": "在Google reCAPTCH申请的网站密钥。",
         "placeholder": "请输入",
         "order": 21
@@ -364,7 +364,7 @@
     "commission_distribution_enable": {
         "group": "invite",
         "label": "三级分销",
-        "help": "开启后将佣金将按照设置的3成比例进行分成，三成比例合计请不要\u003e100%。",
+        "help": "开启后将佣金将按照设置的3成比例进行分成，三成比例合计请不要>100%。",
         "placeholder": "",
         "order": 49
     },
@@ -577,5 +577,23 @@
         "placeholder": "https://panel.example.com",
         "help": "填写所有可信前端的完整 HTTPS 来源，可使用不同主域名，包含非默认端口，不含路径。自动生成 ROR 声明；浏览器对不同注册域标签数量有限制。仅本机 RP localhost 可使用 HTTP。",
         "order": 97
+    },
+    "captcha_provider": {
+        "group": "safe",
+        "label": "人机验证方式",
+        "help": "用于注册和发送邮件验证码。启用前填写对应密钥；用户前端需要支持所选验证方式。",
+        "order": 19
+    },
+    "turnstile_secret_key": {
+        "group": "safe",
+        "label": "Turnstile Secret Key",
+        "help": "Cloudflare Turnstile 的私钥，仅用于后端验证，请勿填入前端配置。",
+        "order": 20
+    },
+    "turnstile_site_key": {
+        "group": "safe",
+        "label": "Turnstile Site Key",
+        "help": "在 Cloudflare Turnstile 创建组件后获取，并配置所有用户前端域名。",
+        "order": 21
     }
 }

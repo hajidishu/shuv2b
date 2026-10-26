@@ -185,7 +185,10 @@ class ConfigController extends Controller
                 'email_whitelist_enable' => (int)config('v2board.email_whitelist_enable', 0),
                 'email_whitelist_suffix' => config('v2board.email_whitelist_suffix', Dict::EMAIL_WHITELIST_SUFFIX_DEFAULT),
                 'email_gmail_limit_enable' => config('v2board.email_gmail_limit_enable', 0),
-                'recaptcha_enable' => (int)config('v2board.recaptcha_enable', 0),
+                'captcha_provider' => \App\Services\CaptchaService::provider(),
+                'turnstile_site_key' => config('v2board.turnstile_site_key'),
+                'turnstile_secret_key' => config('v2board.turnstile_secret_key'),
+                'recaptcha_enable' => \App\Services\CaptchaService::provider() === 'recaptcha' ? 1 : 0,
                 'recaptcha_key' => config('v2board.recaptcha_key'),
                 'recaptcha_site_key' => config('v2board.recaptcha_site_key'),
                 'register_limit_by_ip_enable' => (int)config('v2board.register_limit_by_ip_enable', 0),
@@ -213,6 +216,10 @@ class ConfigController extends Controller
     {
         $data = $request->validated();
         $config = config('v2board');
+        if (array_key_exists('recaptcha_enable', $data) && !array_key_exists('captcha_provider', $data)) {
+            $data['captcha_provider'] = (int)$data['recaptcha_enable'] ? 'recaptcha' : 'none';
+        }
+        if (array_key_exists('captcha_provider', $data)) $data['recaptcha_enable'] = $data['captcha_provider'] === 'recaptcha' ? 1 : 0;
         foreach (ConfigSave::RULES as $k => $v) {
             if (!in_array($k, array_keys(ConfigSave::RULES))) {
                 unset($config[$k]);

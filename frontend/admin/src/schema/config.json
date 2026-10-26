@@ -13,7 +13,11 @@
         "commission_first_time_enable": 1,
         "commission_auto_check_enable": 1,
         "commission_withdraw_limit": 100,
-        "commission_withdraw_method": ["支付宝", "USDT", "Paypal"],
+        "commission_withdraw_method": [
+            "支付宝",
+            "USDT",
+            "Paypal"
+        ],
         "withdraw_close_enable": 0,
         "commission_distribution_enable": 0,
         "commission_distribution_l1": null,
@@ -120,6 +124,9 @@
         "password_limit_expire": 60,
         "passkey_enabled": 0,
         "passkey_rp_id": "",
-        "passkey_origins": []
+        "passkey_origins": [],
+        "captcha_provider": "none",
+        "turnstile_site_key": null,
+        "turnstile_secret_key": null
     }
 }

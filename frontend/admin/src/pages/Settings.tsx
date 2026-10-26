@@ -145,6 +145,7 @@ const toggleKeys = new Set([
 const hiddenConfigFields = new Set([
     // Managed on the separate theme page or absent from the recovered legacy form.
     "frontend_theme",
+    "recaptcha_enable",
     "try_out_enable",
     "telegram_discuss_id",
     "telegram_channel_id",
@@ -237,7 +238,7 @@ export default function Settings() {
                       ? "switch"
                       : typeof val === "number"
                         ? "number"
-                        : /password|token|recaptcha_key/.test(key)
+                        : /password|token|recaptcha_key|turnstile_secret_key/.test(key)
                           ? "password"
                           : "text",
             };
@@ -291,6 +292,14 @@ export default function Settings() {
                     })),
                 ];
             }
+            if (key === "captcha_provider") {
+                field.kind = "select";
+                field.options = [
+                    { label: "关闭", value: "none" },
+                    { label: "Google reCAPTCHA", value: "recaptcha" },
+                    { label: "Cloudflare Turnstile", value: "turnstile" },
+                ];
+            }
             if (key === "subscribe_url") field.kind = "textarea";
             return field;
         });
@@ -298,8 +307,6 @@ export default function Settings() {
         const current = { ...values, ...formValues };
         const dependent: Row = {
             email_whitelist_suffix: "email_whitelist_enable",
-            recaptcha_key: "recaptcha_enable",
-            recaptcha_site_key: "recaptcha_enable",
             register_limit_count: "register_limit_by_ip_enable",
             register_limit_expire: "register_limit_by_ip_enable",
             password_limit_count: "password_limit_enable",
@@ -308,6 +315,8 @@ export default function Settings() {
             commission_distribution_l2: "commission_distribution_enable",
             commission_distribution_l3: "commission_distribution_enable",
         };
+        if (["recaptcha_key", "recaptcha_site_key"].includes(field.key)) return current.captcha_provider === "recaptcha";
+        if (["turnstile_site_key", "turnstile_secret_key"].includes(field.key)) return current.captcha_provider === "turnstile";
         if (field.key === "try_out_hour")
             return Number(current.try_out_plan_id) !== 0;
         if (field.key === "show_subscribe_expire")

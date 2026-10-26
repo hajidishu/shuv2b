@@ -47,7 +47,8 @@ class AuthService
             'ip' => $request->ip(),
             'login_at' => time(),
             'ua' => $request->userAgent(),
-            'auth_data' => $authData
+            'auth_data' => $authData,
+            'login_method' => 'password',
         ], array_intersect_key($context, array_flip(['login_method', 'passkey_id']))));
         if (!$saved) abort(503, '登录会话暂时不可用，请重试');
         return [
@@ -168,11 +169,23 @@ class AuthService
             if (!$user || $user->banned) abort(403, '账号不可用');
             $identity = self::decryptAuthData($context['authorization']);
             if (!$identity || (int)$identity['id'] !== (int)$user->id) abort(422, 'Token error');
+            $auth = new self($user);
+            $source = null;
+            foreach ($auth->getSessions() as $session) {
+                if (($session['auth_data'] ?? null) === $context['authorization']) {
+                    $source = $session;
+                    break;
+                }
+            }
+            if (!is_array($source)) abort(422, 'Token error');
+            // Preserve provenance through every redemption. A legacy session
+            // cannot be relabelled as a known password login during an upgrade.
+            $source['login_method'] = $source['login_method'] ?? 'legacy';
             // User lock serializes recovery, source-session removal and all
             // redemptions. SET NX additionally prevents replay across retries.
             if (!Cache::get($key) || !Cache::add($key . '_USED', true, 60)) abort(422, 'Token error');
             Cache::forget($key);
-            return (new self($user))->generateAuthData($request);
+            return $auth->generateAuthData($request, $source);
         }, 3);
     }
 }

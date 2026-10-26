@@ -102,8 +102,11 @@ class ConfigSave extends FormRequest
         'email_whitelist_suffix' => 'nullable|array',
         'email_gmail_limit_enable' => 'in:0,1',
         'recaptcha_enable' => 'in:0,1',
-        'recaptcha_key' => '',
-        'recaptcha_site_key' => '',
+        'captcha_provider' => 'in:none,recaptcha,turnstile',
+        'turnstile_site_key' => 'nullable|string|max:2048',
+        'turnstile_secret_key' => 'nullable|string|max:2048',
+        'recaptcha_key' => 'nullable|string|max:2048',
+        'recaptcha_site_key' => 'nullable|string|max:2048',
         'email_verify' => 'in:0,1',
         'safe_mode_enable' => 'in:0,1',
         'register_limit_by_ip_enable' => 'in:0,1',
@@ -162,6 +165,16 @@ class ConfigSave extends FormRequest
     {
         $validator->after(function ($validator) {
             if ($validator->errors()->isNotEmpty()) return;
+            $captcha = $this->only(['captcha_provider', 'recaptcha_enable', 'recaptcha_key', 'recaptcha_site_key', 'turnstile_site_key', 'turnstile_secret_key']);
+            if ($captcha) {
+                $captcha = array_merge((array)config('v2board', []), $captcha);
+                if ($this->has('recaptcha_enable') && !$this->has('captcha_provider')) $captcha['captcha_provider'] = (int)$captcha['recaptcha_enable'] ? 'recaptcha' : 'none';
+                $provider = \App\Services\CaptchaService::provider($captcha);
+                foreach (['site_key', 'secret'] as $kind) {
+                    $field = \App\Services\CaptchaService::PROVIDERS[$provider][$kind] ?? null;
+                    if ($field && (!is_string($captcha[$field] ?? null) || trim($captcha[$field]) === '')) $validator->errors()->add($field, '请填写所选人机验证方式的网站密钥和私钥');
+                }
+            }
             $values = array_merge((array)config('v2board', []), $this->only(['passkey_enabled', 'passkey_rp_id', 'passkey_origins']));
             if (!empty($values['passkey_enabled']) && !\App\Services\PasskeySettings::validate($values)) {
                 $validator->errors()->add('passkey_enabled', '启用 Passkey 前请填写固定 RP ID 和完整 HTTPS 允许来源；修改 RP ID 前请先关闭功能');

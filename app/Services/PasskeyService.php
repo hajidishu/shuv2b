@@ -362,7 +362,9 @@ class PasskeyService
             DB::table('v2_passkey_credential')->where('id', $target)->whereNull('revoked_at')->update(['revoked_at' => time()]);
             $auth = new AuthService($user);
             $signOut = false;
-            foreach ($auth->getSessions() as $id => $session) if ((int)($session['passkey_id'] ?? 0) === $target) {
+            // Pre-fix quick logins had no provenance. Revoke those unknown
+            // sessions too, rather than leaving an already-created bypass alive.
+            foreach ($auth->getSessions() as $id => $session) if ((int)($session['passkey_id'] ?? 0) === $target || ($session['login_method'] ?? 'legacy') === 'legacy') {
                 if (hash_equals((string)($session['auth_data'] ?? ''), (string)$request->header('Authorization'))) $signOut = true;
                 $auth->removeSession($id);
             }

@@ -399,19 +399,21 @@ try {
             });
         }
         await navigate("/config/system");
-        const tabs = await page
-            .locator(".settings-card .ant-tabs-tab")
-            .evaluateAll((els) =>
+        const tabBounds = () =>
+            page.locator(".settings-card .ant-tabs-tab").evaluateAll((els) =>
                 els.map((el) => {
                     const r = el.getBoundingClientRect();
                     return { x: r.x, right: r.right };
                 }),
             );
-        assert.ok(tabs[1].x - tabs[0].right <= 32, JSON.stringify(tabs));
-        assert.ok(
-            Math.abs(tabs.at(-1).right - tabs[0].x - 1113.40625) < 4,
-            "Tabs must not stretch across wide screens",
-        );
+        const tabs = await tabBounds();
+        assert.ok(tabs.length > 1);
+        for (let index = 1; index < tabs.length; index++) {
+            assert.ok(
+                Math.abs(tabs[index].x - tabs[index - 1].right - 32) < 1,
+                JSON.stringify(tabs),
+            );
+        }
         await page.screenshot({
             path: resolve(
                 out,
@@ -419,6 +421,22 @@ try {
             ),
             fullPage: true,
         });
+        // Font metrics vary across runners. The tab strip must keep the same
+        // intrinsic width at two wide viewports rather than fill either one.
+        await page.setViewportSize({ width: 1920, height: 1000 });
+        await page.evaluate(() => new Promise((resolve) => {
+            requestAnimationFrame(() => requestAnimationFrame(resolve));
+        }));
+        const narrowerTabs = await tabBounds();
+        assert.equal(narrowerTabs.length, tabs.length);
+        assert.ok(
+            Math.abs(
+                narrowerTabs.at(-1).right - narrowerTabs[0].x -
+                (tabs.at(-1).right - tabs[0].x),
+            ) < 2,
+            "Tabs must not stretch across wide screens: " +
+                JSON.stringify({ tabs, narrowerTabs }),
+        );
         await page.setViewportSize({ width: 1440, height: 1000 });
     });
     await api("/server/group/save", { name: prefix + "-group" });

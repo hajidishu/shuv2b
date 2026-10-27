@@ -22,6 +22,10 @@ class UserRoute
                 $router->post('/delete', 'V1\\Passport\\PasskeyController@delete');
             });
             // User
+            $router->get('/google/fetch', 'V1\\Passport\\GoogleController@listing');
+            $router->post('/google/options', 'V1\\Passport\\GoogleController@bindOptions');
+            $router->post('/google/bind', 'V1\\Passport\\GoogleController@bind');
+            $router->post('/google/unbind', 'V1\\Passport\\GoogleController@unbind');
             $router->get ('/unbindTelegram', 'V1\\User\\UserController@unbindTelegram');
             $router->get ('/resetSecurity', 'V1\\User\\UserController@resetSecurity');
             $router->get ('/info', 'V1\\User\\UserController@info');

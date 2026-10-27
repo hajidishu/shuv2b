@@ -1,5 +1,9 @@
 # 分支变更记录
 
+## 2026 年 10 月 27 日
+
+新增可选 Google 登录，部署者自行配置 Client ID 与前端来源，默认关闭。新用户补设站点密码后注册，已登录用户可经重新验证绑定不同邮箱的 Google 身份。新增第三方身份表，安装和更新命令自动补齐；详见 [Google 登录](./features/google-login)。
+
 ## 2026 年 10 月 26 日
 
 新增 Cloudflare Turnstile 支持，后台以可选验证方式下拉菜单管理，兼容原 reCAPTCHA 配置。用户前端须同步更新，详见[人机验证](./features/captcha)。

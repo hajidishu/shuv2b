@@ -174,7 +174,7 @@ class UserController extends Controller
                 if ($user->wasChanged(['password', 'is_admin', 'is_staff'])) {
                     (new AuthService($user))->removeAllSession();
                 }
-                if ($user->wasChanged('password')) \App\Services\PasskeyService::revokeOnRecovery($user);
+                if ($user->wasChanged('password')) \App\Services\AccountSecurityService::recover($user);
             } catch (\Exception $e) {
                 abort(500, '保存失败');
             }
@@ -359,7 +359,7 @@ class UserController extends Controller
                 }
                 Ticket::where('user_id', $user->id)->delete();
                 User::where('invite_user_id', $user->id)->update(['invite_user_id' => null]);
-                \App\Services\PasskeyService::purgeUser((int)$user->id);
+                \App\Services\AccountSecurityService::purgeUser((int)$user->id);
             });
             $builder->delete();
             DB::commit();
@@ -394,7 +394,7 @@ class UserController extends Controller
             }
             Ticket::where('user_id', $request->input('id'))->delete();
     
-            \App\Services\PasskeyService::purgeUser((int)$user->id);
+            \App\Services\AccountSecurityService::purgeUser((int)$user->id);
             $user->delete();
             DB::commit();
         } catch (\Exception $e) {

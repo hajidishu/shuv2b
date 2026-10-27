@@ -48,6 +48,7 @@ class Environment
             'app' => ['key' => 'base64:' . base64_encode(str_repeat('t', 32)), 'cipher' => 'AES-256-CBC']
         ]));
         $app->instance('translator', new Translator(new ArrayLoader(), 'en'));
+        $app->instance('validator', new \Illuminate\Validation\Factory($app['translator'], $app));
         $app->instance('log', new NullLogger());
         $app->instance('cache', new \Illuminate\Cache\Repository(new \Illuminate\Cache\ArrayStore()));
         $app->instance(\Illuminate\Contracts\Routing\ResponseFactory::class, new class {

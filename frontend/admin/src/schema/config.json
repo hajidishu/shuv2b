@@ -127,6 +127,10 @@
         "passkey_origins": [],
         "captcha_provider": "none",
         "turnstile_site_key": null,
-        "turnstile_secret_key": null
+        "turnstile_secret_key": null,
+        "google_login_enabled": 0,
+        "google_register_enabled": 1,
+        "google_client_id": "",
+        "google_origins": []
     }
 }

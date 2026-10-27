@@ -49,7 +49,7 @@ class AuthService
             'ua' => $request->userAgent(),
             'auth_data' => $authData,
             'login_method' => 'password',
-        ], array_intersect_key($context, array_flip(['login_method', 'passkey_id']))));
+        ], array_intersect_key($context, array_flip(['login_method', 'passkey_id', 'social_identity_id']))));
         if (!$saved) abort(503, '登录会话暂时不可用，请重试');
         return [
             'token' => $this->user->token,

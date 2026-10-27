@@ -16,6 +16,10 @@ class PassportRoute
                 $router->post('/login/verify', 'V1\\Passport\\PasskeyController@loginVerify');
             });
             // Auth
+            $router->get('/google/config', 'V1\\Passport\\GoogleController@config');
+            $router->post('/google/options', 'V1\\Passport\\GoogleController@options');
+            $router->post('/google/verify', 'V1\\Passport\\GoogleController@verify');
+            $router->post('/google/register', 'V1\\Passport\\GoogleController@register');
             $router->post('/auth/register', 'V1\\Passport\\AuthController@register');
             $router->post('/auth/login', 'V1\\Passport\\AuthController@login');
             $router->get ('/auth/token2Login', 'V1\\Passport\\AuthController@token2Login');

@@ -50,7 +50,7 @@ class ResetPassword extends Command
             $user->password_algo = null;
             $user->password_salt = null;
             if (!$user->save()) abort(500, '重置失败');
-            \App\Services\PasskeyService::revokeOnRecovery($user);
+            \App\Services\AccountSecurityService::recover($user);
         }, 3);
         $this->info("!!!重置成功!!!");
         $this->info("新密码为：{$password}，请尽快修改密码。");

@@ -55,6 +55,7 @@ export default defineConfig({
       { text: '本分支功能', items: [
         { text: '管理员前端', link: '/features/admin' },
         { text: 'Passkey 登录', link: '/features/passkey' },
+        { text: 'Google 登录', link: '/features/google-login' },
         { text: '人机验证', link: '/features/captcha' },
         { text: '订阅审计', link: '/features/subscription-audit' },
         { text: '人工排查', link: '/features/leak-probe' },

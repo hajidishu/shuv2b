@@ -119,6 +119,8 @@ const groupLabels: Record<string, string> = {
     safe: "安全",
 };
 const toggleKeys = new Set([
+    "google_login_enabled",
+    "google_register_enabled",
     "passkey_enabled",
     "invite_force",
     "invite_never_expire",
@@ -379,6 +381,35 @@ export default function Settings() {
                 ),
         });
     const renderSettingsFields = (items: Field[]) => {
+        if (group === "safe") {
+            const originsIndex = items.findIndex(
+                (field) => field.key === "passkey_origins",
+            );
+            if (originsIndex >= 0) {
+                return (
+                    <>
+                        <Fields
+                            settings
+                            fields={items.slice(0, originsIndex + 1)}
+                        />
+                        <PasskeyDeployment
+                            beforeLoad={async () => {
+                                flush();
+                                await queue.current;
+                                if (Object.keys(pending.current).length)
+                                    throw new Error(
+                                        "配置尚未保存成功，请先重试保存",
+                                    );
+                            }}
+                        />
+                        <Fields
+                            settings
+                            fields={items.slice(originsIndex + 1)}
+                        />
+                    </>
+                );
+            }
+        }
         if (group === "app") {
             const platforms = [
                 {
@@ -569,18 +600,6 @@ export default function Settings() {
                                     children: renderSettingsFields(advanced),
                                 },
                             ]}
-                        />
-                    )}
-                    {group === "safe" && (
-                        <PasskeyDeployment
-                            beforeLoad={async () => {
-                                flush();
-                                await queue.current;
-                                if (Object.keys(pending.current).length)
-                                    throw new Error(
-                                        "配置尚未保存成功，请先重试保存",
-                                    );
-                            }}
                         />
                     )}
                 </Form>

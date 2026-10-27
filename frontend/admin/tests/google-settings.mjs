@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+import {chromium} from 'playwright';
+import {startFixture} from './fixture.mjs';
+const fixture=await startFixture();
+const browser=await chromium.launch({executablePath:process.env.ADMIN_BROWSER_PATH ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
+try {
+  const page=await browser.newPage();
+  await page.route('**/*',route=>new URL(route.request().url()).origin===fixture.origin?route.continue():route.abort());
+  await page.goto(fixture.origin+'/#/login');
+  await page.getByLabel('邮箱',{exact:true}).fill('admin@example.test');
+  await page.getByLabel('密码',{exact:true}).fill('fixture');
+  await page.getByRole('button',{name:'登录',exact:true}).click();
+  await page.waitForURL('**#/dashboard');
+  await page.goto(fixture.origin+'/#/config/system');
+  await page.getByRole('tab',{name:'安全',exact:true}).click();
+  assert.equal(await page.locator('#google_login_enabled').getAttribute('aria-checked'),'false');
+  assert.equal(await page.locator('#google_client_id').inputValue(),'');
+  assert.equal(await page.locator('#google_client_secret').count(),0);
+  const client='123456789012-fixture.apps.googleusercontent.com';
+  await page.locator('#google_client_id').fill(client);
+  const originsSaved=page.waitForResponse(r=>r.url().endsWith('/config/save') && !!r.request().postDataJSON()?.google_origins);
+  await page.locator('#google_origins').fill('https://panel.example.test');
+  await page.locator('#google_origins').press('Enter');
+  assert((await originsSaved).ok());
+  const enabled=page.waitForResponse(r=>r.url().endsWith('/config/save') && r.request().postDataJSON()?.google_login_enabled===1);
+  await page.locator('#google_login_enabled').click();
+  assert((await enabled).ok());
+  await page.getByText('已保存',{exact:true}).waitFor();
+  await page.reload({waitUntil:'networkidle'});
+  await page.getByRole('tab',{name:'安全',exact:true}).click();
+  assert.equal(await page.locator('#google_client_id').inputValue(),client);
+  assert.equal(await page.locator('#google_login_enabled').getAttribute('aria-checked'),'true');
+  assert(fixture.calls.some(c=>c.path==='/config/save' && c.data.google_origins?.includes('https://panel.example.test')));
+  assert(fixture.calls.some(c=>c.path==='/config/save' && c.data.google_client_id===client));
+  console.log('PASS Google login defaults off, uses deployer-owned client/origins, autosaves and reloads without a client secret');
+} finally {await browser.close();await fixture.close();}

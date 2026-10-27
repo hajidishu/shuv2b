@@ -98,6 +98,30 @@ class PasskeyTest extends DatabaseTestCase
         ]];
     }
 
+    public function testGoogleReauthenticationUsesRealPasskeySignatureAndSinglePurposeGrant(): void
+    {
+        $this->register();
+        foreach (['google_bind', 'google_unbind'] as $counter => $action) {
+            $nonce = PasskeyService::encode(random_bytes(32));
+            $options = $this->service->reauthOptions($this->request(['action' => $action, 'client_nonce' => $nonce]));
+            $public = json_decode(json_encode($options['publicKey']), true);
+            $client = $this->client('webauthn.get', $public['challenge']);
+            $auth = hash('sha256', $this->rp, true) . chr(5) . pack('N', $counter + 1);
+            openssl_sign($auth . hash('sha256', $client, true), $signature, $this->private, OPENSSL_ALGO_SHA256);
+            $id = PasskeyService::encode($this->rawId);
+            $grant = $this->service->reauthVerify($this->request(['client_nonce' => $nonce, 'transaction_id' => $options['transaction_id'],
+                'credential' => ['id' => $id, 'rawId' => $id, 'type' => 'public-key', 'response' => [
+                    'clientDataJSON' => PasskeyService::encode($client), 'authenticatorData' => PasskeyService::encode($auth),
+                    'signature' => PasskeyService::encode($signature), 'userHandle' => $this->handle]]]));
+            $request = $this->request(['reauth_token' => $grant['reauth_token']]);
+            $this->service->authorizeGoogleAction($request, $this->account, $action);
+            $this->reject(fn() => $this->service->authorizeGoogleAction($request, $this->account, $action));
+        }
+        $grant = $this->grant('google_bind');
+        $this->reject(fn() => $this->service->authorizeGoogleAction($this->request(['reauth_token' => $grant]), $this->account, 'google_unbind'));
+        $this->assertNotFalse(AuthService::decryptAuthData($this->session));
+    }
+
     public function testRealAttestationAndSignatureProduceExistingLoginContract(): void
     {
         $this->register();

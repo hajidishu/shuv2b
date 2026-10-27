@@ -590,6 +590,32 @@
         "help": "Cloudflare Turnstile 的私钥，仅用于后端验证，请勿填入前端配置。",
         "order": 20
     },
+    "google_login_enabled": {
+        "group": "safe",
+        "label": "Google 登录",
+        "help": "默认关闭。部署者需使用自己的 Google Web Client ID 和前端域名；Google 登录功能需要前端支持才可用。",
+        "order": 98
+    },
+    "google_client_id": {
+        "group": "safe",
+        "label": "Google Client ID",
+        "placeholder": "填写自己的 Web 应用 Client ID",
+        "help": "在 Google Cloud 创建 Web 应用 OAuth 客户端。Client ID 为公开标识，此登录方式不需要 Client Secret。",
+        "order": 99
+    },
+    "google_origins": {
+        "group": "safe",
+        "label": "Google 允许来源",
+        "placeholder": "https://panel.example.com",
+        "help": "填写每个用户前端的完整 HTTPS 来源，包含非默认端口，不含路径，并在自己的 Google 控制台登记相同的 Authorized JavaScript origins。仅 localhost 允许 HTTP。",
+        "order": 100
+    },
+    "google_register_enabled": {
+        "group": "safe",
+        "label": "允许 Google 注册",
+        "help": "允许未登记的 Google 用户补设站点密码后注册，仍遵守关闭注册、邀请码、邮箱限制、人机验证和 IP 限制。关闭后已绑定用户仍可登录。",
+        "order": 101
+    },
     "turnstile_site_key": {
         "group": "safe",
         "label": "Turnstile Site Key",

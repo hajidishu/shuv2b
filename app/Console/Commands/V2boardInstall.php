@@ -88,6 +88,7 @@ class V2boardInstall extends Command
             app(\App\Services\LeakProbeSchema::class)->ensure();
             app(\App\Services\PaymentLedgerSchema::class)->ensure();
             app(\App\Services\PasskeySchema::class)->ensure();
+            app(\App\Services\GoogleIdentitySchema::class)->ensure();
             $this->info('数据库导入完成');
             $email = '';
             while (!$email) {

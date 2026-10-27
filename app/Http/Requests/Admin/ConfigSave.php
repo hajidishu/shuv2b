@@ -103,6 +103,10 @@ class ConfigSave extends FormRequest
         'email_gmail_limit_enable' => 'in:0,1',
         'recaptcha_enable' => 'in:0,1',
         'captcha_provider' => 'in:none,recaptcha,turnstile',
+        'google_login_enabled' => 'in:0,1',
+        'google_register_enabled' => 'in:0,1',
+        'google_client_id' => 'nullable|string|max:255',
+        'google_origins' => 'nullable|array|max:100',
         'turnstile_site_key' => 'nullable|string|max:2048',
         'turnstile_secret_key' => 'nullable|string|max:2048',
         'recaptcha_key' => 'nullable|string|max:2048',
@@ -125,6 +129,9 @@ class ConfigSave extends FormRequest
     public function rules()
     {
         $rules = self::RULES;
+        $rules['google_origins.*'] = ['required', 'string', 'max:2048', function ($attribute, $value, $fail) {
+            if (!\App\Services\PasskeySettings::origin($value)) $fail('Google 来源必须为完整 HTTPS 来源，不含路径；仅 localhost 允许 HTTP');
+        }];
         $rules['passkey_rp_id'] = ['nullable', 'string', 'max:253', function ($attribute, $value, $fail) {
             if (!\App\Services\PasskeySettings::rpId($value)) $fail('RP ID 必须为域名，不包含协议、端口或路径');
         }];
@@ -165,6 +172,10 @@ class ConfigSave extends FormRequest
     {
         $validator->after(function ($validator) {
             if ($validator->errors()->isNotEmpty()) return;
+            $google = array_merge((array)config('v2board', []), $this->only(['google_login_enabled', 'google_client_id', 'google_origins']));
+            if (!empty($google['google_login_enabled']) && !\App\Services\GoogleSettings::validate($google)) {
+                $validator->errors()->add('google_login_enabled', '启用 Google 登录前请填写部署者自己的 Web Client ID 和允许的前端来源');
+            }
             $captcha = $this->only(['captcha_provider', 'recaptcha_enable', 'recaptcha_key', 'recaptcha_site_key', 'turnstile_site_key', 'turnstile_secret_key']);
             if ($captcha) {
                 $captcha = array_merge((array)config('v2board', []), $captcha);

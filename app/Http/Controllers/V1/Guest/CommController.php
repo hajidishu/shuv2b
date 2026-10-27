@@ -22,7 +22,7 @@ class CommController extends Controller
                 'app_description' => config('v2board.app_description'),
                 'app_url' => config('v2board.app_url'),
                 'logo' => config('v2board.logo'),
-            ], CaptchaService::publicSettings())
+            ], CaptchaService::publicSettings(), \App\Services\GoogleSettings::publicSettings())
         ]);
     }
 

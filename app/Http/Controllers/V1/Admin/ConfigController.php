@@ -176,6 +176,10 @@ class ConfigController extends Controller
                 'android_download_url' => config('v2board.android_download_url')
             ],
             'safe' => [
+                'google_login_enabled' => (int)config('v2board.google_login_enabled', 0),
+                'google_register_enabled' => (int)config('v2board.google_register_enabled', 1),
+                'google_client_id' => config('v2board.google_client_id', ''),
+                'google_origins' => config('v2board.google_origins', []) ?: [],
                 'passkey_enabled' => (int)config('v2board.passkey_enabled', 0),
                 'passkey_rp_id' => config('v2board.passkey_rp_id', ''),
                 'passkey_origins' => config('v2board.passkey_origins', []) ?: [],

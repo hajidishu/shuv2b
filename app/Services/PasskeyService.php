@@ -216,9 +216,9 @@ class PasskeyService
     private function action(Request $request, User $user): array
     {
         $action = $request->input('action');
-        if (!in_array($action, ['register', 'rename', 'delete', 'admin_revoke'], true)) abort(422, '操作不正确');
+        if (!in_array($action, ['register', 'rename', 'delete', 'admin_revoke', 'google_bind', 'google_unbind'], true)) abort(422, '操作不正确');
         $target = $request->input('target_id');
-        if ($action === 'register') return [$action, null];
+        if (in_array($action, ['register', 'google_bind', 'google_unbind'], true)) return [$action, null];
         if (!is_int($target) && !(is_string($target) && ctype_digit($target))) abort(422, '操作目标不正确');
         if ((int)$target < 1) abort(422, '操作目标不正确');
         if ($action === 'admin_revoke') {
@@ -279,6 +279,12 @@ class PasskeyService
         if (($context['purpose'] ?? '') !== 'grant' || (int)$context['user_id'] !== (int)$user->id ||
             !hash_equals($context['session'] ?? '', $this->sessionHash($request)) || $context['origin'] !== $this->prepare($request) ||
             $context['rp_id'] !== PasskeySettings::rpId(config('v2board.passkey_rp_id')) || $context['action'] !== $action || $context['target_id'] !== $target) abort(422, '请重新验证身份');
+    }
+
+    public function authorizeGoogleAction(Request $request, User $user, string $action): void
+    {
+        if (!in_array($action, ['google_bind', 'google_unbind'], true)) abort(422, '操作不正确');
+        $this->requireGrant($request, $user, $action);
     }
 
     public function registerOptions(Request $request): array

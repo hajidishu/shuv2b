@@ -119,6 +119,7 @@ const groupLabels: Record<string, string> = {
     safe: "安全",
 };
 const toggleKeys = new Set([
+    "public_plan_enabled",
     "google_login_enabled",
     "google_register_enabled",
     "passkey_enabled",
@@ -293,6 +294,14 @@ export default function Settings() {
                         value: p.id,
                     })),
                 ];
+            }
+            if (key === "public_plan_ids") {
+                field.kind = "select";
+                field.multiple = true;
+                field.options = (plans.data ?? []).map((plan: Row) => ({
+                    label: plan.name + (Number(plan.show) === 1 ? "" : "（未上架，不公开）"),
+                    value: plan.id,
+                }));
             }
             if (key === "captcha_provider") {
                 field.kind = "select";

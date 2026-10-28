@@ -94,6 +94,8 @@ class Environment
             $t->integer('show')->default(1); $t->integer('renew')->default(1);
             $t->integer('group_id')->default(1); $t->integer('transfer_enable')->default(100);
             foreach (['month_price', 'onetime_price', 'reset_price', 'capacity_limit', 'device_limit', 'speed_limit'] as $key) $t->integer($key)->nullable();
+            foreach (['quarter_price', 'half_year_price', 'year_price', 'two_year_price', 'three_year_price', 'sort'] as $key) $t->integer($key)->nullable();
+            $t->text('content')->nullable();
             $t->integer('created_at')->nullable(); $t->integer('updated_at')->nullable();
         });
         $schema->create('v2_order', function (Blueprint $t) {

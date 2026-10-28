@@ -527,10 +527,34 @@
     border-color: #d5dcf3;
     border-radius: 4px;
 }
-.settings-fields .ant-select-selector {
+.settings-fields .ant-form-item-control,
+.settings-fields .ant-select {
+    min-width: 0;
+    width: 100%;
+}
+.settings-fields .ant-select-single .ant-select-selector {
     height: 38px !important;
     border-color: #d5dcf3 !important;
     align-items: center;
+}
+.settings-fields .ant-select-multiple,
+.settings-fields .ant-select-multiple .ant-select-selector {
+    height: auto !important;
+    min-height: 38px;
+}
+.settings-fields .ant-select-multiple .ant-select-selector {
+    border-color: #d5dcf3 !important;
+    padding: 3px 8px;
+}
+.settings-fields .ant-select-selection-overflow,
+.settings-fields .ant-select-selection-overflow-item,
+.settings-fields .ant-select-selection-item {
+    max-width: 100%;
+}
+.settings-fields .ant-select-selection-item-content {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .settings-fields .ant-input-number {
     min-height: 38px;

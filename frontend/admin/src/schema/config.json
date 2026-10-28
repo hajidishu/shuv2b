@@ -53,7 +53,9 @@
         "change_order_event_id": 0,
         "show_info_to_server_enable": 0,
         "show_subscribe_method": 0,
-        "show_subscribe_expire": 5
+        "show_subscribe_expire": 5,
+        "public_plan_enabled": 0,
+        "public_plan_ids": []
     },
     "frontend": {
         "frontend_theme": "v2board",

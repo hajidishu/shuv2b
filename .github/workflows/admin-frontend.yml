@@ -42,6 +42,7 @@ jobs:
           node tests/telegram-webhook.mjs
           node tests/captcha-settings.mjs
           node tests/google-settings.mjs
+          node tests/public-plans.mjs
           node tests/subscription-audit.mjs
           node tests/leak-probe.mjs
           node tests/browser.mjs

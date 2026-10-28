@@ -1,4 +1,17 @@
 {
+    "public_plan_enabled": {
+        "group": "subscribe",
+        "label": "未登录套餐展示",
+        "help": "默认关闭。开启后允许访客查看下方所选上架套餐的名称、描述和价格；购买仍需登录。需要用户前端支持。",
+        "order": 27
+    },
+    "public_plan_ids": {
+        "group": "subscribe",
+        "label": "公开展示的套餐",
+        "help": "仅公开所选且处于上架状态的套餐，留空不展示。隐藏、仅续费或已删除的套餐不会公开。",
+        "placeholder": "选择允许未登录查看的套餐",
+        "order": 28
+    },
     "app_name": {
         "group": "site",
         "label": "站点名称",

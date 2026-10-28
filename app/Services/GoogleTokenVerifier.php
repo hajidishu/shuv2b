@@ -6,6 +6,7 @@ use Firebase\JWT\JWT;
 use Firebase\JWT\JWK;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 
 class GoogleTokenVerifier
 {
@@ -20,21 +21,43 @@ class GoogleTokenVerifier
             return false;
         };
         if (!is_array($cached) || !$contains($cached)) {
-            // Unknown key IDs cannot force an unbounded number of Google requests.
-            if (Cache::add(self::CACHE . '_REFRESH', true, 30)) {
-                try {
-                    $response = Http::withOptions(['connect_timeout' => 3])->timeout(5)->get(self::CERTS);
-                    $data = $response->json();
-                    if (!$response->successful() || !is_array($data) || !is_array($data['keys'] ?? null) || count($data['keys']) > 10) throw new \RuntimeException();
-                    preg_match('/max-age=(\d+)/i', (string)$response->header('Cache-Control'), $match);
-                    $ttl = isset($match[1]) ? min(86400, (int)$match[1]) : 300;
-                    if ($ttl < 1 || !Cache::put(self::CACHE, $data, $ttl)) throw new \RuntimeException();
-                    $cached = $data;
-                } catch (\Throwable $error) {
-                    abort(503, 'Google 身份验证暂时不可用，请稍后重试');
-                }
-            } else {
-                $cached = Cache::get(self::CACHE);
+            try {
+                // The network timeout is five seconds. Concurrent requests wait
+                // for its result, then recheck the cache while holding the lock.
+                $cached = Cache::lock(self::CACHE . '_LOCK', 10)->block(6, function () use ($contains) {
+                    $data = Cache::get(self::CACHE);
+                    if (is_array($data) && $contains($data)) return $data;
+                    $refresh = Cache::get(self::CACHE . '_REFRESH');
+                    if ($refresh !== null) {
+                        if (!is_array($data) || (is_array($refresh) && !empty($refresh['failed']))) {
+                            abort(503, 'Google 身份验证暂时不可用，请稍后重试');
+                        }
+                        // A successful recent fetch already excludes this kid.
+                        // Unknown IDs cannot force repeated network requests.
+                        return $data;
+                    }
+                    if (!Cache::add(self::CACHE . '_REFRESH', ['failed' => false], 30)) {
+                        abort(503, 'Google 身份验证暂时不可用，请稍后重试');
+                    }
+                    try {
+                        $response = Http::withOptions(['connect_timeout' => 3])->timeout(5)->get(self::CERTS);
+                        $data = $response->json();
+                        if (!$response->successful() || !is_array($data) || !is_array($data['keys'] ?? null) || count($data['keys']) > 10) throw new \RuntimeException();
+                        JWK::parseKeySet($data, 'RS256');
+                        preg_match('/max-age=(\d+)/i', (string)$response->header('Cache-Control'), $match);
+                        $ttl = isset($match[1]) ? min(86400, (int)$match[1]) : 300;
+                        if ($ttl < 1 || !Cache::put(self::CACHE, $data, $ttl) ||
+                            !Cache::put(self::CACHE . '_REFRESH', ['failed' => false], min(30, $ttl))) throw new \RuntimeException();
+                        return $data;
+                    } catch (\Throwable $error) {
+                        // Retain a short failure backoff without the old
+                        // thirty-second invalid-credential window.
+                        Cache::put(self::CACHE . '_REFRESH', ['failed' => true], 5);
+                        abort(503, 'Google 身份验证暂时不可用，请稍后重试');
+                    }
+                });
+            } catch (LockTimeoutException $error) {
+                abort(503, 'Google 身份验证暂时不可用，请稍后重试');
             }
         }
         if (!is_array($cached) || !$contains($cached)) abort(422, 'Google 身份凭据无效，请重新授权');

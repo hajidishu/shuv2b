@@ -107,6 +107,8 @@ class ConfigSave extends FormRequest
         'google_register_enabled' => 'in:0,1',
         'google_client_id' => 'nullable|string|max:255',
         'google_origins' => 'nullable|array|max:100',
+        'public_plan_enabled' => 'in:0,1',
+        'public_plan_ids' => 'nullable|array|max:100',
         'turnstile_site_key' => 'nullable|string|max:2048',
         'turnstile_secret_key' => 'nullable|string|max:2048',
         'recaptcha_key' => 'nullable|string|max:2048',
@@ -129,6 +131,7 @@ class ConfigSave extends FormRequest
     public function rules()
     {
         $rules = self::RULES;
+        $rules['public_plan_ids.*'] = 'bail|required|integer|min:1|distinct|exists:v2_plan,id';
         $rules['google_origins.*'] = ['required', 'string', 'max:2048', function ($attribute, $value, $fail) {
             if (!\App\Services\PasskeySettings::origin($value)) $fail('Google 来源必须为完整 HTTPS 来源，不含路径；仅 localhost 允许 HTTP');
         }];

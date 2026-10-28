@@ -125,6 +125,8 @@ class ConfigController extends Controller
                 'currency_symbol' => config('v2board.currency_symbol', '¥'),
             ],
             'subscribe' => [
+                'public_plan_enabled' => (int)config('v2board.public_plan_enabled', 0),
+                'public_plan_ids' => config('v2board.public_plan_ids', []) ?: [],
                 'plan_change_enable' => (int)config('v2board.plan_change_enable', 1),
                 'reset_traffic_method' => (int)config('v2board.reset_traffic_method', 0),
                 'surplus_enable' => (int)config('v2board.surplus_enable', 1),
@@ -219,6 +221,7 @@ class ConfigController extends Controller
     public function save(ConfigSave $request)
     {
         $data = $request->validated();
+        if (array_key_exists('public_plan_ids', $data)) $data['public_plan_ids'] = array_values(array_map('intval', $data['public_plan_ids'] ?? []));
         $config = config('v2board');
         if (array_key_exists('recaptcha_enable', $data) && !array_key_exists('captcha_provider', $data)) {
             $data['captcha_provider'] = (int)$data['recaptcha_enable'] ? 'recaptcha' : 'none';

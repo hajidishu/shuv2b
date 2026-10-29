@@ -859,3 +859,25 @@ CHANGE `action_value` `action_value` text NULL AFTER `action`;
 
 ALTER TABLE `v2_server_v2node`
 ADD `trusted_x_forwarded_for` varchar(255) COLLATE 'utf8mb4_general_ci' NULL COMMENT '信任的x-forwarded-for头部' AFTER `network_settings`;
+CREATE TABLE `v2_server_naive` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `group_id` varchar(255) NOT NULL,
+  `route_id` varchar(255) DEFAULT NULL,
+  `name` varchar(255) NOT NULL,
+  `parent_id` int(11) DEFAULT NULL,
+  `host` varchar(255) NOT NULL,
+  `listen_ip` varchar(255) NOT NULL DEFAULT '0.0.0.0',
+  `port` varchar(11) NOT NULL,
+  `server_port` int(11) NOT NULL,
+  `tags` varchar(255) DEFAULT NULL,
+  `rate` varchar(11) NOT NULL,
+  `show` tinyint(1) NOT NULL DEFAULT '0',
+  `sort` int(11) DEFAULT NULL,
+  `network` varchar(11) NOT NULL DEFAULT 'tcp',
+  `tls` tinyint(1) NOT NULL DEFAULT '1',
+  `tls_settings` text,
+  `congestion_control` varchar(16) NOT NULL DEFAULT 'bbr',
+  `created_at` int(11) NOT NULL,
+  `updated_at` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

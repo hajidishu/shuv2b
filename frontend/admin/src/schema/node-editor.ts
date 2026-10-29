@@ -1,8 +1,9 @@
-import { nodeFields, options } from "./nodes";
+import { nodeFields, options, naiveTlsNested } from "./nodes";
 import type { Field, Row } from "../types";
 
 // Field order, columns and visibility follow the original per-protocol drawers.
 export function nodeEditorFields(type: string, values: Row): Field[] {
+    const isNaive = type === "naive" || (type === "v2node" && values.protocol === "naive");
     const source = Object.fromEntries(nodeFields(type).map((f) => [f.key, f]));
     const field = (
         key: string,
@@ -26,6 +27,15 @@ export function nodeEditorFields(type: string, values: Row): Field[] {
     const tls = (key: string) => {
         const configuration = cfg(key, "安全性配置"),
             mode = Number(values.tls ?? 0);
+        if (isNaive) {
+            configuration.nested = naiveTlsNested!.map((item) => ({ ...item,
+                ...(["provider", "dns_env"].includes(item.key) ? { when: (v: Row) => v.cert_mode === "dns" } : {}),
+                ...(["cert_file", "key_file"].includes(item.key) ? { when: (v: Row) => v.cert_mode === "file", required: true } : {}),
+            }));
+            configuration.jsonDefaults = { server_name: "", cert_mode: "http" };
+            return field("tls", type === "v2node" ? 6 : 12, { label: "安全性", default: 1,
+                options: [{ label: "TLS", value: 1 }], config: configuration });
+        }
         if (type === "vmess")
             configuration.nested = [
                 { key: "serverName", label: "Server Name" },
@@ -149,7 +159,7 @@ export function nodeEditorFields(type: string, values: Row): Field[] {
         field("group_id", 12, { placeholder: "请选择权限组" }),
     ];
     const addresses =
-        type === "v2node"
+        ["v2node", "naive"].includes(type)
             ? [
                   field("host", 6, { placeholder: "地址或IP" }),
                   field("listen_ip", 6, {
@@ -194,6 +204,7 @@ export function nodeEditorFields(type: string, values: Row): Field[] {
             field("protocol", 6, {
                 options: [
                     "anytls",
+                    "naive",
                     "hysteria2",
                     "shadowsocks",
                     "trojan",
@@ -205,6 +216,7 @@ export function nodeEditorFields(type: string, values: Row): Field[] {
                     label: (
                         {
                             anytls: "AnyTLS",
+                            naive: "Naive",
                             hysteria2: "Hysteria2",
                             shadowsocks: "Shadowsocks",
                             trojan: "Trojan",
@@ -232,13 +244,13 @@ export function nodeEditorFields(type: string, values: Row): Field[] {
             }));
             result.push(f);
         }
-    } else if (["vmess", "vless"].includes(type))
+    } else if (["vmess", "vless", "naive"].includes(type))
         result.push(tls(type === "vmess" ? "tlsSettings" : "tls_settings"));
     if (
         ["vmess", "vless", "trojan"].includes(type) ||
         (type === "v2node" &&
             protocol &&
-            !["tuic", "hysteria2"].includes(protocol))
+            !["tuic", "hysteria2", "naive"].includes(protocol))
     ) {
         const f = network(
             type === "vmess" ? "networkSettings" : "network_settings",
@@ -275,6 +287,12 @@ export function nodeEditorFields(type: string, values: Row): Field[] {
                         "常见头部:X-Forwarded-For CF-Connecting-IP X-Real-IP",
                 }),
             );
+    }
+    if (isNaive) {
+        result.push(field("network", 12, { label: "监听网络", required: false, options: [
+            { value: "tcp", label: "TCP（HTTP/2）" }, { value: "udp", label: "UDP（QUIC）" }, { value: "", label: "TCP + UDP" },
+        ], help: "仅支持 Naive 原生监听，不支持 WebSocket、gRPC 或 Reality" }));
+        if (values.network !== "tcp") result.push(field("congestion_control", 12, { label: "QUIC 拥塞控制（服务端）", default: "bbr", options: options("bbr", "cubic", "reno") }));
     }
     if (["tuic", "hysteria", "anytls", "trojan"].includes(type))
         result.push(

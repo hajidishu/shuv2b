@@ -60,7 +60,8 @@ export default function NodeEditor({
             if (node.type === "v2node" && !node.id) {
                 payload.disable_sni ??= 0;
                 payload.zero_rtt_handshake ??= 0;
-                payload.network ??= "tcp";
+                if (context.protocol === "naive" && (v.network == null || v.network === "")) payload.network = "";
+                else payload.network ??= "tcp";
                 payload.tls ??= 0;
             }
             await save(payload);
@@ -110,6 +111,11 @@ export default function NodeEditor({
                 onFinish={submit}
                 onValuesChange={(changed) => {
                     if (changed.protocol) {
+                        if (changed.protocol === "naive") {
+                            form.setFieldsValue({ tls: 1, network: "tcp", congestion_control: "bbr", tls_settings: JSON.stringify({ server_name: "", cert_mode: "http" }) });
+                        } else if (form.getFieldValue("network") == null || ["udp", ""].includes(form.getFieldValue("network"))) {
+                            form.setFieldValue("network", "tcp");
+                        }
                         if (
                             ["anytls", "hysteria2", "trojan", "tuic"].includes(
                                 changed.protocol,

@@ -41,6 +41,20 @@ const editorSchema = await load("src/schema/node-editor.ts", {
     "./nodes": nodesUrl,
 });
 
+test("Naive 与 V2node Naive 仅提供原生网络和受信任 TLS 配置", () => {
+    for (const type of ["naive", "v2node"]) {
+        const fields = editorSchema.nodeEditorFields(type, { protocol: "naive", tls: 1, network: "udp" });
+        const keys = editorSchema.nodeSubmissionFields(fields).map(f => f.key);
+        for (const key of ["network", "tls", "tls_settings", "congestion_control"]) assert(keys.includes(key));
+        for (const key of ["flow", "padding_scheme", "network_settings", "encryption_settings", "obfs", "zero_rtt_handshake"]) assert(!keys.includes(key));
+        assert.deepEqual(fields.find(f => f.key === "network").options.map(o => o.value), ["tcp", "udp", ""]);
+        const tls = fields.find(f => f.key === "tls");
+        assert.deepEqual(tls.options.map(o => o.value), [1]);
+        assert(!tls.config.nested.some(f => ["allow_insecure", "fingerprint", "private_key", "short_id"].includes(f.key)));
+        assert.deepEqual(tls.config.nested.find(f => f.key === "cert_mode").options.map(o => o.value), ["http", "dns", "file"]);
+    }
+});
+
 test("统计图保留日期对齐、原版配色和平滑曲线，排名不改写响应", async () => {
     const { incomeOptions, rankingOptions, originalChartColors } = await load(
         "src/chart-options.ts",
@@ -224,7 +238,7 @@ test("用户编辑绝不回填密码哈希，金额和零值仍保留", async ()
     assert.equal(payload.banned, 0);
     assert.equal(payload.expired_at, 1791993637);
 });
-test("八种节点表单覆盖后端保存规则中的全部可编辑字段", async () => {
+test("原有节点表单覆盖后端保存规则中的全部可编辑字段", async () => {
     for (const type of [
         "shadowsocks",
         "vmess",

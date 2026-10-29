@@ -43,7 +43,12 @@ class UniProxyController extends Controller
         Cache::put(CacheKey::get('SERVER_' . strtoupper($this->nodeType) . '_LAST_CHECK_AT', $this->nodeInfo->id), time(), 3600);
         $users = $this->serverService->getAvailableUsers($this->nodeInfo->group_id, $this->nodeType, $this->nodeId)
             ->map(function ($user) {
-                return array_filter($user->toArray(), function ($v) {
+                $data = $user->toArray();
+                if ($this->nodeType === 'naive' || ($this->nodeType === 'v2node' && $this->nodeInfo->protocol === 'naive')) {
+                    $data['username'] = (string)$user->id;
+                    $data['password'] = $user->uuid;
+                }
+                return array_filter($data, function ($v) {
                     return !is_null($v);
                 });
             })->toArray();
@@ -286,6 +291,16 @@ class UniProxyController extends Controller
                     $response['obfs'] = $this->nodeInfo->obfs ?? null;
                     $response['obfs-password'] = $this->nodeInfo->obfs_password ?? null;
                 }
+                break;
+            case 'naive':
+                $response = [
+                    'listen_ip' => $this->nodeInfo->listen_ip,
+                    'server_port' => $this->nodeInfo->server_port,
+                    'network' => $this->nodeInfo->network,
+                    'tls' => 1,
+                    'tls_settings' => $this->nodeInfo->tls_settings,
+                    'quic_congestion_control' => $this->nodeInfo->congestion_control,
+                ];
                 break;
             case 'anytls':
                 $response = [

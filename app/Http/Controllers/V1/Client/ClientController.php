@@ -16,8 +16,8 @@ class ClientController extends Controller
 {
     public function subscribe(Request $request)
     {
-        $flag = $request->input('flag')
-            ?? ($_SERVER['HTTP_USER_AGENT'] ?? '');
+        $userAgent = (string)$request->userAgent();
+        $flag = $request->input('flag') ?? $userAgent;
         $flag = strtolower($flag);
         $user = $request->user;
         // account not expired and is not banned.
@@ -26,7 +26,7 @@ class ClientController extends Controller
             $serverService = new ServerService();
             $servers = $serverService->getAvailableServers($user);
             if($flag) {
-                if (!strpos($flag, 'sing')) {
+                if (strpos($flag, 'sing') === false) {
                     $this->setSubscribeInfoToServers($servers, $user);
                     foreach (array_reverse(glob(app_path('Protocols') . '/*.php')) as $file) {
                         $file = 'App\\Protocols\\' . basename($file, '.php');
@@ -38,11 +38,15 @@ class ClientController extends Controller
                 }
                 if (strpos($flag, 'sing') !== false) {
                     $version = null;
-                    if (preg_match('/sing-box\s+([0-9.]+)/i', $flag, $matches)) {
-                        $version = $matches[1];
+                    // A format-only query flag must not hide the real client version.
+                    foreach ([$flag, $userAgent] as $versionHint) {
+                        if (preg_match('/sing-box\s+([0-9.]+)/i', $versionHint, $matches)) {
+                            $version = $matches[1];
+                            break;
+                        }
                     }
-                    if (!is_null($version) && $version >= '1.12.0') {
-                        $class = new Singbox($user, $servers);
+                    if (!is_null($version) && version_compare($version, '1.12.0', '>=')) {
+                        $class = new Singbox($user, $servers, ['version' => $version]);
                     } else {
                         $class = new SingboxOld($user, $servers);
                     }

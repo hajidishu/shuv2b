@@ -534,7 +534,7 @@ try {
             assert.equal(node.protocol, protocol);
         }
     });
-    await check("create-edit-eight-node-types", async () => {
+    await check("create-edit-all-node-types", async () => {
         for (const [type, label] of Object.entries(nodeTypes)) {
             await navigate("/server/manage");
             await page
@@ -812,7 +812,7 @@ try {
         assert.equal(payload.filter[1].value, 201);
         await (await downloaded).saveAs(resolve(out, "filtered-users.csv"));
     });
-    await check("batch-copy-and-delete-eight-protocols", async () => {
+    await check("batch-copy-and-delete-all-protocols", async () => {
         await navigate("/server/manage");
         const selectAcrossPages = async (nodes) => {
             await page.waitForFunction(
@@ -870,7 +870,8 @@ try {
             (n) => !before.some((b) => nodeKey(b) === nodeKey(n)),
         );
         owned.nodes.push(...copies.map(({ type, id }) => ({ type, id })));
-        assert.equal(copies.length, 8);
+        assert.equal(originals.length, Object.keys(nodeTypes).length);
+        assert.equal(copies.length, originals.length);
         assert.ok(copies.every((n) => Number(n.show) === 0));
         await navigate("/server/manage");
         await selectAcrossPages(copies);

@@ -21,11 +21,11 @@ class V2nodeController extends Controller
             'listen_ip' => 'nullable',
             'port' => 'required',
             'server_port' => 'required',
-            'protocol' => 'required|in:shadowsocks,vmess,vless,trojan,tuic,hysteria2,anytls',
+            'protocol' => 'required|in:shadowsocks,vmess,vless,trojan,tuic,hysteria2,anytls,naive',
             'tls' => 'required|in:0,1,2',
             'tls_settings' => 'nullable|array',
             'flow' => 'nullable|in:xtls-rprx-vision',
-            'network' => 'required|in:tcp,ws,grpc,http,httpupgrade,xhttp',
+            'network' => $request->input('protocol') === 'naive' ? 'nullable|in:tcp,udp' : 'required|in:tcp,ws,grpc,http,httpupgrade,xhttp',
             'network_settings' => 'nullable|array',
             'trusted_x_forwarded_for' => 'nullable|array',
             'encryption' => 'nullable',
@@ -45,6 +45,7 @@ class V2nodeController extends Controller
             'show' => 'nullable|in:0,1',
             'sort' => 'nullable'
         ]);
+        if ($params['protocol'] === 'naive') $params = \App\Services\NaiveSettings::normalize($params);
         if ($params['protocol'] == 'anytls' && $params['tls'] === 0) {
             $params['tls'] = 1;
         }

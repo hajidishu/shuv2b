@@ -9,11 +9,13 @@ class Singbox
     private $servers;
     private $user;
     private $config;
+    private $version;
 
     public function __construct($user, $servers, array $options = null)
     {
         $this->user = $user;
         $this->servers = $servers;
+        $this->version = $options['version'] ?? null;
     }
 
     public function handle()
@@ -70,6 +72,10 @@ class Singbox
                 case 'tuic':
                     $tuicConfig = $this->buildTuic($this->user['uuid'], $item);
                     $proxies[] = \App\Services\LeakProbeService::renderedValue($item, $tuicConfig);
+                    break;
+                case 'naive':
+                    if ($this->version !== null && version_compare($this->version, '1.13.0', '<')) break;
+                    $proxies[] = \App\Services\LeakProbeService::renderedValue($item, \App\Services\NaiveSettings::outbound($this->user['id'], $this->user['uuid'], $item));
                     break;
                 case 'anytls':
                     $anytlsConfig = $this->buildAnyTLS($this->user['uuid'], $item);

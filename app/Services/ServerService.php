@@ -13,6 +13,7 @@ use App\Models\ServerVmess;
 use App\Models\ServerTrojan;
 use App\Models\ServerTuic;
 use App\Models\ServerAnytls;
+use App\Models\ServerNaive;
 use App\Utils\CacheKey;
 use App\Utils\Helper;
 use Illuminate\Support\Facades\Cache;
@@ -190,6 +191,21 @@ class ServerService
         return $servers;
     }
 
+    public function getAvailableNaive(User $user, $probeNodeId = null): array
+    {
+        $servers = [];
+        $nodes = ServerNaive::orderBy('sort', 'ASC')->get()->keyBy('id');
+        foreach ($nodes as $node) {
+            if (!$node->show || (!in_array($user->group_id, $node->group_id) && (int)$node->id !== $probeNodeId)) continue;
+            $server = $node->toArray(); $server['type'] = 'naive';
+            $parent = $nodes[$node->parent_id] ?? null;
+            $server['last_check_at'] = Cache::get(CacheKey::get('SERVER_NAIVE_LAST_CHECK_AT', $parent ? $parent->id : $node->id));
+            if ($parent) $server['created_at'] = $parent->created_at;
+            $servers[] = NaiveSettings::publicNode($server);
+        }
+        return $servers;
+    }
+
     public function getAvailableV2node(User $user, $probeNodeId = null)
     {
         $servers = [];
@@ -217,7 +233,9 @@ class ServerService
                     $v2node[$key]['encryption_settings'] = array_diff_key($v2node[$key]['encryption_settings'], array('private_key' => ''));
                 }
             }
-            $servers[] = $v2node[$key]->toArray();
+            $server = $v2node[$key]->toArray();
+            if ($server['protocol'] === 'naive') $server = NaiveSettings::publicNode($server);
+            $servers[] = $server;
         }
         return $servers;
     }
@@ -235,6 +253,7 @@ class ServerService
             $this->getAvailableHysteria($user, $extra['hysteria'] ?? null),
             $this->getAvailableVless($user, $extra['vless'] ?? null),
             $this->getAvailableAnyTLS($user, $extra['anytls'] ?? null),
+            $this->getAvailableNaive($user, $extra['naive'] ?? null),
             $this->getAvailableV2node($user, $extra['v2node'] ?? null)
         );
         $tmp = array_column($servers, 'sort');
@@ -384,6 +403,13 @@ class ServerService
         return $servers;
     }
 
+    public function getAllNaive()
+    {
+        return ServerNaive::orderBy('sort', 'ASC')->get()->map(function ($node) {
+            return array_merge($node->toArray(), ['type' => 'naive']);
+        })->all();
+    }
+
     public function getAllV2node()
     {
         $servers = ServerV2node::orderBy('sort', 'ASC')
@@ -437,6 +463,7 @@ class ServerService
             $this->getAllHysteria(),
             $this->getAllVLess(),
             $this->getAllAnyTLS(),
+            $this->getAllNaive(),
             $this->getAllV2node()
         );
         $this->mergeData($servers);
@@ -479,6 +506,8 @@ class ServerService
                 return ServerVless::find($serverId);
             case 'anytls':
                 return ServerAnytls::find($serverId);
+            case 'naive':
+                return ServerNaive::find($serverId);
             default:
                 return false;
         }

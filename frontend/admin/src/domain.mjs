@@ -6,6 +6,7 @@ export const nodeTypes = {
     hysteria: "Hysteria",
     vless: "VLess",
     anytls: "AnyTLS",
+    naive: "Naive",
     v2node: "V2node",
 };
 export const periods = {

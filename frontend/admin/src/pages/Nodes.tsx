@@ -41,6 +41,7 @@ const nodeTypeOrder: Array<keyof typeof nodeTypes> = [
     "tuic",
     "vless",
     "anytls",
+    "naive",
 ];
 const nodeTypeColors: Record<string, string> = {
     shadowsocks: "#489851",
@@ -50,6 +51,7 @@ const nodeTypeColors: Record<string, string> = {
     tuic: "#9400d3",
     vless: "#4080ff",
     anytls: "#ff8c00",
+    naive: "#13a8a8",
     v2node: "#ff0000",
 };
 export default function Nodes() {

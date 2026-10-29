@@ -10,7 +10,7 @@ class LeakProbeInput extends FormRequest
         if ($this->method() === 'GET') return ['id' => 'nullable|integer|min:1', 'round_id' => 'nullable|integer|min:1',
             'current' => 'nullable|integer|min:1|max:100000', 'pageSize' => 'nullable|integer|min:1|max:100',
             'branch' => 'nullable|in:a,b', 'email' => 'nullable|string|max:64'];
-        if ($last === 'nodes') return ['action' => 'required|in:register,remove', 'node_type' => 'required_if:action,register|in:shadowsocks,vmess,trojan,vless,hysteria,tuic,anytls,v2node',
+        if ($last === 'nodes') return ['action' => 'required|in:register,remove', 'node_type' => 'required_if:action,register|in:shadowsocks,vmess,trojan,vless,hysteria,tuic,anytls,naive,v2node',
             'node_id' => 'required_if:action,register|integer|min:1', 'id' => 'required_if:action,remove|integer|min:1'];
         if ($last === 'update') return [
             'id' => 'required|integer|min:1', 'round_id' => 'required|integer|min:1', 'action' => 'required|in:results,pause,resume,finish,advance',

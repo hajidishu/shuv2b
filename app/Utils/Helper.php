@@ -168,11 +168,12 @@ class Helper
         return strtr(rawurlencode($str), $revert);
     }
 
-    public static function buildUri($uuid, $server)
+    public static function buildUri($uuid, $server, $userId = null)
     {
         if ($server['type'] == 'v2node') {
             $server['type'] = $server['protocol'];
         } 
+        if ($server['type'] === 'naive') return \App\Services\NaiveSettings::uri($userId, $uuid, $server);
         $method = "build" . ucfirst($server['type']) . "Uri";
 
         if (method_exists(self::class, $method)) {

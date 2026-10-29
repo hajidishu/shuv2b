@@ -15,7 +15,7 @@ class BatchController extends Controller
     private const TYPES = [
         'shadowsocks' => 'Shadowsocks', 'vmess' => 'Vmess', 'trojan' => 'Trojan',
         'tuic' => 'Tuic', 'hysteria' => 'Hysteria', 'vless' => 'Vless',
-        'anytls' => 'AnyTLS', 'v2node' => 'V2node',
+        'anytls' => 'AnyTLS', 'naive' => 'Naive', 'v2node' => 'V2node',
     ];
     private const FIELDS = [
         'name', 'group_id', 'route_id', 'parent_id', 'host', 'port', 'server_port',

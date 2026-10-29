@@ -84,6 +84,12 @@ class AdminRoute
                 $router->post('update', 'V1\\Admin\\Server\\VlessController@update');
                 $router->post('copy', 'V1\\Admin\\Server\\VlessController@copy');
             });
+            $router->group(['prefix' => 'server/naive'], function ($router) {
+                $router->post('save', 'V1\\Admin\\Server\\NaiveController@save');
+                $router->post('drop', 'V1\\Admin\\Server\\NaiveController@drop');
+                $router->post('update', 'V1\\Admin\\Server\\NaiveController@update');
+                $router->post('copy', 'V1\\Admin\\Server\\NaiveController@copy');
+            });
             $router->group([
                 'prefix' => 'server/anytls'
             ], function ($router) {

@@ -74,6 +74,9 @@ class ServerController extends Controller
             'padding_scheme' => $this->nodeInfo->padding_scheme
         ];
 
+        if ($this->nodeInfo->protocol === 'naive') {
+            $response['quic_congestion_control'] = $this->nodeInfo->congestion_control ?: 'bbr';
+        }
         if ($this->nodeInfo->cipher === '2022-blake3-aes-128-gcm') {
             $response['server_key'] = Helper::getServerKey($this->nodeInfo->created_at, 16);
         }

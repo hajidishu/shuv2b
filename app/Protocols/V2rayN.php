@@ -22,7 +22,7 @@ class V2rayN
         $uri = '';
 
         foreach ($this->servers as $server) {
-            $uri .= \App\Services\LeakProbeService::renderedValue($server, Helper::buildUri($this->user['uuid'], $server));
+            $uri .= \App\Services\LeakProbeService::renderedValue($server, Helper::buildUri($this->user['uuid'], $server, $this->user['id'] ?? null));
         }
         return base64_encode($uri);
     }

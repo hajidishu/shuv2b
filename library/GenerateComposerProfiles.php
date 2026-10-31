@@ -7,6 +7,8 @@ final class GenerateComposerProfiles
 {
     public static function manifests(array $common): array
     {
+        // TODO(security): assess/backport remaining Laravel 8 fixes and upgrade
+        // YAML 4. Published compatibility locks restore installs, not security support.
         $fpm = $common;
         $fpm['require']['php'] = '^8.1';
         $fpm['config']['platform']['php'] = '8.1.0';

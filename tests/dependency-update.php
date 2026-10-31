@@ -124,6 +124,10 @@ try {
     verify(tree($invalid.'/vendor')===$before&&!is_file($invalid.'/composer.lock'),'Incompatible requirement changed deployment');
     $pass('incompatible dependency requirements stop before mutating installed packages');
 
+    $global=$fixture('global-composer-without-extension');$globalComposer=$scratch.'/composer';copy($composer,$globalComposer);
+    [$code,$out,$err]=command([PHP_BINARY,'-d','error_reporting=24575',$repo.'/library/UpdateDependencies.php',$global,$scratch,'--composer='.$globalComposer,'--apply'],$repo);
+    verify($code===0,$out.$err);$pass('global Composer PHAR without a filename extension is loaded correctly');
+
     $incomplete=$fixture('missing-development-metadata',false);$before=tree($incomplete.'/vendor');
     [$code,$out,$err]=$apply($incomplete);verify($code!==0&&str_contains($err,'development lock information'),$out.$err);
     verify(tree($incomplete.'/vendor')===$before&&!is_file($incomplete.'/composer.lock'),'Incomplete metadata changed deployment');

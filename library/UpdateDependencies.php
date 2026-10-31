@@ -65,6 +65,11 @@ final class UpdateDependencies
     private static function composerAutoload(string $composer): void
     {
         $phar = 'phar://' . $composer . '/vendor/autoload.php';
+        if (!@is_file($phar)) {
+            // Global installations commonly name the archive "composer", which
+            // the stream wrapper cannot identify by extension until registered.
+            try { \Phar::loadPhar($composer); } catch (Throwable $ignored) {}
+        }
         if (@is_file($phar)) { require_once $phar; return; }
         // Distribution packages can install Composer as PHP source instead of a PHAR.
         $source = stream_resolve_include_path('Composer/autoload.php');

@@ -5,11 +5,11 @@
 | 组件 | 要求 / 已验证环境 |
 | --- | --- |
 | 系统 | 支持 CLI `pcntl` 的 Linux；完整测试环境为 Debian 13 |
-| PHP | Composer 声明 `^8.0`，Passkey 依赖要求 PHP 8.0+；已有锁文件可能要求更高版本。现有 PHP 8.3 可先保留并验证。指定 PHP 8.4.26 + PHP-FPM 环境回归通过，不代表全面支持 8.4 / Webman |
+| PHP | FPM 最低 PHP 8.0，使用专门兼容锁；PHP 8.1+ 自动选择现代 FPM 锁。Webman 的 Adapterman 0.7.1 配置最低 PHP 8.1。建议继续使用已验证的 PHP 8.3；PHP 8.4.26 的指定测试环境通过不代表所有扩展与部署组合均支持 |
 | 数据库 | MySQL 驱动；完整测试环境为 MariaDB 11.8 |
 | Redis | 缓存、会话及 Horizon 队列，设置 `CACHE_DRIVER=redis` |
 | Web | Nginx + PHP-FPM 等，根目录指向 `public` |
-| Composer | 安装 PHP 依赖，有锁文件时按锁文件安装 |
+| Composer | 使用安装/更新脚本选择运行配置并按发布锁安装；服务器不运行全量依赖解析 |
 
 CLI 与 Web 均需数据库、Redis 及所需扩展。检查 PDO MySQL、Redis、mbstring、OpenSSL、fileinfo、cURL、XML 和 CLI 的 pcntl / posix：
 

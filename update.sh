@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
 
 if ! command -v git >/dev/null 2>&1 || ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -14,44 +14,44 @@ if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
     echo "Tracked files have local changes. Back them up and resolve them before updating." >&2
     exit 1
 fi
+source library/dependency-shell.sh
 loaded_script=$(git hash-object -- update.sh)
 git fetch origin "$branch"
+if ! git merge-base --is-ancestor HEAD FETCH_HEAD; then
+    echo "Deployment history diverged. Resolve it without discarding local commits before updating." >&2
+    exit 1
+fi
+if [ -z "${V2BOARD_UPDATE_SNAPSHOT:-}" ]; then
+    V2BOARD_UPDATE_OLD_HEAD=$(git rev-parse HEAD)
+    V2BOARD_UPDATE_SNAPSHOT=$(v2board_profiles snapshot)
+    export V2BOARD_UPDATE_OLD_HEAD V2BOARD_UPDATE_SNAPSHOT
+fi
+v2board_update_failed() {
+    local failure=$?
+    trap - ERR
+    v2board_profiles rollback "--snapshot=$V2BOARD_UPDATE_SNAPSHOT" || true
+    if [ "$(git rev-parse HEAD)" != "$V2BOARD_UPDATE_OLD_HEAD" ]; then
+        # --keep refuses to overwrite new local edits; no hard reset is used.
+        git reset --keep "$V2BOARD_UPDATE_OLD_HEAD" || echo "Code rollback needs manual inspection." >&2
+    fi
+    echo "Update failed; no success was reported. Inspect logs: $(dirname -- "$V2BOARD_UPDATE_SNAPSHOT"). Any database changes require separate inspection before restoring service." >&2
+    exit "$failure"
+}
+trap v2board_update_failed ERR
+v2board_profiles preflight --revision=FETCH_HEAD
 git merge --ff-only FETCH_HEAD
-
-# Bash can keep executing the previous script after Git replaces it on disk.
 if [ "$(git hash-object -- update.sh)" != "$loaded_script" ]; then
     echo "Updater changed; restarting the newly fetched update.sh."
     exec bash "$PWD/update.sh" "$@"
 fi
 
-php_command=${V2BOARD_PHP:-php}
-if ! command -v "$php_command" >/dev/null 2>&1; then
-    echo "PHP CLI not found. Set V2BOARD_PHP to the intended PHP executable." >&2
-    exit 1
-fi
-if [ -f composer.phar ]; then
-    composer_path="$PWD/composer.phar"
-elif command -v composer >/dev/null 2>&1; then
-    composer_path=$(command -v composer)
-else
-    echo "Install Composer before updating." >&2
-    exit 1
-fi
-
-if [ -f vendor/composer/installed.json ]; then
-    # Preserve installed versions and optional runtime packages. This also repairs
-    # a missing lock or a lock predating the pinned WebAuthn dependency.
-    "$php_command" library/UpdateDependencies.php "$PWD" "--composer=$composer_path" --apply
-else
-    "$php_command" "$composer_path" install --no-dev --prefer-dist --optimize-autoloader --no-plugins --no-scripts --no-interaction
-    "$php_command" library/WebAuthnPatch.php
-fi
-
-"$php_command" "$composer_path" check-platform-reqs --no-dev --no-plugins --no-scripts --no-interaction
-"$php_command" artisan package:discover --ansi
-"$php_command" artisan v2board:update
-"$php_command" artisan config:cache
-"$php_command" artisan view:clear
-"$php_command" artisan horizon:terminate
+v2board_profiles update "--snapshot=$V2BOARD_UPDATE_SNAPSHOT"
+"$v2board_php" artisan package:discover --ansi
+"$v2board_php" artisan v2board:update
+"$v2board_php" artisan config:cache
+"$v2board_php" artisan view:clear
+"$v2board_php" artisan horizon:terminate
+v2board_profiles commit "--snapshot=$V2BOARD_UPDATE_SNAPSHOT"
+trap - ERR
 
 echo "Code and database update finished. Reload PHP-FPM or restart Webman, restore the scheduler and Horizon supervisor, then verify orders and subscriptions."

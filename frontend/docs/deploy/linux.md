@@ -14,11 +14,21 @@ cd /var/www/v2board
 
 ## 2. 安装面板
 
+先准备 Composer（全局命令或项目内的 `composer.phar`）。全新 PHP-FPM 部署执行：
+
 ```sh
-composer install --no-dev --prefer-dist --optimize-autoloader
-composer check-platform-reqs --no-dev
-php artisan v2board:install
+# 按发布锁安装 FPM 依赖，检查平台后初始化面板和数据库
+bash init.sh --runtime=fpm
 ```
+
+如果准备使用 Webman，**将上面一条替换为**：
+
+```sh
+# 安装包含 Adapterman/Workerman 的发布依赖并初始化面板；不会自动启动服务
+bash init.sh --runtime=webman
+```
+
+FPM 支持 PHP 8.0 兼容配置及 PHP 8.1+ 配置，由 CLI 自动选择；Webman 新配置要求 PHP 8.1+。两种配置均使用仓库发布的锁文件，不在服务器临时解析最新依赖。
 
 按提示填写数据库和管理员邮箱，保存输出的入口与凭据。安装器创建 `.env`、`APP_KEY` 和数据库结构。**已有站点不要重新安装**，应按[原版 v2b](./migrate)或[xiaov2b](./from-xiaov2b)教程迁移。
 
@@ -75,4 +85,6 @@ php artisan config:cache
 
 ## 常见问题
 
-**安装中断？** 先修正 `.env` 中的数据库连接或报错原因，再运行 `php artisan v2board:install --resume`。此操作保留原 `APP_KEY` 和已有表数据；已有管理员的站点应运行 `v2board:update`，不要重新初始化。
+**安装中断？** 修正报错原因后运行 `bash init.sh --runtime=fpm --resume`；Webman 将 `fpm` 替换为 `webman`。依赖会重新验证，原 `.env`、`APP_KEY` 和已有表数据保留；已安装站点使用 `update.sh`，不要重新初始化。
+
+**为什么仍有安全公告？** 当前锁是旧 Laravel 8 的兼容基线，`composer.profile-audit.json` 记录尚未处理的 Laravel、Flysystem、YAML 公告及废弃组件。可重复安装不代表这些问题已修复；框架和 YAML 安全升级会单独发布。

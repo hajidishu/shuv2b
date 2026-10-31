@@ -21,19 +21,28 @@ bash update.sh
 
 脚本拉取当前分支，只允许快进更新，核对依赖后执行 `v2board:update`、缓存刷新及队列终止。遇到本地修改、分叉或命令失败会停止，不硬重置、不删除锁文件，也不自动更换 Web 运行模式。拉取到新版更新脚本时会重新执行新版，避免继续运行旧逻辑。
 
-服务器需预先安装 Composer，或已有 `composer.phar`。已安装站点会保留现有包版本、开发依赖安装状态及 Adapterman/Workerman 等可选运行包；缺少锁文件时尝试从安装记录恢复，仅补齐固定版本的 WebAuthn。先验证变更计划并备份，补装失败会恢复依赖和锁文件；依赖未通过时不执行数据库更新。不会关闭 Composer 的全局安全策略；保留旧版本不代表已修复其安全公告。
+服务器需预先安装 Composer，或已有 `composer.phar`。更新会在代码切换前备份实例锁、运行配置、安装记录和依赖。旧站首次迁移保留已安装版本与 Webman 等可选运行组件；缺锁时结合现有安装记录和发布锁恢复信息，仅补齐必要的 WebAuthn。
 
-缺锁且安装记录不足、版本不满足新版要求或存在未知文件时，更新会停止。根据终端给出的私有备份目录查看日志，不要删除 `vendor` 或通过全量 `composer update` 强行继续。
+运行模式记录在本机 `.v2board-runtime.json`，不会提交到 Git。发布锁使用 `composer.fpm.lock`、`composer.webman.lock`，PHP 8.0 的 FPM 使用独立兼容锁，均与实例 `composer.lock` 分开。新安装和已采用发布配置的站点按发布锁安装；新依赖集发布后可正常升级，不会永久冻结旧包。
+
+依赖先在私有目录安装、检查，再切换到最终位置并重新生成自动加载路径。失败时恢复依赖、实例锁、运行配置和缓存；代码回退使用保留本地修改的方式，不硬重置。数据库步骤失败后保持维护状态，需检查数据库备份及已执行的变更，不能把依赖回退当作数据库回退。
+
+安装记录无法与发布版本兼容、PHP/扩展不满足要求或文件异常时，更新会停止。终端会打印私有备份与日志目录；成功后也保留备份，确认稳定后再清理。`V2BOARD_UPDATE_BACKUP_DIR` 可指定站点目录外的现有目录。
+
+Composer 全局安全策略不被关闭。当前发布锁仍是 Laravel 8 兼容基线，已知公告记录在 `composer.profile-audit.json`；CI 会核对新增公告，现有公告的适用性审计与安全升级另行处理。
 
 Passkey 要求 PHP 8.0+，功能默认关闭，见 [Passkey 登录](../features/passkey)。首次更新会创建所需数据表，已有用户与订阅保留。
 
 aaPanel / 宝塔可明确指定 CLI 的 PHP，避免使用其他版本：
 
 ```sh
+# 用指定的 PHP 8.3 执行依赖、数据库和缓存更新
 V2BOARD_PHP=/www/server/php/83/bin/php bash update.sh
 ```
 
 Webman 守护继续使用原来的专用配置，例如 `php -c cli-php.ini webman.php start`；Horizon 与调度使用常规 CLI 配置。
+
+已有运行配置默认沿用。旧站未记录配置时，检测到已安装的 Adapterman/Workerman 会保留包含这些组件的依赖集；这不改变 Nginx、PHP-FPM 或守护服务。需要明确选择依赖配置时可设置 `V2BOARD_RUNTIME=fpm` 或 `webman`，实际服务切换仍由部署者完成。
 
 邮箱找回修复会创建 `v2_user_email_identity` 精确身份索引，不修改已有账号邮箱。升级须暂停 Web、队列和调度中的账号写入；拉取新版代码后可先运行 `php artisan email-identity:install --check` 检查规范化冲突，确认后运行 `php artisan v2board:update`。冲突会按用户 ID 报错并中止，核对账号归属后再处理，不要直接合并账号。无效历史邮箱会报告用户 ID，需管理员核实后改正。国际化域名的 IDNA 转换与现有邮件投递一致。
 

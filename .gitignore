@@ -18,6 +18,11 @@ npm-debug.log
 yarn-error.log
 composer.phar
 composer.lock
+/.v2board-runtime.json
+/.v2board-dependencies-*/
+/.v2board-write-*
+/.v2board-dependency-update.lock
+/.v2board-dependency-update.lockdir/
 yarn.lock
 docker-compose.yml
 .DS_Store

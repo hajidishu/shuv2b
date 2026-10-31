@@ -13,6 +13,7 @@ const remote = join(scratch, 'origin.git'), seed = join(scratch, 'seed'), bin = 
 mkdirSync(bin)
 put(join(bin, 'php'), [
   '#!/usr/bin/env bash',
+  'if [ "$1" = -d ]; then shift 2; fi',
   'case "$1" in',
   '  */composer|*/composer.phar)',
   '    shift',
@@ -21,7 +22,12 @@ put(join(bin, 'php'), [
   '    ;;',
   '  *)',
   '    printf "php %s\\n" "$*" >> "$V2BOARD_UPDATE_LOG"',
-  '    if [ "$1" = library/UpdateDependencies.php ] && [ "${V2BOARD_UPDATE_RECOVERY_FAIL:-}" = 1 ]; then exit 9; fi',
+  '    if [ "$1" = library/DependencyProfiles.php ]; then',
+  '      if [ "$2" = snapshot ]; then printf "%s\\n" "$V2BOARD_FAKE_SNAPSHOT"; fi',
+  '      if [ "$2" = update ] || [ "$2" = install ]; then',
+  '        if [ "${V2BOARD_UPDATE_FAIL:-}" = 1 ] || [ "${V2BOARD_UPDATE_RECOVERY_FAIL:-}" = 1 ]; then exit 9; fi',
+  '      fi',
+  '    fi',
   '    if [ "${V2BOARD_UPDATE_PHP_FAIL:-}" = "$*" ]; then exit 11; fi',
   '    ;;',
   'esac',
@@ -39,6 +45,8 @@ put(join(seed, 'update.sh'), readFileSync(join(root, 'update.sh')))
 mkdirSync(join(seed, 'library'))
 put(join(seed, 'library/UpdateDependencies.php'), readFileSync(join(root, 'library/UpdateDependencies.php')))
 put(join(seed, 'library/WebAuthnPatch.php'), readFileSync(join(root, 'library/WebAuthnPatch.php')))
+for (const name of ['DependencyProfiles.php', 'dependency-shell.sh']) put(join(seed, 'library', name), readFileSync(join(root, 'library', name)))
+put(join(seed, 'init.sh'), readFileSync(join(root, 'init.sh')))
 put(join(seed, '.gitignore'), '.env\nconfig/v2board.php\ncomposer.lock\ncomposer.phar\nvendor/\n')
 put(join(seed, 'marker'), 'baseline\n')
 git(seed, 'add', '.')
@@ -55,10 +63,10 @@ const checkout = name => {
   put(join(dir, 'composer.lock'), 'fixture lock\n')
   return dir
 }
-const run = (cwd, fail = false, extraEnv = {}) => {
+const run = (cwd, fail = false, extraEnv = {}, script = 'update.sh', args = []) => {
   const log = join(scratch, `${cwd.split(/[\\/]/).at(-1)}.log`)
   put(log, '')
-  const result = spawnSync(shell, ['update.sh'], { cwd, encoding: 'utf8', env: { ...process.env, PATH: bin + (process.platform === 'win32' ? ';' : ':') + process.env.PATH, V2BOARD_UPDATE_LOG: log, V2BOARD_UPDATE_FAIL: fail ? '1' : '', ...extraEnv } })
+  const result = spawnSync(shell, [script, ...args], { cwd, encoding: 'utf8', env: { ...process.env, PATH: bin + (process.platform === 'win32' ? ';' : ':') + process.env.PATH, V2BOARD_UPDATE_LOG: log, V2BOARD_FAKE_SNAPSHOT: join(scratch, 'snapshot.json'), V2BOARD_UPDATE_FAIL: fail ? '1' : '', ...extraEnv } })
   if (result.error) throw result.error
   return { ...result, log: readFileSync(log, 'utf8') }
 }
@@ -70,14 +78,14 @@ assert.equal(result.status, 0, result.stderr + result.stdout)
 assert.equal(git(clean, 'branch', '--show-current'), 'release')
 assert.equal(readFileSync(join(clean, 'marker'), 'utf8'), 'updated\n')
 for (const [file, value] of [['.env', 'APP_KEY=fixture-key\n'], ['config/v2board.php', '<?php return ["fixture" => true];\n'], ['composer.lock', 'fixture lock\n']]) assert.equal(readFileSync(join(clean, file), 'utf8'), value)
-assert.ok(result.log.includes('composer install --no-dev'))
-assert.ok(result.log.indexOf('php library/WebAuthnPatch.php') < result.log.indexOf('php artisan v2board:update'))
-assert.ok(result.log.indexOf('composer check-platform-reqs') < result.log.indexOf('php artisan v2board:update'))
+assert.ok(result.log.includes('php library/DependencyProfiles.php snapshot'))
+assert.ok(result.log.indexOf('php library/DependencyProfiles.php update') < result.log.indexOf('php artisan v2board:update'))
+assert.ok(result.log.includes('php library/DependencyProfiles.php commit'))
 assert.ok(result.log.includes('php artisan v2board:update'))
 console.log('PASS release fast-forward, original configuration/key/lock retained')
 put(join(clean, 'marker'), 'local edit\n')
 result = run(clean)
-assert.notEqual(result.status, 0); assert.equal(result.log, '')
+assert.notEqual(result.status, 0); assert.ok(!result.log.includes('php artisan'))
 assert.equal(readFileSync(join(clean, 'marker'), 'utf8'), 'local edit\n')
 console.log('PASS dirty checkout stops without changing local edits')
 put(join(clean, 'marker'), 'updated\n')
@@ -90,7 +98,8 @@ put(join(diverged, 'local-only'), 'local\n'); git(diverged, 'add', '.'); git(div
 const localHead = git(diverged, 'rev-parse', 'HEAD')
 put(join(seed, 'remote-only'), 'remote\n'); git(seed, 'add', '.'); git(seed, 'commit', '-m', 'remote change'); git(seed, 'push', 'origin', 'release')
 result = run(diverged)
-assert.notEqual(result.status, 0); assert.equal(result.log, '')
+assert.notEqual(result.status, 0); assert.ok(!result.log.includes('php artisan'))
+assert.ok(!result.log.includes('php library/DependencyProfiles.php snapshot'))
 assert.equal(git(diverged, 'rev-parse', 'HEAD'), localHead)
 console.log('PASS divergent history stops without discarding the local commit')
 const failed = checkout('failed')
@@ -103,14 +112,14 @@ mkdirSync(join(legacy, 'vendor/composer'), { recursive: true })
 put(join(legacy, 'vendor/composer/installed.json'), '{"dev":true,"packages":[]}\n')
 result = run(legacy)
 assert.equal(result.status, 0, result.stderr + result.stdout)
-assert.ok(result.log.includes('php library/UpdateDependencies.php'))
+assert.ok(result.log.includes('php library/DependencyProfiles.php update'))
 assert.ok(!result.log.includes('composer install') && !result.log.includes('composer update'))
-assert.ok(result.log.indexOf('php library/UpdateDependencies.php') < result.log.indexOf('php artisan v2board:update'))
+assert.ok(result.log.indexOf('php library/DependencyProfiles.php update') < result.log.indexOf('php artisan v2board:update'))
 console.log('PASS installed legacy vendor uses guarded recovery rather than whole-project resolution')
 put(join(legacy, 'composer.lock'), 'recovered lock\n')
 result = run(legacy)
 assert.equal(result.status, 0)
-assert.ok(result.log.includes('php library/UpdateDependencies.php'))
+assert.ok(result.log.includes('php library/DependencyProfiles.php update'))
 assert.equal(readFileSync(join(legacy, 'composer.lock'), 'utf8'), 'recovered lock\n')
 console.log('PASS repeat update keeps the recovered lock and validates installed versions')
 result = run(legacy, false, { V2BOARD_UPDATE_RECOVERY_FAIL: '1' })
@@ -127,7 +136,8 @@ const localComposer = checkout('project-composer')
 put(join(localComposer, 'composer.phar'), 'fixture composer\n')
 result = run(localComposer, false, { V2BOARD_PHP: join(bin, 'php') })
 assert.equal(result.status, 0)
-assert.ok(result.log.includes('composer install --no-dev'))
+assert.ok(result.log.includes('php library/DependencyProfiles.php update'))
+assert.ok(result.log.includes('--composer='))
 console.log('PASS explicit PHP executable and project Composer are supported')
 const selfReload = checkout('reload-updater')
 const updater = readFileSync(join(root, 'update.sh'), 'utf8')
@@ -142,4 +152,26 @@ assert.ok(result.stdout.includes('Updater changed; restarting'))
 assert.ok(result.stdout.includes('FRESH_UPDATER_RAN'))
 assert.ok(!result.stdout.includes('STALE_BODY_RAN'))
 console.log('PASS changed updater restarts the fetched script before dependency/database work')
+const install = checkout('fresh-install')
+unlinkSync(join(install, '.env'))
+result = run(install, false, {}, 'init.sh', ['--runtime=webman'])
+assert.equal(result.status, 0, result.stderr + result.stdout)
+assert.ok(result.log.includes('php library/DependencyProfiles.php install'))
+assert.ok(result.log.includes('--runtime=webman'))
+assert.ok(result.log.includes('php artisan v2board:install'))
+console.log('PASS new installation uses the explicit runtime profile without composer require')
+result = run(install, true, {}, 'init.sh', ['--runtime=fpm'])
+assert.notEqual(result.status, 0)
+assert.ok(!result.log.includes('php artisan'))
+assert.ok(result.log.includes('php library/DependencyProfiles.php rollback'))
+console.log('PASS installation dependency failure rolls back before creating application data')
+put(join(install, '.env'), 'APP_KEY=preserved-install-key\n')
+result = run(install, false, {}, 'init.sh')
+assert.notEqual(result.status, 0);assert.equal(result.log, '')
+console.log('PASS an existing environment cannot be silently reinstalled')
+result = run(install, false, {}, 'init.sh', ['--runtime=webman', '--resume'])
+assert.equal(result.status, 0, result.stderr + result.stdout)
+assert.ok(result.log.includes('php artisan v2board:install --resume'))
+assert.equal(readFileSync(join(install, '.env'), 'utf8'), 'APP_KEY=preserved-install-key\n')
+console.log('PASS explicit resume preserves the existing application key')
 console.log('All update checks passed using local Git repositories and fake PHP/Composer; no application/database/network access.')

@@ -90,6 +90,12 @@ class AdminRoute
                 $router->post('update', 'V1\\Admin\\Server\\NaiveController@update');
                 $router->post('copy', 'V1\\Admin\\Server\\NaiveController@copy');
             });
+            $router->group(['prefix' => 'server/mieru'], function ($router) {
+                $router->post('save', 'V1\\Admin\\Server\\MieruController@save');
+                $router->post('drop', 'V1\\Admin\\Server\\MieruController@drop');
+                $router->post('update', 'V1\\Admin\\Server\\MieruController@update');
+                $router->post('copy', 'V1\\Admin\\Server\\MieruController@copy');
+            });
             $router->group([
                 'prefix' => 'server/anytls'
             ], function ($router) {

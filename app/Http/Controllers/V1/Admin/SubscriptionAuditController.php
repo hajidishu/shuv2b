@@ -49,6 +49,7 @@ class SubscriptionAuditController extends Controller
     {
         $record = DB::table(SubscriptionAuditService::TABLE)->where('id', $request->input('id'))->first();
         if (!$record) abort(404, '记录不存在或已按保留规则清理');
+        unset($record->count_recorded);
         $details = json_decode($record->request_details ?? '', true);
         $record->request_details = is_array($details) ? $details : null;
         $user = \App\Models\User::select(['id', 'token'])->find($record->user_id);

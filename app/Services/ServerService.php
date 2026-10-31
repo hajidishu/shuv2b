@@ -14,6 +14,7 @@ use App\Models\ServerTrojan;
 use App\Models\ServerTuic;
 use App\Models\ServerAnytls;
 use App\Models\ServerNaive;
+use App\Models\ServerMieru;
 use App\Utils\CacheKey;
 use App\Utils\Helper;
 use Illuminate\Support\Facades\Cache;
@@ -206,6 +207,21 @@ class ServerService
         return $servers;
     }
 
+    public function getAvailableMieru(User $user, $probeNodeId = null): array
+    {
+        $servers = [];
+        $nodes = ServerMieru::orderBy('sort', 'ASC')->get()->keyBy('id');
+        foreach ($nodes as $node) {
+            if (!$node->show || (!in_array($user->group_id, $node->group_id) && (int)$node->id !== $probeNodeId)) continue;
+            $server = $node->toArray(); $server['type'] = 'mieru';
+            $parent = $nodes[$node->parent_id] ?? null;
+            $server['last_check_at'] = Cache::get(CacheKey::get('SERVER_MIERU_LAST_CHECK_AT', $parent ? $parent->id : $node->id));
+            if ($parent) $server['created_at'] = $parent->created_at;
+            $servers[] = MieruSettings::publicNode($server);
+        }
+        return $servers;
+    }
+
     public function getAvailableV2node(User $user, $probeNodeId = null)
     {
         $servers = [];
@@ -235,6 +251,7 @@ class ServerService
             }
             $server = $v2node[$key]->toArray();
             if ($server['protocol'] === 'naive') $server = NaiveSettings::publicNode($server);
+            if ($server['protocol'] === 'mieru') $server = MieruSettings::publicNode($server);
             $servers[] = $server;
         }
         return $servers;
@@ -254,6 +271,7 @@ class ServerService
             $this->getAvailableVless($user, $extra['vless'] ?? null),
             $this->getAvailableAnyTLS($user, $extra['anytls'] ?? null),
             $this->getAvailableNaive($user, $extra['naive'] ?? null),
+            $this->getAvailableMieru($user, $extra['mieru'] ?? null),
             $this->getAvailableV2node($user, $extra['v2node'] ?? null)
         );
         $tmp = array_column($servers, 'sort');
@@ -410,6 +428,13 @@ class ServerService
         })->all();
     }
 
+    public function getAllMieru()
+    {
+        return ServerMieru::orderBy('sort', 'ASC')->get()->map(function ($node) {
+            return array_merge($node->toArray(), ['type' => 'mieru']);
+        })->all();
+    }
+
     public function getAllV2node()
     {
         $servers = ServerV2node::orderBy('sort', 'ASC')
@@ -464,6 +489,7 @@ class ServerService
             $this->getAllVLess(),
             $this->getAllAnyTLS(),
             $this->getAllNaive(),
+            $this->getAllMieru(),
             $this->getAllV2node()
         );
         $this->mergeData($servers);
@@ -508,6 +534,8 @@ class ServerService
                 return ServerAnytls::find($serverId);
             case 'naive':
                 return ServerNaive::find($serverId);
+            case 'mieru':
+                return ServerMieru::find($serverId);
             default:
                 return false;
         }

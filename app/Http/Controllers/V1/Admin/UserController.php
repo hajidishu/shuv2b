@@ -15,6 +15,7 @@ use App\Models\Plan;
 use App\Models\TicketMessage;
 use App\Models\User;
 use App\Services\AuthService;
+use App\Services\SubscriptionAuditService;
 use App\Utils\Helper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -41,6 +42,10 @@ class UserController extends Controller
         $filters = $request->input('filter');
         if ($filters) {
             foreach ($filters as $k => $filter) {
+                if ($filter['key'] === 'subscribe_count') {
+                    $builder->where(app(SubscriptionAuditService::class)->userCountQuery(), $filter['condition'], (int)$filter['value']);
+                    continue;
+                }
                 if ($filter['condition'] === '模糊') {
                     $filter['condition'] = 'like';
                     $filter['value'] = "%{$filter['value']}%";
@@ -72,19 +77,19 @@ class UserController extends Controller
     {
         $current = $request->input('current') ? $request->input('current') : 1;
         $pageSize = $request->input('pageSize') >= 10 ? $request->input('pageSize') : 10;
-        $sortType = in_array($request->input('sort_type'), ['ASC', 'DESC']) ? $request->input('sort_type') : 'DESC';
-        $sort = $request->input('sort') ? $request->input('sort') : 'created_at';
-        $userModel = User::select(
+        $userModel = $this->orderedUsers($request)->select(
             DB::raw('*'),
             DB::raw('(u+d) as total_used')
-        )
-            ->orderBy($sort, $sortType);
+        );
         $this->filter($request, $userModel);
         $total = $userModel->count();
         $res = $userModel->forPage($current, $pageSize)
             ->get();
         $plan = Plan::get();
+        // One indexed aggregate for the current page, never one query per user.
+        $pulls = app(SubscriptionAuditService::class)->countsForUsers($res->pluck('id')->all());
         for ($i = 0; $i < count($res); $i++) {
+            $res[$i]['subscribe_count'] = (int)($pulls[$res[$i]['id']] ?? 0);
             for ($k = 0; $k < count($plan); $k++) {
                 if ($plan[$k]['id'] == $res[$i]['plan_id']) {
                     $res[$i]['plan_name'] = $plan[$k]['name'];
@@ -291,11 +296,29 @@ class UserController extends Controller
         echo $data;
     }
 
-    public function sendMail(UserSendMail $request)
+    private function orderedUsers(Request $request)
     {
         $sortType = in_array($request->input('sort_type'), ['ASC', 'DESC']) ? $request->input('sort_type') : 'DESC';
-        $sort = $request->input('sort') ? $request->input('sort') : 'created_at';
-        $builder = User::orderBy($sort, $sortType);
+        $sort = $request->input('sort') ?: 'created_at';
+        $builder = User::query();
+        if ($sort === 'subscribe_count') return $builder->orderBy(app(SubscriptionAuditService::class)->userCountQuery(), $sortType)->orderBy('id');
+        return $builder->orderBy($sort, $sortType);
+    }
+
+    private function freezeAuditFilter(Request $request, $builder)
+    {
+        $usesAudit = $request->input('sort') === 'subscribe_count';
+        foreach ($request->input('filter', []) as $filter) $usesAudit = $usesAudit || $filter['key'] === 'subscribe_count';
+        if (!$usesAudit) return $builder;
+        // New subscription pulls can change counts while sessions are being revoked.
+        // Mutate exactly the users selected before that work, rather than reevaluating the count.
+        $ids = (clone $builder)->lockForUpdate()->pluck('v2_user.id')->all();
+        return User::whereIntegerInRaw('id', $ids)->orderBy('id');
+    }
+
+    public function sendMail(UserSendMail $request)
+    {
+        $builder = $this->orderedUsers($request);
         $this->filter($request, $builder);
         foreach ($builder->cursor() as $user) {
             SendEmailJob::dispatch([
@@ -317,12 +340,11 @@ class UserController extends Controller
 
     public function ban(Request $request)
     {
-        $sortType = in_array($request->input('sort_type'), ['ASC', 'DESC']) ? $request->input('sort_type') : 'DESC';
-        $sort = $request->input('sort') ? $request->input('sort') : 'created_at';
-        $builder = User::orderBy($sort, $sortType);
+        $builder = $this->orderedUsers($request);
         $this->filter($request, $builder);
         try {
-            DB::transaction(function () use ($builder) {
+            DB::transaction(function () use ($request, $builder) {
+                $builder = $this->freezeAuditFilter($request, $builder);
                 (clone $builder)->lockForUpdate()->each(function ($user) {
                     (new AuthService($user))->removeAllSession();
                 });
@@ -341,13 +363,12 @@ class UserController extends Controller
 
     public function allDel(Request $request)
     {
-        $sortType = in_array($request->input('sort_type'), ['ASC', 'DESC']) ? $request->input('sort_type') : 'DESC';
-        $sort = $request->input('sort') ? $request->input('sort') : 'created_at';
-        $builder = User::orderBy($sort, $sortType);
+        $builder = $this->orderedUsers($request);
         $this->filter($request, $builder);
 
         DB::beginTransaction();
         try {
+            $builder = $this->freezeAuditFilter($request, $builder);
             $builder->lockForUpdate()->each(function ($user){
                 $authService = new AuthService($user);
                 $authService->removeAllSession();

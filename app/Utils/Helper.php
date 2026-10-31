@@ -174,6 +174,7 @@ class Helper
             $server['type'] = $server['protocol'];
         } 
         if ($server['type'] === 'naive') return \App\Services\NaiveSettings::uri($userId, $uuid, $server);
+        if ($server['type'] === 'mieru') return \App\Services\MieruSettings::uri($userId, $uuid, $server);
         $method = "build" . ucfirst($server['type']) . "Uri";
 
         if (method_exists(self::class, $method)) {

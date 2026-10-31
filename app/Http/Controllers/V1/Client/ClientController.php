@@ -19,6 +19,7 @@ class ClientController extends Controller
         $userAgent = (string)$request->userAgent();
         $flag = $request->input('flag') ?? $userAgent;
         $flag = strtolower($flag);
+        if (strpos($flag, 'mihomo') !== false) $flag = 'meta';
         $user = $request->user;
         // account not expired and is not banned.
         $userService = new UserService();

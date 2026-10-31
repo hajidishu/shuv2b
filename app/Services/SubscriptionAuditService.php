@@ -8,7 +8,33 @@ class SubscriptionAuditService
 {
     const TABLE = 'v2_subscribe_audit';
     const SETTINGS = 'v2_subscribe_audit_setting';
+    const TOTALS = 'v2_subscribe_audit_total';
+    const LEGACY_EVENTS = 'v2_subscribe_audit_count_event';
     const CHUNK = 1000;
+
+    /** Lifetime totals are independent of retained request details. */
+    public function countsForUsers(array $ids): array
+    {
+        if (!$ids) return [];
+        return DB::table(self::TOTALS)->whereIn('user_id', $ids)->pluck('pull_count', 'user_id')->all();
+    }
+
+    /** A primary-key lookup, including zero for users with no pulls. */
+    public function userCountQuery()
+    {
+        return DB::table(self::TOTALS)->selectRaw('COALESCE(MAX(pull_count), 0)')
+            ->whereColumn(self::TOTALS . '.user_id', 'v2_user.id');
+    }
+
+    public function recordPull(int $userId): void
+    {
+        if ($userId < 1) throw new \InvalidArgumentException('Invalid subscription user');
+        $grammar = DB::connection()->getQueryGrammar();
+        $column = $grammar->wrapTable(self::TOTALS) . '.' . $grammar->wrap('pull_count');
+        DB::table(self::TOTALS)->upsert([['user_id' => $userId, 'pull_count' => 1]], ['user_id'], [
+            'pull_count' => DB::raw($column . ' + 1'),
+        ]);
+    }
 
     public function settings()
     {
@@ -19,9 +45,17 @@ class SubscriptionAuditService
 
     public function append(array $event)
     {
-        DB::transaction(function () use ($event) {
+        $counted = (bool)($event['count_recorded'] ?? false);
+        $event['count_recorded'] = 1;
+        DB::transaction(function () use ($event, $counted) {
             $settings = DB::table(self::SETTINGS)->where('id', 1)->lockForUpdate()->first();
             if (!$settings) throw new \RuntimeException('订阅审计尚未安装');
+            if (!$counted) {
+                // Upgrade-era jobs and failed synchronous writes use an anonymous receipt.
+                // New requests are already counted and do not create these receipts.
+                if (!DB::table(self::LEGACY_EVENTS)->insertOrIgnore(['event_id' => $event['event_id']])) return;
+                $this->recordPull((int)$event['user_id']);
+            }
             // A delayed/retried event must retain its original time and cannot resurrect expired data.
             if ($event['requested_at'] < time() - (int)$settings->retention_days * 86400) return;
             $inserted = DB::table(self::TABLE)->insertOrIgnore($event);

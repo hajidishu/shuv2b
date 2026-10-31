@@ -16,6 +16,7 @@ class CaptchaService
             'site_key' => 'turnstile_site_key', 'secret' => 'turnstile_secret_key',
             'url' => 'https://challenges.cloudflare.com/turnstile/v0/siteverify', 'max_token' => 2048,
         ],
+        'image' => [],
     ];
 
     public static function provider(?array $values = null): string
@@ -39,10 +40,14 @@ class CaptchaService
         ];
     }
 
-    public function verify(Request $request): void
+    public function verify(Request $request, string $purpose = 'register'): void
     {
         $provider = self::provider();
         if ($provider === 'none') return;
+        if ($provider === 'image') {
+            app(ImageCaptchaService::class)->verify($request, $purpose);
+            return;
+        }
         $adapter = self::PROVIDERS[$provider] ?? null;
         $secret = $adapter ? config('v2board.' . $adapter['secret']) : null;
         if (!$adapter || !is_string($secret) || trim($secret) === '') abort(503, '人机验证配置不完整，请联系管理员');

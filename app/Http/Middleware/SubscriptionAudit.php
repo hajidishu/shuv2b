@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Jobs\WriteSubscriptionAuditJob;
 use App\Services\SubscriptionAuditRequest;
+use App\Services\SubscriptionAuditService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -13,12 +14,19 @@ class SubscriptionAudit
 {
     public function handle(Request $request, Closure $next)
     {
-        if (!config('subscription_audit.enabled', true)) return $next($request);
         $user = $request->user;
         if (!$user || !$user->id) return $next($request);
+        $started = microtime(true);
+        $counted = false;
+        try {
+            app(SubscriptionAuditService::class)->recordPull((int)$user->id);
+            $counted = true;
+        } catch (\Throwable $error) {
+            Log::warning('Subscription pull count update failed', ['user_id' => (int)$user->id]);
+        }
+        if (!config('subscription_audit.enabled', true)) return $next($request);
         $ip = $request->ip();
         $packed = @inet_pton((string)$ip);
-        $started = microtime(true);
         $metadata = new SubscriptionAuditRequest($request, $user);
         $details = $metadata->capture($request);
         $event = [
@@ -26,6 +34,7 @@ class SubscriptionAudit
             'email' => mb_substr((string)$user->email, 0, 64, 'UTF-8'), 'ip' => $packed === false ? '' : inet_ntop($packed),
             'ua' => $metadata->text($request->userAgent() ?? '', 512), 'format' => '',
             'result' => 'error', 'status' => 500, 'requested_at' => time(),
+            'count_recorded' => $counted,
         ];
         try {
             $response = $next($request);

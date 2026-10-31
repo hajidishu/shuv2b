@@ -55,6 +55,7 @@ class V2boardUpdate extends Command
         app(\App\Services\PasskeySchema::class)->ensure();
         app(\App\Services\GoogleIdentitySchema::class)->ensure();
         app(\App\Services\NaiveSchema::class)->ensure();
+        app(\App\Services\MieruSchema::class)->ensure();
         \Artisan::call('route:clear');
         \Artisan::call('horizon:terminate');
         $this->info('更新完毕，队列服务已重启，你无需进行任何操作。');

@@ -10,6 +10,18 @@ permissions:
   contents: read
 
 jobs:
+  dependencies:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:2.10.3
+          coverage: none
+      - name: Check legacy dependency recovery with real Composer
+        run: php tests/dependency-update.php "$(command -v composer)"
+
   build:
     # Keep browser installation on a platform supported by the pinned Playwright.
     runs-on: ubuntu-24.04
@@ -62,7 +74,7 @@ jobs:
 
   release:
     if: github.repository == 'hajidishu/shuv2b' && github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
-    needs: build
+    needs: [build, dependencies]
     runs-on: ubuntu-latest
     permissions:
       contents: write

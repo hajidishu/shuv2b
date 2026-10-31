@@ -59,7 +59,7 @@ class V2boardUpdate extends Command
         app(\App\Services\MieruSchema::class)->ensure();
         \Artisan::call('route:clear');
         \Artisan::call('horizon:terminate');
-        $this->info('更新完毕，队列服务已重启，你无需进行任何操作。');
+        $this->info('数据库更新完成，已请求 Horizon 退出。请确认守护程序已重新拉起 Horizon，并重载 PHP-FPM 或通过原守护配置重启 Webman。');
         return 0;
     }
 }

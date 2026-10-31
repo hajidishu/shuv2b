@@ -4,6 +4,7 @@ namespace App\Services;
 
 
 use App\Models\Payment;
+use Illuminate\Validation\ValidationException;
 
 class PaymentService
 {
@@ -102,14 +103,30 @@ class PaymentService
         return $result;
     }
 
+    public static function notifyBase($notifyDomain = null)
+    {
+        // Notification destinations are administrator-controlled configuration.
+        // Never recover a missing/invalid destination from request headers.
+        $configured = $notifyDomain === null || $notifyDomain === ''
+            ? config('v2board.app_url') : $notifyDomain;
+        $base = PaymentReturnUrl::normalizeBase($configured);
+        if ($base === null) {
+            throw ValidationException::withMessages([
+                'notify_domain' => '请填写有效的 HTTP(S) 通知域名，或在系统配置中设置站点地址',
+            ]);
+        }
+        return $base;
+    }
+
+    public static function notifyUrl($method, $uuid, $notifyDomain = null)
+    {
+        return self::notifyBase($notifyDomain) . '/api/v1/guest/payment/notify/' .
+            rawurlencode((string)$method) . '/' . rawurlencode((string)$uuid);
+    }
+
     public function pay($order)
     {
-        // custom notify domain name
-        $notifyUrl = url("/api/v1/guest/payment/notify/{$this->method}/{$this->config['uuid']}");
-        if ($this->config['notify_domain']) {
-            $parseUrl = parse_url($notifyUrl);
-            $notifyUrl = $this->config['notify_domain'] . $parseUrl['path'];
-        }
+        $notifyUrl = self::notifyUrl($this->method, $this->config['uuid'], $this->config['notify_domain'] ?? null);
         $returnTradeNo = $order['return_trade_no'] ?? $order['trade_no'];
         $returnUrl = PaymentReturnUrl::make($returnTradeNo);
         $params = [

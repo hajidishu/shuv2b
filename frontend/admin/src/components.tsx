@@ -501,9 +501,19 @@ export function Fields({
     references?: Row;
     settings?: boolean;
 }) {
+    const form = Form.useFormInstance();
+    const addresses = Form.useWatch(
+        (values: Row) => ({ app_url: values.app_url, notify_domain: values.notify_domain }),
+        { form, preserve: true },
+    );
     return (
         <div className={settings ? "settings-fields" : "form-grid"}>
             {fields.map((f) => {
+                const watchedAddress = f.key === "app_url" ? addresses?.app_url :
+                    f.key === "notify_domain" ? addresses?.notify_domain : undefined;
+                const address = watchedAddress ?? form.getFieldValue(f.key);
+                const warnHttp = (f.key === "app_url" || f.key === "notify_domain") &&
+                    typeof address === "string" && /^http:\/\//i.test(address.trim());
                 let options = f.options;
                 if (f.reference) {
                     options = [
@@ -734,7 +744,16 @@ export function Fields({
                                 </span>
                             )
                         }
-                        extra={settings ? undefined : f.help}
+                        extra={
+                            warnHttp ? (
+                                <>
+                                    {settings ? undefined : f.help}
+                                    <div role="note" style={{ color: "#ff4d4f" }}>
+                                        警告：HTTP 为明文传输，支付通知中的敏感信息可能被窃听。建议使用 HTTPS。
+                                    </div>
+                                </>
+                            ) : settings ? undefined : f.help
+                        }
                         rules={rules}
                         className={
                             ["json", "textarea", "html"].includes(f.kind ?? "")

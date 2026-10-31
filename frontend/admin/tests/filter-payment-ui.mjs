@@ -186,6 +186,19 @@ try {
         }
     }
 
+    if (!live) await check("http-site-address-warning-is-advisory", async () => {
+        await nav("/config/system");
+        const site = page.locator("#app_url");
+        await site.fill("http://panel.example.test");
+        const warning = page.getByRole("note").filter({ hasText: "HTTP 为明文传输" });
+        await warning.waitFor();
+        assert.equal(await warning.evaluate((element) => getComputedStyle(element).color), "rgb(255, 77, 79)");
+        assert.equal(await site.inputValue(), "http://panel.example.test");
+        await site.fill("https://panel.example.test");
+        await warning.waitFor({ state: "hidden" });
+        assert.equal(await site.evaluate((element) => element.closest(".ant-form-item").querySelectorAll(".ant-form-item-extra").length), 0);
+    });
+
     for (const method of ["Paytaro", "PaytaroQR"]) {
         await check(`${method}-configuration-without-advertising`, async () => {
             await nav("/config/payment");
@@ -240,6 +253,16 @@ try {
                 fullPage: true,
             });
             if (!live) {
+                const notifyDomain = modal.getByLabel("自定义通知域名(选填)", { exact: true });
+                assert.equal(await notifyDomain.inputValue(), "");
+                assert.match(await modal.innerText(), /留空使用系统配置中的站点地址/);
+                await notifyDomain.fill("http://notify.example.test");
+                const warning = modal.getByRole("note").filter({ hasText: "HTTP 为明文传输" });
+                await warning.waitFor();
+                assert.equal(await warning.evaluate((element) => getComputedStyle(element).color), "rgb(255, 77, 79)");
+                await notifyDomain.fill("https://notify.example.test");
+                await warning.waitFor({ state: "hidden" });
+                await notifyDomain.fill(method === "PaytaroQR" ? "http://notify.example.test" : "");
                 await modal
                     .getByLabel("显示名称", { exact: true })
                     .fill(method + " regression");
@@ -251,6 +274,8 @@ try {
                     .click();
                 const response = await saved;
                 assert.ok(response.ok());
+                if (method === "PaytaroQR") assert.equal(response.request().postDataJSON().notify_domain, "http://notify.example.test");
+                else assert.ok(!response.request().postDataJSON().notify_domain);
                 assert.deepEqual(response.request().postDataJSON().config, {
                     pid: "test-app",
                     key: "test-secret",

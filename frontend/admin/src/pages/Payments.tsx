@@ -136,7 +136,9 @@ export default function Payments() {
                             ),
                             dataIndex: "notify_url",
                             render: (v) => (
-                                <span className="break-word">{v}</span>
+                                <span className="break-word">
+                                    {v || "请配置有效的站点地址或通知域名"}
+                                </span>
                             ),
                         },
                         {

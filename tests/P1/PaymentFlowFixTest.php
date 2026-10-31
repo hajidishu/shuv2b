@@ -23,6 +23,7 @@ class PaymentFlowFixTest extends DatabaseTestCase
     }
     private function checkout($user, $order, $gateway, $token = null, $origin = 'https://panel.example.test')
     {
+        config(['v2board.app_url' => 'https://panel.example.test']);
         $request = Request::create('https://panel.example.test/api/fixture', 'POST', ['user' => ['id' => $user->id],
             'trade_no' => $order->trade_no, 'method' => $gateway->id, 'token' => $token]);
         $request->headers->set('Origin', $origin);

@@ -29,6 +29,7 @@ const base: Field[] = [
         key: "notify_domain",
         label: "自定义通知域名(选填)",
         placeholder: "网关的通知将会发送到该域名(https://x.com)",
+        help: "留空使用系统配置中的站点地址。请确保该地址能够接收支付通知。",
         span: 12,
     },
     {

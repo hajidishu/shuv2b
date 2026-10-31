@@ -34,10 +34,11 @@ class PaymentController extends Controller
     {
         $payments = Payment::orderBy('sort', 'ASC')->get();
         foreach ($payments as $k => $v) {
-            $notifyUrl = url("/api/v1/guest/payment/notify/{$v->payment}/{$v->uuid}");
-            if ($v->notify_domain) {
-                $parseUrl = parse_url($notifyUrl);
-                $notifyUrl = $v->notify_domain . $parseUrl['path'];
+            try {
+                $notifyUrl = PaymentService::notifyUrl($v->payment, $v->uuid, $v->notify_domain);
+            } catch (\Illuminate\Validation\ValidationException $error) {
+                // Keep legacy entries editable even when their callback base is invalid.
+                $notifyUrl = null;
             }
             $payments[$k]['notify_url'] = $notifyUrl;
         }
@@ -58,7 +59,10 @@ class PaymentController extends Controller
     {
         $payment = Payment::find($request->input('id'));
         if (!$payment) abort(500, '支付方式不存在');
-        if (!$payment->enable) PaymentService::validateConfiguration($payment->payment, $payment->config);
+        if (!$payment->enable) {
+            PaymentService::validateConfiguration($payment->payment, $payment->config);
+            PaymentService::notifyBase($payment->notify_domain);
+        }
         $payment->enable = !$payment->enable;
         if (!$payment->save()) abort(500, '保存失败');
         return response([
@@ -76,7 +80,7 @@ class PaymentController extends Controller
             'icon' => 'nullable',
             'payment' => 'required',
             'config' => 'required|array',
-            'notify_domain' => 'nullable|url',
+            'notify_domain' => 'nullable|string|url|max:128',
             'handling_fee_fixed' => 'nullable|integer|min:0',
             'handling_fee_percent' => 'nullable|numeric|between:0.1,100'
         ], [
@@ -87,6 +91,7 @@ class PaymentController extends Controller
             'handling_fee_fixed.integer' => '固定手续费格式有误',
             'handling_fee_percent.between' => '百分比手续费范围须在0.1-100之间'
         ]);
+        PaymentService::notifyBase($params['notify_domain'] ?? null);
         PaymentService::validateConfiguration($params['payment'], $params['config']);
         if ($request->input('id')) {
             $payment = Payment::find($request->input('id'));

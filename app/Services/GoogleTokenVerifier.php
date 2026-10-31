@@ -83,7 +83,7 @@ class GoogleTokenVerifier
             ($claims['email_verified'] ?? null) !== true ||
             !is_string($claims['sub'] ?? null) || $claims['sub'] === '' || strlen($claims['sub']) > 255 || preg_match('/[\x00-\x20]/', $claims['sub']) ||
             !is_string($claims['email'] ?? null) || strlen($claims['email']) > 254 || !filter_var($claims['email'], FILTER_VALIDATE_EMAIL)) abort(422, 'Google 身份凭据校验失败');
-        $email = strtolower(trim($claims['email']));
+        $email = EmailAddress::key($claims['email']);
         return ['subject' => $claims['sub'], 'email' => $email,
             'verified_email' => substr($email, -10) === '@gmail.com' || (is_string($claims['hd'] ?? null) && $claims['hd'] !== '')];
     }

@@ -44,7 +44,7 @@ class ResetPassword extends Command
     {
         $password = Helper::guid(false);
         DB::transaction(function () use ($password) {
-            $user = User::where('email', $this->argument('email'))->lockForUpdate()->first();
+            $user = \App\Services\EmailIdentity::find($this->argument('email'), true);
             if (!$user) abort(500, '邮箱不存在');
             $user->password = password_hash($password, PASSWORD_DEFAULT);
             $user->password_algo = null;

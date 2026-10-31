@@ -142,9 +142,7 @@ class UserController extends Controller
             if (!$user) {
                 abort(500, '用户不存在');
             }
-            if (User::where('email', $params['email'])->first() && $user->email !== $params['email']) {
-                abort(500, '邮箱已被使用');
-            }
+            \App\Services\EmailIdentity::assertAvailable($params['email'], (int)$user->id);
             if (isset($params['password'])) {
                 $params['password'] = password_hash($params['password'], PASSWORD_DEFAULT);
                 $params['password_algo'] = NULL;
@@ -161,7 +159,7 @@ class UserController extends Controller
                 $params['group_id'] = null;
             }
             if ($request->input('invite_user_email')) {
-                $inviteUser = User::where('email', $request->input('invite_user_email'))->first();
+                $inviteUser = \App\Services\EmailIdentity::find($request->input('invite_user_email'));
                 if ($inviteUser) {
                     $params['invite_user_id'] = $inviteUser->id;
                 }
@@ -238,9 +236,8 @@ class UserController extends Controller
                 'uuid' => Helper::guid(true),
                 'token' => Helper::guid()
             ];
-            if (User::where('email', $user['email'])->first()) {
-                abort(500, '邮箱已存在于系统中');
-            }
+            $user['email'] = \App\Services\EmailAddress::normalize($user['email'], true);
+            \App\Services\EmailIdentity::assertAvailable($user['email']);
             $user['password'] = password_hash($request->input('password') ?? $user['email'], PASSWORD_DEFAULT);
             if (!User::create($user)) {
                 abort(500, '生成失败');
@@ -265,7 +262,7 @@ class UserController extends Controller
         $users = [];
         for ($i = 0;$i < $request->input('generate_count');$i++) {
             $user = [
-                'email' => Helper::randomChar(6) . '@' . $request->input('email_suffix'),
+                'email' => \App\Services\EmailAddress::normalize(Helper::randomChar(6) . '@' . $request->input('email_suffix'), true),
                 'plan_id' => isset($plan->id) ? $plan->id : NULL,
                 'group_id' => isset($plan->group_id) ? $plan->group_id : NULL,
                 'transfer_enable' => isset($plan->transfer_enable) ? $plan->transfer_enable * 1073741824 : 0,
@@ -279,12 +276,13 @@ class UserController extends Controller
             $user['password'] = password_hash($request->input('password') ?? $user['email'], PASSWORD_DEFAULT);
             array_push($users, $user);
         }
-        DB::beginTransaction();
-        if (!User::insert($users)) {
-            DB::rollBack();
-            abort(500, '生成失败');
-        }
-        DB::commit();
+        \App\Services\EmailIdentity::writing(function () use ($users) {
+            DB::transaction(function () use ($users) {
+                foreach ($users as $user) \App\Services\EmailIdentity::assertAvailable($user['email']);
+                if (!User::insert($users)) abort(500, '生成失败');
+                if (\App\Services\EmailIdentity::installed()) foreach (User::whereIn('email', array_column($users, 'email'))->get() as $created) \App\Services\EmailIdentity::synchronize($created);
+            });
+        });
         $data = "账号,密码,过期时间,UUID,创建时间,订阅地址\r\n";
         foreach($users as $user) {
             $expireDate = $user['expired_at'] === NULL ? '长期有效' : date('Y-m-d H:i:s', $user['expired_at']);

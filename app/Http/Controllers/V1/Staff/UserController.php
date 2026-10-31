@@ -38,9 +38,7 @@ class UserController extends Controller
             if (!$user) {
                 abort(500, '用户不存在');
             }
-            if (User::where('email', $params['email'])->first() && $user->email !== $params['email']) {
-                abort(500, '邮箱已被使用');
-            }
+            \App\Services\EmailIdentity::assertAvailable($params['email'], (int)$user->id);
             if (isset($params['password'])) {
                 $params['password'] = password_hash($params['password'], PASSWORD_DEFAULT);
                 $params['password_algo'] = NULL;

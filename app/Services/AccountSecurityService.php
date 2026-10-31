@@ -14,6 +14,7 @@ class AccountSecurityService
 
     public static function purgeUser(int $id): void
     {
+        EmailIdentity::remove($id);
         GoogleIdentityService::purgeUser($id);
         PasskeyService::purgeUser($id);
     }

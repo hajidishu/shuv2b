@@ -6,18 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Passport\AuthForget;
 use App\Http\Requests\Passport\AuthLogin;
 use App\Http\Requests\Passport\AuthRegister;
-use App\Jobs\SendEmailJob;
-use App\Models\InviteCode;
-use App\Models\Plan;
-use App\Models\User;
 use App\Services\AuthService;
 use App\Utils\CacheKey;
-use App\Utils\Dict;
 use App\Utils\Helper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
-use App\Services\CaptchaService;
 
 class AuthController extends Controller
 {
@@ -28,7 +21,7 @@ class AuthController extends Controller
 
     public function login(AuthLogin $request)
     {
-        $email = $request->input('email');
+        $email = \App\Services\EmailAddress::key($request->input('email'));
         $password = $request->input('password');
 
         if ((int)config('v2board.password_limit_enable', 1)) {
@@ -40,7 +33,7 @@ class AuthController extends Controller
             }
         }
 
-        $user = User::where('email', $email)->first();
+        $user = \App\Services\EmailIdentity::find($email);
         if (!$user) {
             abort(500, __('Incorrect email or password'));
         }
@@ -108,48 +101,9 @@ class AuthController extends Controller
 
     public function forget(AuthForget $request)
     {
-        $email     = $request->input('email');
-        $inputCode = $request->input('email_code');
-        $password  = $request->input('password');
-
-        if (!is_string($email) || !is_string($inputCode) || !is_string($password)) {
-            abort(500, __('Incorrect email verification code'));
-        }
-        if (!preg_match('/^\d{6}$/', $inputCode)) {
-            abort(500, __('Incorrect email verification code'));
-        }
-
-        $cacheKeyEmail         = strtolower(trim($email));
-        $forgetRequestLimitKey = CacheKey::get('FORGET_REQUEST_LIMIT', $cacheKeyEmail);
-        $forgetRequestLimit    = (int)Cache::get($forgetRequestLimitKey);
-        if ($forgetRequestLimit >= 3) {
-            abort(500, __('Reset failed, Please try again later'));
-        }
-
-        $cachedCode = Cache::get(CacheKey::get('EMAIL_VERIFY_CODE', $cacheKeyEmail));
-        if ($cachedCode === null || $cachedCode === '' || !hash_equals((string)$cachedCode, $inputCode)) {
-            Cache::put($forgetRequestLimitKey, $forgetRequestLimit + 1, 300);
-            abort(500, __('Incorrect email verification code'));
-        }
-        DB::transaction(function () use ($email, $password, $cacheKeyEmail, $inputCode) {
-            $user = User::where('email', $email)->lockForUpdate()->first();
-            if (!$user) {
-                abort(500, __('This email is not registered in the system'));
-            }
-            // Another reset may have consumed the code while this request waited.
-            $currentCode = Cache::get(CacheKey::get('EMAIL_VERIFY_CODE', $cacheKeyEmail));
-            if (!is_scalar($currentCode) || !hash_equals((string)$currentCode, $inputCode)) abort(500, __('Incorrect email verification code'));
-            $user->password      = password_hash($password, PASSWORD_DEFAULT);
-            $user->password_algo = null;
-            $user->password_salt = null;
-            if (!$user->save()) {
-                abort(500, __('Reset failed'));
-            }
-            Cache::forget(CacheKey::get('EMAIL_VERIFY_CODE', $cacheKeyEmail));
-            \App\Services\AccountSecurityService::recover($user);
-        }, 3);
-        return response([
-            'data' => true
-        ]);
+        app(\App\Services\EmailVerificationService::class)->recover(
+            $request->input('email'), $request->input('email_code'), $request->input('password')
+        );
+        return response(['data' => true]);
     }
 }

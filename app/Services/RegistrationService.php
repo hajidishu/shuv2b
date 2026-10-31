@@ -19,8 +19,8 @@ class RegistrationService
     public function register(Request $request, bool $verifiedEmail = false, bool $forceEmailVerify = false, ?callable $identity = null): array
     {
         Validator::make($request->all(), ['email' => 'required|email:strict|max:64', 'password' => 'required|string|min:8|max:1024', 'invite_code' => 'nullable|string|max:128'])->validate();
-        $email = $request->input('email');
-        $emailKey = strtolower(trim($email));
+        $email = EmailAddress::normalize($request->input('email'), true);
+        $emailKey = EmailAddress::key($email);
         if ((int)config('v2board.register_limit_by_ip_enable', 0) &&
             (int)Cache::get(CacheKey::get('REGISTER_IP_RATE_LIMIT', $request->ip()), 0) >= (int)config('v2board.register_limit_count', 3)) abort(500, __('Register frequently, please try again after :minute minute', ['minute' => config('v2board.register_limit_expire', 60)]));
         app(CaptchaService::class)->verify($request);
@@ -38,23 +38,16 @@ class RegistrationService
             $count = (int)Cache::get($ipKey, 0);
             if ($limited && $count >= (int)config('v2board.register_limit_count', 3)) abort(500, __('Register frequently, please try again after :minute minute', ['minute' => config('v2board.register_limit_expire', 60)]));
             return DB::transaction(function () use ($request, $email, $emailKey, $verify, $identity, $ipKey, $limited, $count) {
-                if (User::where('email', $email)->exists()) abort(500, __('Email already exists'));
+                EmailIdentity::assertAvailable($email);
+                $emailProof = null;
                 if ($verify) {
-                    $attempts = CacheKey::get('REGISTER_EMAIL_CODE_LIMIT', $emailKey);
-                    $failures = (int)Cache::get($attempts, 0);
-                    if ($failures >= 10) abort(429, '邮箱验证码尝试过多，请稍后重试');
-                    $code = $request->input('email_code');
-                    $cached = Cache::get(CacheKey::get('EMAIL_VERIFY_CODE', $emailKey));
-                    if (!is_string($code) || !preg_match('/\A\d{6}\z/', $code) || !is_scalar($cached) || !hash_equals((string)$cached, $code)) {
-                        if (!Cache::put($attempts, $failures + 1, 300)) abort(503, '注册服务暂时不可用');
-                        abort(500, __('Incorrect email verification code'));
-                    }
+                    $emailProof = app(EmailVerificationService::class)->registrationProof($email, $request->input('email_code'));
                 }
                 $invite = null;
                 if ($request->input('invite_code')) $invite = InviteCode::where('code', $request->input('invite_code'))->where('status', 0)->lockForUpdate()->first();
                 if ((int)config('v2board.invite_force', 0) && !$invite) abort(500, __('Invalid invitation code'));
                 $user = new User();
-                $user->email = $email;
+                $user->email = $emailProof ? $emailProof['recipient'] : $email;
                 $user->password = password_hash($request->input('password'), PASSWORD_DEFAULT);
                 $user->uuid = Helper::guid(true);
                 $user->token = Helper::guid();
@@ -76,8 +69,7 @@ class RegistrationService
                 $context = $identity ? $identity($user) : [];
                 if ($limited && !Cache::put($ipKey, $count + 1, max(1, (int)config('v2board.register_limit_expire', 60)) * 60)) abort(503, '注册服务暂时不可用');
                 if ($verify) {
-                    Cache::forget(CacheKey::get('EMAIL_VERIFY_CODE', $emailKey));
-                    Cache::forget(CacheKey::get('REGISTER_EMAIL_CODE_LIMIT', $emailKey));
+                    app(EmailVerificationService::class)->consumeRegistration($email, $emailProof);
                 }
                 return (new AuthService($user))->generateAuthData($request, $context);
             }, 3);

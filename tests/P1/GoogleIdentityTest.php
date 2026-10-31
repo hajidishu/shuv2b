@@ -254,9 +254,9 @@ class GoogleIdentityTest extends DatabaseTestCase
         $this->assertTrue($pending['email_verification_required']);
         $payload = ['registration_token' => $pending['registration_token'], 'client_nonce' => $nonce, 'password' => 'new-site-password'];
         $this->rejected(fn() => $this->service->register($this->request($payload)), 500);
-        Cache::put(CacheKey::get('EMAIL_VERIFY_CODE', 'owner@example.test'), '123456', 300);
-        $this->service->register($this->request($payload + ['email_code' => '123456']));
-        $this->assertNull(Cache::get(CacheKey::get('EMAIL_VERIFY_CODE', 'owner@example.test')));
+        $code = $this->emailCode('owner@example.test');
+        $this->service->register($this->request($payload + ['email_code' => $code]));
+        $this->assertNull(Cache::get(\App\Services\EmailVerificationService::key('register', 'owner@example.test')));
         $this->assertSame(1, User::count());
     }
 
@@ -387,12 +387,12 @@ class GoogleIdentityTest extends DatabaseTestCase
         [$pending, $nonce] = $this->pending(['email' => 'owner@example.test']);
         $payload = ['registration_token' => $pending['registration_token'], 'client_nonce' => $nonce,
             'password' => 'new-site-password', 'email_code' => '000000'];
-        Cache::put(CacheKey::get('EMAIL_VERIFY_CODE', 'owner@example.test'), '123456', 300);
+        $code = $this->emailCode('owner@example.test');
         for ($i = 0; $i < 10; $i++) $this->rejected(fn() => $this->service->register($this->request($payload)), 500);
-        $this->rejected(fn() => $this->service->register($this->request(array_merge($payload, ['email_code' => '123456']))), 429);
+        $this->rejected(fn() => $this->service->register($this->request(array_merge($payload, ['email_code' => $code]))), 429);
         config(['v2board.email_verify' => 1]);
         $this->rejected(fn() => app(\App\Services\RegistrationService::class)->register($this->request([
-            'email' => 'owner@example.test', 'password' => 'new-site-password', 'email_code' => '123456'])), 429);
+            'email' => 'owner@example.test', 'password' => 'new-site-password', 'email_code' => $code])), 429);
         $this->assertSame(0, User::count());
     }
 

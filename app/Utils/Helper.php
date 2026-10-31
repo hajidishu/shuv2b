@@ -70,13 +70,19 @@ class Helper
 
     public static function emailSuffixVerify($email, $suffixs)
     {
-        $suffix = preg_split('/@/', $email)[1];
-        if (!$suffix) return false;
+        $email = \App\Services\EmailAddress::normalize($email);
+        $suffix = substr($email, strrpos($email, '@') + 1);
         if (!is_array($suffixs)) {
             $suffixs = preg_split('/,/', $suffixs);
         }
-        if (!in_array($suffix, $suffixs)) return false;
-        return true;
+        foreach ($suffixs as $allowed) {
+            if (!is_string($allowed)) continue;
+            try {
+                $candidate = \App\Services\EmailAddress::normalize('whitelist@' . trim($allowed));
+                if ($suffix === substr($candidate, strrpos($candidate, '@') + 1)) return true;
+            } catch (\Illuminate\Validation\ValidationException $e) { continue; }
+        }
+        return false;
     }
 
     public static function trafficConvert(int $byte)

@@ -139,7 +139,7 @@ class GoogleIdentityService
             return ['status' => 'authenticated', 'auth' => (new AuthService($user))->generateAuthData($request, ['login_method' => 'google', 'social_identity_id' => (int)$current->id])];
         }, 3);
         // Matching an email is not permission to take over an existing account.
-        if (User::where('email', $claims['email'])->exists()) return ['status' => 'link_required', 'email' => $claims['email']];
+        if (EmailIdentity::find($claims['email'])) return ['status' => 'link_required', 'email' => $claims['email']];
         $this->registrationAllowed();
         if (strlen($claims['email']) > 64) abort(422, '此邮箱长度超过本站支持范围');
         // Issue a separate purpose-bound ticket; a consumed login challenge can

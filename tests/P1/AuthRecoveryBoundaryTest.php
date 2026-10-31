@@ -16,6 +16,11 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class AuthRecoveryBoundaryTest extends DatabaseTestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        (new \App\Services\EmailIdentitySchema())->ensure();
+    }
     private function account()
     {
         return $this->user(['password' => password_hash('OldPassword!2026', PASSWORD_DEFAULT), 'token' => 'subscription-unchanged', 'uuid' => 'uuid-unchanged'])->fresh();
@@ -34,9 +39,9 @@ class AuthRecoveryBoundaryTest extends DatabaseTestCase
 
     private function recover($user)
     {
-        Cache::put(CacheKey::get('EMAIL_VERIFY_CODE', strtolower($user->email)), '123456', 60);
+        $code = $this->emailCode($user->email, true);
         $request = new AuthForget();
-        $request->merge(['email' => $user->email, 'email_code' => '123456', 'password' => 'NewPassword!2026']);
+        $request->merge(['email' => $user->email, 'email_code' => $code, 'password' => 'NewPassword!2026']);
         (new AuthController())->forget($request);
     }
 

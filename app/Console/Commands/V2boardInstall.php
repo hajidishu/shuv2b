@@ -89,6 +89,7 @@ class V2boardInstall extends Command
             app(\App\Services\PaymentLedgerSchema::class)->ensure();
             app(\App\Services\PasskeySchema::class)->ensure();
             app(\App\Services\GoogleIdentitySchema::class)->ensure();
+            app(\App\Services\EmailIdentitySchema::class)->ensure();
         app(\App\Services\NaiveSchema::class)->ensure();
         app(\App\Services\MieruSchema::class)->ensure();
             $this->info('数据库导入完成');

@@ -23,6 +23,10 @@ bash update.sh
 
 服务器需预先安装 Composer，或已有 `composer.phar`。Passkey 版本要求 PHP 8.0+；首次更新会将新增的固定版本 WebAuthn 依赖补入旧锁文件，并创建两张 Passkey 表。原用户与订阅数据保留，功能默认关闭，配置方法见 [Passkey 登录](../features/passkey)。结构更新报错时先处理再上线。
 
+邮箱找回修复会创建 `v2_user_email_identity` 精确身份索引，不修改已有账号邮箱。升级须暂停 Web、队列和调度中的账号写入；拉取新版代码后可先运行 `php artisan email-identity:install --check` 检查规范化冲突，确认后运行 `php artisan v2board:update`。冲突会按用户 ID 报错并中止，核对账号归属后再处理，不要直接合并账号。无效历史邮箱会报告用户 ID，需管理员核实后改正。国际化域名的 IDNA 转换与现有邮件投递一致。
+
+升级前发出的验证码全部失效，用户需重新获取。找回发码必须传 `isforget=1`；省略或传 `0` 只用于注册，注册验证码不能找回密码。第三方前端需明确区分这两种用途，原有邮箱、验证码和密码参数不变。
+
 ## 3. 恢复服务
 
 恢复 Horizon 守护和调度，重载 PHP-FPM；使用 Webman 时手动重启。然后执行：

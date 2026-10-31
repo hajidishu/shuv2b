@@ -73,14 +73,17 @@ class Environment
         self::$app = $app;
         self::$capsule = $capsule;
         self::$queue = $queue;
-        if ($reset) self::createSchema();
+        if ($reset) {
+            self::createSchema();
+            if (getenv('P1_EMAIL_IDENTITY') === '1') (new \App\Services\EmailIdentitySchema())->ensure();
+        }
         return $app;
     }
 
     private static function createSchema()
     {
         $schema = self::$capsule->getConnection('p1')->getSchemaBuilder();
-        foreach (['v2_subscribe_audit_total', 'v2_subscribe_audit_count_event', 'v2_server_mieru', 'v2_server_naive', 'v2_passkey_credential', 'v2_passkey_user', 'v2_payment_receipt', 'v2_payment_attempt', 'v2_commission_log', 'v2_giftcard', 'v2_coupon', 'v2_payment', 'v2_order', 'v2_plan', 'v2_user'] as $table) $schema->dropIfExists($table);
+        foreach (['v2_user_email_identity', 'v2_subscribe_audit_total', 'v2_subscribe_audit_count_event', 'v2_server_mieru', 'v2_server_naive', 'v2_passkey_credential', 'v2_passkey_user', 'v2_payment_receipt', 'v2_payment_attempt', 'v2_commission_log', 'v2_giftcard', 'v2_coupon', 'v2_payment', 'v2_order', 'v2_plan', 'v2_user'] as $table) $schema->dropIfExists($table);
         $schema->create('v2_user', function (Blueprint $t) {
             $t->increments('id'); $t->string('email')->unique(); $t->string('password')->nullable();
             foreach (['is_admin', 'is_staff', 'banned', 'commission_type', 'auto_renewal'] as $key) $t->integer($key)->default(0);
@@ -157,5 +160,15 @@ abstract class DatabaseTestCase extends TestCase
     protected function order($user, array $values = [])
     {
         return \App\Models\Order::create(array_merge(['user_id' => $user->id, 'trade_no' => uniqid('order-'), 'total_amount' => 10000], $values));
+    }
+    protected function emailCode(string $email, bool $recovery = false): string
+    {
+        $service = new \App\Services\EmailVerificationService();
+        if ($recovery) $service->sendRecovery($email);
+        else $service->sendRegistration($email);
+        $job = Environment::$queue->pushed(\App\Jobs\SendEmailJob::class)->last();
+        $property = new \ReflectionProperty($job, 'params');
+        $property->setAccessible(true);
+        return $property->getValue($job)['template_value']['code'];
     }
 }

@@ -1306,12 +1306,20 @@ try {
                 );
                 await page.waitForFunction(() => {
                     const modal = document.querySelector(".payment-modal");
+                    // rc-motion's prepare frame is full size before zooming in.
+                    // A width-only wait can pass there, then measure the active
+                    // animation on the next call. Wait for motion classes to go.
                     return (
                         modal &&
+                        !Array.from(modal.classList).some((name) =>
+                            /^ant-zoom-(appear|enter)(-|$)/.test(name),
+                        ) &&
                         Math.abs(modal.getBoundingClientRect().width - 520) < 2
                     );
                 });
-                const box = await drawer().boundingBox();
+                const box = await page
+                    .locator(".payment-modal:visible")
+                    .boundingBox();
                 assert.ok(
                     Math.abs(box.width - 520) < 2,
                     "Original payment modal width",

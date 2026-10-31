@@ -62,7 +62,7 @@ final class UpdateDependencies
             && preg_match('/^\s*- (Removing|Upgrading|Downgrading) /m', $text) !== 1;
     }
 
-    private static function composerAutoload(string $composer): void
+    public static function composerAutoload(string $composer): void
     {
         $phar = 'phar://' . $composer . '/vendor/autoload.php';
         if (!@is_file($phar)) {

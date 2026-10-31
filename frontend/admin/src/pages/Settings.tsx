@@ -309,6 +309,7 @@ export default function Settings() {
                     { label: "关闭", value: "none" },
                     { label: "Google reCAPTCHA", value: "recaptcha" },
                     { label: "Cloudflare Turnstile", value: "turnstile" },
+                    { label: "图片验证码", value: "image" },
                 ];
             }
             if (key === "subscribe_url") field.kind = "textarea";

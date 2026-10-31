@@ -611,3 +611,24 @@ CREATE TABLE `v2_user` (
 
 
 -- 2025-09-12 10:05:00
+
+CREATE TABLE `v2_server_mieru` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `group_id` text NOT NULL,
+  `route_id` text DEFAULT NULL,
+  `name` varchar(255) NOT NULL,
+  `parent_id` int(11) DEFAULT NULL,
+  `host` varchar(255) NOT NULL,
+  `listen_ip` varchar(255) NOT NULL DEFAULT '0.0.0.0',
+  `port` varchar(11) NOT NULL,
+  `server_port` int(11) NOT NULL,
+  `tags` text DEFAULT NULL,
+  `rate` varchar(11) NOT NULL,
+  `show` tinyint(1) NOT NULL DEFAULT '0',
+  `sort` int(11) DEFAULT NULL,
+  `network` varchar(11) NOT NULL DEFAULT 'tcp',
+  `network_settings` text,
+  `created_at` int(11) NOT NULL,
+  `updated_at` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -1,9 +1,18 @@
-import { nodeFields, options, naiveTlsNested } from "./nodes";
+import {
+    nodeFields,
+    options,
+    naiveTlsNested,
+    mieruNested,
+    mieruDefaults,
+} from "./nodes";
 import type { Field, Row } from "../types";
 
 // Field order, columns and visibility follow the original per-protocol drawers.
 export function nodeEditorFields(type: string, values: Row): Field[] {
-    const isNaive = type === "naive" || (type === "v2node" && values.protocol === "naive");
+    const isNaive =
+        type === "naive" || (type === "v2node" && values.protocol === "naive");
+    const isMieru =
+        type === "mieru" || (type === "v2node" && values.protocol === "mieru");
     const source = Object.fromEntries(nodeFields(type).map((f) => [f.key, f]));
     const field = (
         key: string,
@@ -28,13 +37,25 @@ export function nodeEditorFields(type: string, values: Row): Field[] {
         const configuration = cfg(key, "安全性配置"),
             mode = Number(values.tls ?? 0);
         if (isNaive) {
-            configuration.nested = naiveTlsNested!.map((item) => ({ ...item,
-                ...(["provider", "dns_env"].includes(item.key) ? { when: (v: Row) => v.cert_mode === "dns" } : {}),
-                ...(["cert_file", "key_file"].includes(item.key) ? { when: (v: Row) => v.cert_mode === "file", required: true } : {}),
+            configuration.nested = naiveTlsNested!.map((item) => ({
+                ...item,
+                ...(["provider", "dns_env"].includes(item.key)
+                    ? { when: (v: Row) => v.cert_mode === "dns" }
+                    : {}),
+                ...(["cert_file", "key_file"].includes(item.key)
+                    ? {
+                          when: (v: Row) => v.cert_mode === "file",
+                          required: true,
+                      }
+                    : {}),
             }));
             configuration.jsonDefaults = { server_name: "", cert_mode: "http" };
-            return field("tls", type === "v2node" ? 6 : 12, { label: "安全性", default: 1,
-                options: [{ label: "TLS", value: 1 }], config: configuration });
+            return field("tls", type === "v2node" ? 6 : 12, {
+                label: "安全性",
+                default: 1,
+                options: [{ label: "TLS", value: 1 }],
+                config: configuration,
+            });
         }
         if (type === "vmess")
             configuration.nested = [
@@ -158,25 +179,25 @@ export function nodeEditorFields(type: string, values: Row): Field[] {
         }),
         field("group_id", 12, { placeholder: "请选择权限组" }),
     ];
-    const addresses =
-        ["v2node", "naive"].includes(type)
-            ? [
-                  field("host", 6, { placeholder: "地址或IP" }),
-                  field("listen_ip", 6, {
-                      placeholder: "地址或IP默认为0.0.0.0",
-                  }),
-              ]
-            : [
-                  field("host", 12, {
-                      label: "节点地址",
-                      ariaLabel: "连接地址",
-                      placeholder: "地址或IP",
-                  }),
-              ];
+    const addresses = ["v2node", "naive", "mieru"].includes(type)
+        ? [
+              field("host", 6, { placeholder: "地址或IP" }),
+              field("listen_ip", 6, {
+                  placeholder: "地址或IP默认为0.0.0.0",
+              }),
+          ]
+        : [
+              field("host", 12, {
+                  label: "节点地址",
+                  ariaLabel: "连接地址",
+                  placeholder: "地址或IP",
+              }),
+          ];
     const insecure = ["hysteria", "tuic", "anytls"].includes(type);
     const ports = [
         field("port", insecure ? 4 : 6, { placeholder: "用户连接端口" }),
         field("server_port", insecure ? 4 : 6, {
+            ...(isMieru ? { kind: "text" as const } : {}),
             label: "服务端口",
             placeholder: "服务端开放端口",
         }),
@@ -205,6 +226,7 @@ export function nodeEditorFields(type: string, values: Row): Field[] {
                 options: [
                     "anytls",
                     "naive",
+                    "mieru",
                     "hysteria2",
                     "shadowsocks",
                     "trojan",
@@ -217,6 +239,7 @@ export function nodeEditorFields(type: string, values: Row): Field[] {
                         {
                             anytls: "AnyTLS",
                             naive: "Naive",
+                            mieru: "Mieru",
                             hysteria2: "Hysteria2",
                             shadowsocks: "Shadowsocks",
                             trojan: "Trojan",
@@ -228,7 +251,7 @@ export function nodeEditorFields(type: string, values: Row): Field[] {
                 })),
             }),
         );
-        if (protocol && protocol !== "shadowsocks") {
+        if (protocol && !["shadowsocks", "mieru"].includes(protocol)) {
             const f = tls("tls_settings");
             f.options = (
                 protocol === "vmess"
@@ -250,7 +273,7 @@ export function nodeEditorFields(type: string, values: Row): Field[] {
         ["vmess", "vless", "trojan"].includes(type) ||
         (type === "v2node" &&
             protocol &&
-            !["tuic", "hysteria2", "naive"].includes(protocol))
+            !["tuic", "hysteria2", "naive", "mieru"].includes(protocol))
     ) {
         const f = network(
             type === "vmess" ? "networkSettings" : "network_settings",
@@ -288,11 +311,50 @@ export function nodeEditorFields(type: string, values: Row): Field[] {
                 }),
             );
     }
+    if (isMieru) {
+        for (const port of ports) {
+            port.placeholder = "端口或范围，例如 2012-2022";
+            port.help = "支持单端口或连续端口范围";
+        }
+        result.push(
+            field("network", 12, {
+                label: "传输协议",
+                required: true,
+                default: "tcp",
+                options: [
+                    { value: "tcp", label: "TCP" },
+                    { value: "udp", label: "UDP" },
+                ],
+                config: {
+                    ...cfg("network_settings", "Mieru 配置"),
+                    nested: mieruNested,
+                    jsonDefaults: mieruDefaults,
+                    help: "MTU 范围为 1280–1500，默认 1400。Mihomo 不支持自定义 MTU；自定义 MTU 的 UDP 节点只下发到原生 Mieru 分享链接。Traffic Pattern 从 mieru export traffic-pattern 获取。",
+                },
+            }),
+        );
+    }
     if (isNaive) {
-        result.push(field("network", 12, { label: "监听网络", required: false, options: [
-            { value: "tcp", label: "TCP（HTTP/2）" }, { value: "udp", label: "UDP（QUIC）" }, { value: "", label: "TCP + UDP" },
-        ], help: "仅支持 Naive 原生监听，不支持 WebSocket、gRPC 或 Reality" }));
-        if (values.network !== "tcp") result.push(field("congestion_control", 12, { label: "QUIC 拥塞控制（服务端）", default: "bbr", options: options("bbr", "cubic", "reno") }));
+        result.push(
+            field("network", 12, {
+                label: "监听网络",
+                required: false,
+                options: [
+                    { value: "tcp", label: "TCP（HTTP/2）" },
+                    { value: "udp", label: "UDP（QUIC）" },
+                    { value: "", label: "TCP + UDP" },
+                ],
+                help: "仅支持 Naive 原生监听，不支持 WebSocket、gRPC 或 Reality",
+            }),
+        );
+        if (values.network !== "tcp")
+            result.push(
+                field("congestion_control", 12, {
+                    label: "QUIC 拥塞控制（服务端）",
+                    default: "bbr",
+                    options: options("bbr", "cubic", "reno"),
+                }),
+            );
     }
     if (["tuic", "hysteria", "anytls", "trojan"].includes(type))
         result.push(

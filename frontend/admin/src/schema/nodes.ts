@@ -48,12 +48,52 @@ const tlsNested: Field["nested"] = [
 ];
 export const naiveTlsNested: Field["nested"] = [
     { key: "server_name", label: "SNI" },
-    { key: "cert_mode", label: "证书模式", kind: "select", options: [
-        { value: "http", label: "HTTP 申请" }, { value: "dns", label: "DNS 申请" },
-        { value: "file", label: "已有受信任证书" },
-    ] },
-    { key: "cert_file", label: "证书文件" }, { key: "key_file", label: "私钥文件" },
-    { key: "provider", label: "DNS 提供商" }, { key: "dns_env", label: "DNS 环境变量", kind: "password" },
+    {
+        key: "cert_mode",
+        label: "证书模式",
+        kind: "select",
+        options: [
+            { value: "http", label: "HTTP 申请" },
+            { value: "dns", label: "DNS 申请" },
+            { value: "file", label: "已有受信任证书" },
+        ],
+    },
+    { key: "cert_file", label: "证书文件" },
+    { key: "key_file", label: "私钥文件" },
+    { key: "provider", label: "DNS 提供商" },
+    { key: "dns_env", label: "DNS 环境变量", kind: "password" },
+];
+export const mieruDefaults = {
+    mtu: 1400,
+    multiplexing: "MULTIPLEXING_LOW",
+    handshake_mode: "HANDSHAKE_STANDARD",
+    user_hint_is_mandatory: 0,
+};
+export const mieruNested: Field["nested"] = [
+    { key: "mtu", label: "MTU（原生客户端）", kind: "number" },
+    {
+        key: "multiplexing",
+        label: "多路复用",
+        kind: "select",
+        options: options(
+            "MULTIPLEXING_OFF",
+            "MULTIPLEXING_LOW",
+            "MULTIPLEXING_MIDDLE",
+            "MULTIPLEXING_HIGH",
+        ),
+    },
+    {
+        key: "handshake_mode",
+        label: "握手模式",
+        kind: "select",
+        options: options("HANDSHAKE_STANDARD", "HANDSHAKE_NO_WAIT"),
+    },
+    { key: "traffic_pattern", label: "客户端 Traffic Pattern（Base64）" },
+    {
+        key: "server_traffic_pattern",
+        label: "服务端 Traffic Pattern（Base64）",
+    },
+    { key: "user_hint_is_mandatory", label: "强制用户提示", kind: "switch" },
 ];
 const networkNested: Field["nested"] = [
     { key: "path", label: "路径" },
@@ -200,10 +240,35 @@ export const protocolFields: Record<string, Field[]> = {
     ],
     naive: [
         f("listen_ip", "监听地址", "text", { default: "0.0.0.0" }),
-        f("tls", "TLS", "select", { required: true, default: 1, options: [{ label: "TLS", value: 1 }] }),
-        f("tls_settings", "TLS 配置", "json", { nested: naiveTlsNested, default: { cert_mode: "http", server_name: "" } }),
-        f("network", "监听网络", "select", { default: "tcp", options: options("tcp", "udp", "") }),
-        f("congestion_control", "QUIC 拥塞控制", "select", { default: "bbr", options: options("bbr", "cubic", "reno") }),
+        f("tls", "TLS", "select", {
+            required: true,
+            default: 1,
+            options: [{ label: "TLS", value: 1 }],
+        }),
+        f("tls_settings", "TLS 配置", "json", {
+            nested: naiveTlsNested,
+            default: { cert_mode: "http", server_name: "" },
+        }),
+        f("network", "监听网络", "select", {
+            default: "tcp",
+            options: options("tcp", "udp", ""),
+        }),
+        f("congestion_control", "QUIC 拥塞控制", "select", {
+            default: "bbr",
+            options: options("bbr", "cubic", "reno"),
+        }),
+    ],
+    mieru: [
+        f("listen_ip", "监听地址", "text", { default: "0.0.0.0" }),
+        f("network", "传输协议", "select", {
+            required: true,
+            default: "tcp",
+            options: options("tcp", "udp"),
+        }),
+        f("network_settings", "Mieru 配置", "json", {
+            nested: mieruNested,
+            default: mieruDefaults,
+        }),
     ],
     anytls: [
         ...sni,
@@ -224,6 +289,7 @@ export const protocolFields: Record<string, Field[]> = {
                 "hysteria2",
                 "anytls",
                 "naive",
+                "mieru",
             ),
         }),
         f("listen_ip", "监听地址"),

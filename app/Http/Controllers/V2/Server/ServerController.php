@@ -74,6 +74,7 @@ class ServerController extends Controller
             'padding_scheme' => $this->nodeInfo->padding_scheme
         ];
 
+        if ($this->nodeInfo->protocol === 'mieru') $response = array_merge($response, \App\Services\MieruSettings::nodeConfig($this->nodeInfo));
         if ($this->nodeInfo->protocol === 'naive') {
             $response['quic_congestion_control'] = $this->nodeInfo->congestion_control ?: 'bbr';
         }

@@ -29,6 +29,7 @@ class ManageController extends Controller
             'hysteria',
             'anytls',
             'naive',
+            'mieru',
             'v2node'
         ) ?? [];
         if (empty($params)) {
@@ -41,6 +42,7 @@ class ManageController extends Controller
                 'hysteria'    => $_POST['hysteria'] ?? null,
                 'anytls'      => $_POST['anytls'] ?? null,
                 'naive'       => $_POST['naive'] ?? null,
+                'mieru'       => $_POST['mieru'] ?? null,
                 'v2node'      => $_POST['v2node'] ?? null,
             ];
         }

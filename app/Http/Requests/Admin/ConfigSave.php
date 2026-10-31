@@ -102,7 +102,7 @@ class ConfigSave extends FormRequest
         'email_whitelist_suffix' => 'nullable|array',
         'email_gmail_limit_enable' => 'in:0,1',
         'recaptcha_enable' => 'in:0,1',
-        'captcha_provider' => 'in:none,recaptcha,turnstile',
+        'captcha_provider' => 'in:none,recaptcha,turnstile,image',
         'google_login_enabled' => 'in:0,1',
         'google_register_enabled' => 'in:0,1',
         'google_client_id' => 'nullable|string|max:255',
@@ -184,6 +184,9 @@ class ConfigSave extends FormRequest
                 $captcha = array_merge((array)config('v2board', []), $captcha);
                 if ($this->has('recaptcha_enable') && !$this->has('captcha_provider')) $captcha['captcha_provider'] = (int)$captcha['recaptcha_enable'] ? 'recaptcha' : 'none';
                 $provider = \App\Services\CaptchaService::provider($captcha);
+                if ($provider === 'image' && !\App\Services\ImageCaptchaService::available()) {
+                    $validator->errors()->add('captcha_provider', '图片验证码需要先启用 PHP GD 扩展');
+                }
                 foreach (['site_key', 'secret'] as $kind) {
                     $field = \App\Services\CaptchaService::PROVIDERS[$provider][$kind] ?? null;
                     if ($field && (!is_string($captcha[$field] ?? null) || trim($captcha[$field]) === '')) $validator->errors()->add($field, '请填写所选人机验证方式的网站密钥和私钥');

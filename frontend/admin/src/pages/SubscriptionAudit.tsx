@@ -142,7 +142,7 @@ export default function SubscriptionAudit() {
             >
                 <GridRow gutter={[24, 16]} className="audit-statistics">
                     {[
-                        ["拉取总次数", "total"],
+                        ["保留记录数", "total"],
                         ["涉及用户", "users"],
                         ["来源 IP 数", "ips"],
                         ["UA 数", "uas"],
@@ -194,7 +194,7 @@ export default function SubscriptionAudit() {
                     ]}
                 />
                 <p className="audit-stats-note">
-                    基于当前筛选范围的全部保留记录 · 前 10 名 · 统计最多缓存 60
+                    仅统计保留明细，与用户管理的累计次数不同 · 前 10 名 · 统计最多缓存 60
                     秒，点击刷新可立即更新
                 </p>
             </DataCard>

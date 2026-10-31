@@ -211,13 +211,20 @@ export function Filters({
                             ) : (
                                 <Input
                                     aria-label={"筛选值 " + (index + 1)}
+                                    inputMode={
+                                        filter.key === "subscribe_count"
+                                            ? "numeric"
+                                            : undefined
+                                    }
                                     placeholder={
-                                        [
-                                            "balance",
-                                            "commission_balance",
-                                        ].includes(filter.key)
-                                            ? "金额（元）"
-                                            : "请输入欲检索内容"
+                                        filter.key === "subscribe_count"
+                                            ? "次数（非负整数）"
+                                            : [
+                                                    "balance",
+                                                    "commission_balance",
+                                                ].includes(filter.key)
+                                              ? "金额（元）"
+                                              : "请输入欲检索内容"
                                     }
                                     value={filter.value}
                                     onChange={(event) =>

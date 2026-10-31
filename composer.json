@@ -27,6 +27,9 @@
         "stripe/stripe-php": "^v14.9.0",
         "symfony/yaml": "^4.3"
     },
+    "suggest": {
+        "ext-gd": "Required only when using the image CAPTCHA provider."
+    },
     "require-dev": {
         "facade/ignition": "^2.3.6",
         "fakerphp/faker": "^1.9.1",

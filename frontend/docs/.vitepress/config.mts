@@ -54,7 +54,6 @@ export default defineConfig({
       ] },
       { text: '本分支功能', items: [
         { text: '管理员前端', link: '/features/admin' },
-        { text: 'Naive 节点', link: '/features/naive' },
         { text: 'Passkey 登录', link: '/features/passkey' },
         { text: 'Google 登录', link: '/features/google-login' },
         { text: '人机验证', link: '/features/captcha' },

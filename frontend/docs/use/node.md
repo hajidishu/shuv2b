@@ -2,7 +2,7 @@
 
 ## 添加与编辑
 
-1. 在「节点管理」选择类型：Shadowsocks、VMess、Trojan、TUIC、Hysteria、VLESS、AnyTLS 或 V2node。
+1. 在「节点管理」选择类型：Shadowsocks、VMess、Trojan、TUIC、Hysteria、VLESS、AnyTLS、Naive、Mieru 或 V2node。
 2. 填写连接地址、端口、权限组及该协议的传输、TLS 等配置。V2node 还需选择实际协议。
 3. 在节点服务器安装兼容的[服务端](./server)，配置面板地址、通信密钥、节点类型与 ID。
 4. 用测试用户验证订阅、连接和流量上报。
@@ -17,13 +17,20 @@
 
 路由在「路由管理」创建后应用到节点，需服务端支持对应匹配规则与动作。
 
+## 协议兼容性
+
+- **Naive**：必须使用受信任 TLS；TCP 对应 HTTP/2，UDP 对应 QUIC，也可同时监听。支持 Sing-box 1.13+ 和 `naive+https://`／`naive+quic://` 链接。
+- **Mieru**：支持 TCP／UDP 和端口范围，不使用 TLS。支持 Mihomo／Clash.Meta 和 `mierus://` 链接。MTU 默认 1400；Mihomo 无自定义 MTU 选项，自定义 MTU 的 UDP 节点仅下发原生链接。
+
+V2node 可选择这两种协议，节点程序须自行适配[面板 API](./server#面板-api)。
+
 ## 指定订阅格式
 
 在已有订阅链接后添加 `&flag=...`：
 
 | 客户端 | 识别值 |
 | --- | --- |
-| Clash / Meta | `clash` / `clash.meta` |
+| Clash / Meta / Mihomo | `clash` / `clash.meta` / `mihomo` |
 | Verge / Nyanpasu | `verge` / `nyanpasu` |
 | Shadowrocket | `shadowrocket` |
 | Surge / Stash / Surfboard | `surge` / `stash` / `surfboard` |

@@ -61,6 +61,13 @@ class ClashMeta
                     $proxy[] = \App\Services\LeakProbeService::renderedValue($item, self::buildTuic($user['uuid'], $item));
                     $proxies[] = $item['name'];
                     break;
+                case 'mieru':
+                    $mieru = \App\Services\MieruSettings::mihomo($user['id'] ?? null, $user['uuid'], $item);
+                    if ($mieru !== null) {
+                        $proxy[] = \App\Services\LeakProbeService::renderedValue($item, $mieru);
+                        $proxies[] = $item['name'];
+                    }
+                    break;
                 case 'anytls':
                     $proxy[] = \App\Services\LeakProbeService::renderedValue($item, self::buildAnyTLS($user['uuid'], $item));
                     $proxies[] = $item['name'];

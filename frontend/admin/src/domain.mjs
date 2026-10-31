@@ -7,6 +7,7 @@ export const nodeTypes = {
     vless: "VLess",
     anytls: "AnyTLS",
     naive: "Naive",
+    mieru: "Mieru",
     v2node: "V2node",
 };
 export const periods = {

@@ -24,6 +24,10 @@ try {
   await choose('Google reCAPTCHA');
   await page.locator('#recaptcha_key').waitFor();
   assert.equal(await page.locator('#turnstile_secret_key').count(),0);
+  await choose('图片验证码');
+  assert.equal(await page.locator('#recaptcha_key, #recaptcha_site_key, #turnstile_secret_key, #turnstile_site_key').count(),0);
+  await page.getByText('已保存',{exact:true}).waitFor();
+  assert(fixture.calls.some(c=>c.path==='/config/save' && c.data.captcha_provider==='image'));
   await choose('关闭');
   assert.equal(await page.locator('#recaptcha_key').count(),0);
   assert.equal(await page.locator('#turnstile_site_key').count(),0);

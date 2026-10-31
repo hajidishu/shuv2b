@@ -54,6 +54,17 @@ test("Naive 与 V2node Naive 仅提供原生网络和受信任 TLS 配置", () =
         assert.deepEqual(tls.config.nested.find(f => f.key === "cert_mode").options.map(o => o.value), ["http", "dns", "file"]);
     }
 });
+test("Mieru 与 V2node Mieru 使用原生传输、端口范围和专属配置，不显示 TLS", () => {
+    for (const type of ["mieru", "v2node"]) {
+        const fields = editorSchema.nodeEditorFields(type, { protocol: "mieru", network: "udp", tls: 2 });
+        const all = editorSchema.nodeSubmissionFields(fields), keys = all.map(f => f.key);
+        for (const key of ["network", "network_settings", "port", "server_port", "listen_ip"]) assert(keys.includes(key));
+        for (const key of ["tls", "tls_settings", "flow", "padding_scheme", "congestion_control", "cipher", "zero_rtt_handshake"]) assert(!keys.includes(key));
+        assert.equal(fields.find(f => f.key === "server_port").kind, "text");
+        assert.deepEqual(fields.find(f => f.key === "network").options.map(o => o.value), ["tcp", "udp"]);
+        assert(all.find(f => f.key === "network_settings").nested.some(f => f.key === "server_traffic_pattern"));
+    }
+});
 
 test("统计图保留日期对齐、原版配色和平滑曲线，排名不改写响应", async () => {
     const { incomeOptions, rankingOptions, originalChartColors } = await load(

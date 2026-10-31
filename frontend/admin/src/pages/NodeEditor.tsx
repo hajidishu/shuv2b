@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Button, Drawer, Form, Input, Modal, Space } from "antd";
 import { ApiError, api } from "../api";
 import {
@@ -7,7 +7,7 @@ import {
     Fields,
     payloadValues,
 } from "../components";
-import { nodeFields } from "../schema/nodes";
+import { nodeFields, mieruDefaults } from "../schema/nodes";
 import { nodeEditorFields, nodeSubmissionFields } from "../schema/node-editor";
 import type { Row } from "../types";
 
@@ -25,11 +25,19 @@ export default function NodeEditor({
     const [form] = Form.useForm(),
         [busy, setBusy] = useState(false),
         [error, setError] = useState("");
+    const previousProtocol = useRef(node.protocol);
     const [addingGroup, setAddingGroup] = useState(false),
         [groupName, setGroupName] = useState(""),
         [groupBusy, setGroupBusy] = useState(false),
         [groups, setGroups] = useState<Row[]>();
     const defaults = displayValues(nodeFields(node.type), node);
+    if (
+        node.type === "mieru" ||
+        (node.type === "v2node" && node.protocol === "mieru")
+    ) {
+        defaults.server_port =
+            node.network_settings?.server_port_range ?? node.server_port;
+    }
     if (!node.id) {
         defaults.port = node.port;
         defaults.server_port = node.server_port;
@@ -55,12 +63,26 @@ export default function NodeEditor({
         setError("");
         try {
             const payload = payloadValues(nodeSubmissionFields(fields), v);
+            if (
+                node.type === "mieru" ||
+                (node.type === "v2node" && context.protocol === "mieru")
+            ) {
+                payload.network_settings = {
+                    ...(payload.network_settings ?? {}),
+                };
+                if (!String(v.server_port).includes("-"))
+                    delete payload.network_settings.server_port_range;
+            }
             // The current V2node API requires these neutral flags even for other protocols.
             // Keep them out of the editor and do not overwrite them on existing nodes.
             if (node.type === "v2node" && !node.id) {
                 payload.disable_sni ??= 0;
                 payload.zero_rtt_handshake ??= 0;
-                if (context.protocol === "naive" && (v.network == null || v.network === "")) payload.network = "";
+                if (
+                    context.protocol === "naive" &&
+                    (v.network == null || v.network === "")
+                )
+                    payload.network = "";
                 else payload.network ??= "tcp";
                 payload.tls ??= 0;
             }
@@ -111,9 +133,42 @@ export default function NodeEditor({
                 onFinish={submit}
                 onValuesChange={(changed) => {
                     if (changed.protocol) {
-                        if (changed.protocol === "naive") {
-                            form.setFieldsValue({ tls: 1, network: "tcp", congestion_control: "bbr", tls_settings: JSON.stringify({ server_name: "", cert_mode: "http" }) });
-                        } else if (form.getFieldValue("network") == null || ["udp", ""].includes(form.getFieldValue("network"))) {
+                        if (
+                            previousProtocol.current === "mieru" &&
+                            changed.protocol !== "mieru"
+                        ) {
+                            form.setFieldsValue({
+                                network_settings: undefined,
+                                server_port:
+                                    Number(
+                                        String(
+                                            form.getFieldValue("server_port"),
+                                        ).split("-")[0],
+                                    ) || undefined,
+                            });
+                        }
+                        previousProtocol.current = changed.protocol;
+                        if (changed.protocol === "mieru") {
+                            form.setFieldsValue({
+                                tls: 0,
+                                tls_settings: undefined,
+                                network: "tcp",
+                                network_settings: JSON.stringify(mieruDefaults),
+                            });
+                        } else if (changed.protocol === "naive") {
+                            form.setFieldsValue({
+                                tls: 1,
+                                network: "tcp",
+                                congestion_control: "bbr",
+                                tls_settings: JSON.stringify({
+                                    server_name: "",
+                                    cert_mode: "http",
+                                }),
+                            });
+                        } else if (
+                            form.getFieldValue("network") == null ||
+                            ["udp", ""].includes(form.getFieldValue("network"))
+                        ) {
                             form.setFieldValue("network", "tcp");
                         }
                         if (
@@ -146,7 +201,7 @@ export default function NodeEditor({
                     }}
                 />
             </Form>
-            {node.type === "v2node" && (
+            {node.type === "v2node" && context.protocol !== "mieru" && (
                 <div className="node-install-command">
                     <label htmlFor="node-install-command">一键安装指令</label>
                     <Input.TextArea

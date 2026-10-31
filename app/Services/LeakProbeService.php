@@ -13,7 +13,7 @@ class LeakProbeService
     const NODE = 'v2_leak_probe_node';
     const ACTIVE = 'v2_leak_probe_active_user';
     const EVENT = 'v2_leak_probe_event';
-    const TYPES = ['shadowsocks','vmess','trojan','vless','hysteria','tuic','anytls','naive','v2node'];
+    const TYPES = ['shadowsocks','vmess','trojan','vless','hysteria','tuic','anytls','naive','mieru','v2node'];
 
     public static function installed()
     {
@@ -44,7 +44,7 @@ class LeakProbeService
                 'shadowsocks' => \App\Models\ServerShadowsocks::class, 'vmess' => \App\Models\ServerVmess::class,
                 'trojan' => \App\Models\ServerTrojan::class, 'vless' => \App\Models\ServerVless::class,
                 'hysteria' => \App\Models\ServerHysteria::class, 'tuic' => \App\Models\ServerTuic::class,
-                'naive' => \App\Models\ServerNaive::class, 'anytls' => \App\Models\ServerAnytls::class, 'v2node' => \App\Models\ServerV2node::class,
+                'mieru' => \App\Models\ServerMieru::class, 'naive' => \App\Models\ServerNaive::class, 'anytls' => \App\Models\ServerAnytls::class, 'v2node' => \App\Models\ServerV2node::class,
             ][$otherType];
             $query = $class::query();
             if ($otherType === $type) {

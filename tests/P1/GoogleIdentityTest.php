@@ -321,6 +321,25 @@ class GoogleIdentityTest extends DatabaseTestCase
         $this->assertSame(0, (int)User::firstOrFail()->is_staff);
     }
 
+    public function testGoogleRegistrationUsesTheSameImageCaptchaEnforcement(): void
+    {
+        if (!\App\Services\ImageCaptchaService::available()) $this->markTestSkipped('PHP GD required');
+        \Illuminate\Support\Facades\RateLimiter::swap(new \Illuminate\Cache\RateLimiter(app('cache')));
+        [$pending, $nonce] = $this->pending();
+        config(['v2board.captcha_provider' => 'image']);
+        $payload = ['registration_token' => $pending['registration_token'], 'client_nonce' => $nonce, 'password' => 'new-site-password'];
+        $this->rejected(fn() => $this->service->register($this->request($payload)));
+        $this->assertSame(0, User::count());
+        $image = new class extends \App\Services\ImageCaptchaService {
+            protected function generateCode(): string { return 'A1B2C3'; }
+        };
+        $challenge = $image->create($this->request(['purpose' => 'register']));
+        $payload['captcha_data'] = $challenge['id'] . ':a1b2c3';
+        $result = $this->service->register($this->request($payload));
+        $this->assertSame('authenticated', $result['status']);
+        $this->assertSame(1, User::count());
+    }
+
     public function testBindingChallengeCannotBeCompletedUnderAnotherAccount(): void
     {
         $a = $this->account(); $b = $this->account(); $nonce = str_repeat('a', 43);

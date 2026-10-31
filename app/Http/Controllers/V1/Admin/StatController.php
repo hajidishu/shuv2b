@@ -13,6 +13,7 @@ use App\Models\ServerVmess;
 use App\Models\ServerVless;
 use App\Models\ServerAnytls;
 use App\Models\ServerNaive;
+use App\Models\ServerMieru;
 use App\Models\ServerV2node;
 use App\Models\Stat;
 use App\Models\StatServer;
@@ -120,6 +121,7 @@ class StatController extends Controller
             'hysteria'=> ServerHysteria::where('parent_id', null)->get()->toArray(),
             'anytls' => ServerAnytls::where('parent_id', null)->get()->toArray(),
             'naive' => ServerNaive::where('parent_id', null)->get()->toArray(),
+            'mieru' => ServerMieru::where('parent_id', null)->get()->toArray(),
             'v2node' => ServerV2node::where('parent_id', null)->get()->toArray()
         ];
         $startAt = strtotime('-1 day', strtotime(date('Y-m-d')));
@@ -164,6 +166,7 @@ class StatController extends Controller
             'hysteria'=> ServerHysteria::where('parent_id', null)->get()->toArray(),
             'anytls' => ServerAnytls::where('parent_id', null)->get()->toArray(),
             'naive' => ServerNaive::where('parent_id', null)->get()->toArray(),
+            'mieru' => ServerMieru::where('parent_id', null)->get()->toArray(),
             'v2node' => ServerV2node::where('parent_id', null)->get()->toArray()
         ];
         $startAt = strtotime(date('Y-m-d'));

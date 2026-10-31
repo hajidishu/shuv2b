@@ -16,7 +16,7 @@ import {
     UsergroupAddOutlined,
     SolutionOutlined,
 } from "@ant-design/icons";
-import { Dropdown, Drawer } from "antd";
+import { Dropdown, Drawer, Tooltip } from "antd";
 import { useRef, useState } from "react";
 import dayjs from "dayjs";
 import { Badge, Button, Input, Space, Table, Tag, Tabs } from "antd";
@@ -415,7 +415,7 @@ export default function Users() {
                         <Table<Row>
                             rowKey="id"
                             dataSource={resource.data ?? []}
-                            scroll={{ x: 1500 }}
+                            scroll={{ x: 1700 }}
                             rowSelection={{
                                 selectedRowKeys: selected,
                                 onChange: setSelected,
@@ -588,6 +588,7 @@ export default function Users() {
                                 {
                                     title: "到期时间",
                                     dataIndex: "expired_at",
+                                    width: 180,
                                     sorter: true,
                                     render: (v) => (
                                         <Tag
@@ -609,6 +610,17 @@ export default function Users() {
                                                     )}
                                         </Tag>
                                     ),
+                                },
+                                {
+                                    title: (
+                                        <Tooltip title="累计拉取次数，包含失败请求；清理或重置审计明细不会减少此次数。">
+                                            <span>拉取订阅次数</span>
+                                        </Tooltip>
+                                    ),
+                                    dataIndex: "subscribe_count",
+                                    width: 140,
+                                    sorter: true,
+                                    render: (v) => Number(v ?? 0),
                                 },
                                 {
                                     title: "余额",

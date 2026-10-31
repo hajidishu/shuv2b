@@ -43,9 +43,28 @@ class SubscriptionAuditSchema
                 $table->text('request_details')->nullable();
             });
         }
+        if (!$schema->hasColumn(SubscriptionAuditService::TABLE, 'count_recorded')) {
+            $schema->table(SubscriptionAuditService::TABLE, function (Blueprint $table) {
+                $table->boolean('count_recorded')->default(0);
+            });
+        }
+        if (!$schema->hasTable(SubscriptionAuditService::TOTALS)) {
+            $schema->create(SubscriptionAuditService::TOTALS, function (Blueprint $table) {
+                $table->unsignedInteger('user_id')->primary();
+                $table->unsignedBigInteger('pull_count')->default(0);
+            });
+        }
+        if (!$schema->hasTable(SubscriptionAuditService::LEGACY_EVENTS)) {
+            $schema->create(SubscriptionAuditService::LEGACY_EVENTS, function (Blueprint $table) {
+                // Random deduplication IDs only, with no identity or request metadata.
+                $table->char('event_id', 32)->primary();
+            });
+        }
         foreach ([
-            'v2_subscribe_audit' => ['id', 'event_id', 'user_id', 'email', 'ip', 'ua', 'format', 'result', 'status', 'requested_at', 'request_details'],
+            'v2_subscribe_audit' => ['id', 'event_id', 'user_id', 'email', 'ip', 'ua', 'format', 'result', 'status', 'requested_at', 'request_details', 'count_recorded'],
             'v2_subscribe_audit_setting' => ['id', 'retention_days', 'max_records', 'record_count', 'updated_at'],
+            SubscriptionAuditService::TOTALS => ['user_id', 'pull_count'],
+            SubscriptionAuditService::LEGACY_EVENTS => ['event_id'],
         ] as $table => $columns) {
             foreach ($columns as $column) {
                 if (!$schema->hasColumn($table, $column)) {
@@ -84,5 +103,31 @@ class SubscriptionAuditSchema
             'id' => 1, 'retention_days' => 30, 'max_records' => 1000000,
             'record_count' => DB::table('v2_subscribe_audit')->count(), 'updated_at' => time(),
         ]);
+        $this->backfillCounts();
+    }
+
+    private function backfillCounts(): void
+    {
+        DB::transaction(function () {
+            DB::table(SubscriptionAuditService::SETTINGS)->where('id', 1)->lockForUpdate()->first();
+            $grammar = DB::connection()->getQueryGrammar();
+            $audit = $grammar->wrapTable(SubscriptionAuditService::TABLE);
+            $totals = $grammar->wrapTable(SubscriptionAuditService::TOTALS);
+            $seen = $grammar->wrapTable(SubscriptionAuditService::LEGACY_EVENTS);
+            $mysql = DB::connection()->getDriverName() === 'mysql';
+            $suffix = $mysql
+                ? ' ON DUPLICATE KEY UPDATE pull_count = ' . $totals . '.pull_count + VALUES(pull_count)'
+                : ' ON CONFLICT(user_id) DO UPDATE SET pull_count = ' . $totals . '.pull_count + excluded.pull_count';
+            DB::statement('INSERT INTO ' . $totals . ' (user_id, pull_count) '
+                . 'SELECT a.user_id, COUNT(*) FROM ' . $audit . ' AS a WHERE a.count_recorded = 0 '
+                . 'AND NOT EXISTS (SELECT 1 FROM ' . $seen . ' AS s WHERE s.event_id = a.event_id) GROUP BY a.user_id' . $suffix);
+            DB::statement(($mysql ? 'INSERT IGNORE' : 'INSERT OR IGNORE') . ' INTO ' . $seen
+                . ' (event_id) SELECT event_id FROM ' . $audit . ' WHERE count_recorded = 0');
+            DB::table(SubscriptionAuditService::TABLE)->where('count_recorded', 0)->update(['count_recorded' => 1]);
+            // Repair detail-retention bookkeeping after a manual detail reset.
+            DB::table(SubscriptionAuditService::SETTINGS)->where('id', 1)->update([
+                'record_count' => DB::table(SubscriptionAuditService::TABLE)->count(),
+            ]);
+        }, 3);
     }
 }

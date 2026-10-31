@@ -44,7 +44,7 @@ class UniProxyController extends Controller
         $users = $this->serverService->getAvailableUsers($this->nodeInfo->group_id, $this->nodeType, $this->nodeId)
             ->map(function ($user) {
                 $data = $user->toArray();
-                if ($this->nodeType === 'naive' || ($this->nodeType === 'v2node' && $this->nodeInfo->protocol === 'naive')) {
+                if (in_array($this->nodeType, ['naive', 'mieru'], true) || ($this->nodeType === 'v2node' && in_array($this->nodeInfo->protocol, ['naive', 'mieru'], true))) {
                     $data['username'] = (string)$user->id;
                     $data['password'] = $user->uuid;
                 }
@@ -291,6 +291,9 @@ class UniProxyController extends Controller
                     $response['obfs'] = $this->nodeInfo->obfs ?? null;
                     $response['obfs-password'] = $this->nodeInfo->obfs_password ?? null;
                 }
+                break;
+            case 'mieru':
+                $response = \App\Services\MieruSettings::nodeConfig($this->nodeInfo);
                 break;
             case 'naive':
                 $response = [

@@ -44,6 +44,7 @@ jobs:
           node tests/google-settings.mjs
           node tests/public-plans.mjs
           node tests/naive-nodes.mjs
+          node tests/mieru-nodes.mjs
           node tests/subscription-audit.mjs
           node tests/leak-probe.mjs
           node tests/browser.mjs

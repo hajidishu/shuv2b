@@ -492,7 +492,7 @@ export async function startFixture({ visual = false, settings = {} } = {}) {
             if (path === "/server/manage/sort")
                 return json(res, { data: true });
             const node = path.match(
-                /^\/server\/(shadowsocks|vmess|trojan|tuic|hysteria|vless|anytls|naive|v2node)\/(save|drop|update|copy)$/,
+                /^\/server\/(shadowsocks|vmess|trojan|tuic|hysteria|vless|anytls|naive|mieru|v2node)\/(save|drop|update|copy)$/,
             );
             if (node) {
                 const [, type, action] = node;

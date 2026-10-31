@@ -300,6 +300,7 @@ try {
             "流量(G)",
             "设备数",
             "到期时间",
+            "拉取订阅次数",
             "余额",
             "佣金",
             "加入时间",
@@ -349,6 +350,7 @@ try {
             ["状态", "banned"],
             ["订阅", "plan_id"],
             ["权限组", "group_id"],
+            ["拉取订阅次数", "subscribe_count"],
         ]) {
             const response = page.waitForResponse((response) => {
                 const url = new URL(response.url());

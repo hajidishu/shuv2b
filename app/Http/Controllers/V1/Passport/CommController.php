@@ -36,7 +36,7 @@ class CommController extends Controller
         }
         RateLimiter::hit($ip, 60);
 
-        app(CaptchaService::class)->verify($request);
+        app(CaptchaService::class)->verify($request, 'email');
         $email = $request->input('email');
         $cacheKeyEmail = strtolower(trim((string)$email));
         $isforget = $request->input('isforget');

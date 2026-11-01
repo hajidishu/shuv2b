@@ -81,13 +81,30 @@ class PaymentAttemptService
 
     public static function resolve(array &$payment)
     {
-        if (!PaymentLedgerSchema::installed()) return Order::where('trade_no', $payment['trade_no'])->first();
+        PaymentLedgerSchema::requireInstalled();
         $attempt = DB::table(self::TABLE)->where('trade_no', $payment['trade_no'])->first();
-        if (!$attempt) return Order::where('trade_no', $payment['trade_no'])->first();
+        if (!$attempt) {
+            $gateway = Payment::find($payment['payment_id']);
+            if ($gateway && strpos($gateway->payment, 'Stripe') === 0) return null;
+            return Order::where('trade_no', $payment['trade_no'])->first();
+        }
         if ((int)$attempt->payment_id !== (int)$payment['payment_id']) return null;
         if (!empty($payment['verified_attempt_id']) && (int)$payment['verified_attempt_id'] !== (int)$attempt->id) return null;
         $payment['attempt_id'] = $attempt->id;
         return Order::find($attempt->order_id);
+    }
+
+    public static function stripeSourceAttempt($source, $method, $paymentId)
+    {
+        PaymentLedgerSchema::requireInstalled();
+        $attempt = DB::table(self::TABLE)->where('trade_no', $source->metadata->out_trade_no ?? '')
+            ->where('payment_id', $paymentId)->where('method', $method)->first();
+        if (!$attempt || $attempt->gateway_amount_minor === null ||
+            (int)$source->amount !== (int)$attempt->gateway_amount_minor ||
+            strtolower((string)$source->currency) !== strtolower((string)$attempt->gateway_currency)) {
+            abort(400, 'Stripe source does not match its payment attempt');
+        }
+        return $attempt;
     }
 
     public static function adjustments($orderId)

@@ -5,7 +5,6 @@
  */
 namespace App\Payments;
 
-use Stripe\Source;
 use Stripe\Stripe;
 use App\Utils\StripeCurrency;
 
@@ -99,13 +98,7 @@ class StripeCredit {
         }
         switch ($event->type) {
             case 'source.chargeable':
-                $object = $event->data->object;
-                \Stripe\Charge::create([
-                    'amount' => $object->amount,
-                    'currency' => $object->currency,
-                    'source' => $object->id,
-                    'metadata' => json_decode($object->metadata, true)
-                ], ['idempotency_key' => 'stripe-source-charge:' . $object->id]);
+                // Card payments create their Charge in pay(); Sources belong to other adapters.
                 break;
             case 'charge.succeeded':
                 $object = $event->data->object;

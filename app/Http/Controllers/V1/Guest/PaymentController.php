@@ -8,6 +8,7 @@ use App\Services\OrderService;
 use App\Services\PaymentService;
 use App\Services\TelegramService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
@@ -39,13 +40,17 @@ class PaymentController extends Controller
             return false;
         }
         if (!$orderService->order->wasChanged('status')) return true;
-        $telegramService = new TelegramService();
-        $message = sprintf(
-            "💰成功收款%s元\n———————————————\n订单号：%s",
-            $order->total_amount / 100,
-            $order->trade_no
-        );
-        $telegramService->sendMessageWithAdmin($message);
+        try {
+            $telegramService = new TelegramService();
+            $message = sprintf(
+                "💰成功收款%s元\n———————————————\n订单号：%s",
+                $order->total_amount / 100,
+                $order->trade_no
+            );
+            $telegramService->sendMessageWithAdmin($message);
+        } catch (\Throwable $error) {
+            Log::warning('收款通知派发失败', ['trade_no' => $order->trade_no, 'exception' => $error]);
+        }
         return true;
     }
 }

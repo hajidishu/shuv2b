@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Plugins\Telegram\Telegram;
 use App\Utils\Helper;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class Bind extends Telegram {
     public $command = '/bind';
@@ -17,10 +18,10 @@ class Bind extends Telegram {
             abort(500, '参数有误，请携带订阅地址发送');
         }
         $subscribeUrl = $message->args[0];
-        $subscribeUrl = parse_url($subscribeUrl);
-        parse_str($subscribeUrl['query'], $query);
-        $token = $query['token'];
-        if (!$token) {
+        $subscribeUrl = is_string($subscribeUrl) ? parse_url($subscribeUrl) : false;
+        parse_str(is_array($subscribeUrl) ? ($subscribeUrl['query'] ?? '') : '', $query);
+        $token = $query['token'] ?? null;
+        if (!is_string($token) || $token === '' || strlen($token) > 512) {
             abort(500, '订阅地址无效');
         }
         $submethod = (int)config('v2board.show_subscribe_method', 0);
@@ -42,8 +43,8 @@ class Bind extends Telegram {
                     $counterBytes = pack('N*', 0) . pack('N*', $counter);
                     $idhash = Helper::base64DecodeUrlSafe($token);
                     $parts = explode(':', $idhash, 2);
-                    [$userid, $clienthash] = $parts;
-                    if (!$userid || !$clienthash) {
+                    [$userid, $clienthash] = array_pad($parts, 2, null);
+                    if (!is_string($userid) || !ctype_digit($userid) || !$clienthash) {
                         abort(403, 'token is error');
                     }
                     $user = User::where('id', $userid)->select('token')->first();
@@ -62,17 +63,17 @@ class Bind extends Telegram {
             default:
                 break;
         }
-        $user = User::where('token', $token)->first();
-        if (!$user) {
-            abort(500, '用户不存在');
-        }
-        if ($user->telegram_id) {
-            abort(500, '该账号已经绑定了Telegram账号');
-        }
-        $user->telegram_id = $message->chat_id;
-        if (!$user->save()) {
-            abort(500, '设置失败');
-        }
+        if (!is_string($token) || $token === '') abort(403, 'token is error');
+        DB::transaction(function () use ($token, $message) {
+            $user = User::where('token', $token)->lockForUpdate()->first();
+            if (!$user) abort(500, '用户不存在');
+            if ($user->is_admin || $user->is_staff) abort(403, '管理员和员工请在后台手动设置 Telegram 管理账号 ID');
+            if ($user->banned) abort(403, '账号不可用');
+            if ($user->telegram_id) abort(500, '该账号已经绑定了Telegram账号');
+            // Subscription credentials can only write the ordinary-user binding.
+            $user->telegram_id = $message->chat_id;
+            if (!$user->save()) abort(500, '设置失败');
+        });
         $telegramService = $this->telegramService;
         $telegramService->sendMessage($message->chat_id, '绑定成功');
     }

@@ -100,7 +100,7 @@ class UserController extends Controller
         $this->filter($request, $builder);
         try {
             $builder->update([
-                'banned' => 1
+                'banned' => 1, 'telegram_admin_id' => null, 'telegram_admin_version' => DB::raw('telegram_admin_version + 1')
             ]);
         } catch (\Exception $e) {
             abort(500, '处理失败');

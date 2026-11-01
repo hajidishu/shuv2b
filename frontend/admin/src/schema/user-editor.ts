@@ -21,6 +21,7 @@ const editOrder = [
     "speed_limit",
     "is_admin",
     "is_staff",
+    "telegram_admin_id",
     "remarks",
 ];
 

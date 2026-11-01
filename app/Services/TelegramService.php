@@ -134,19 +134,22 @@ class TelegramService {
         return $response;
     }
 
-    public function sendMessageWithAdmin($message, $isStaff = false)
+    public static function managementUsers($isStaff = true)
     {
-        if (!config('v2board.telegram_bot_enable', 0)) return;
-        $users = User::where(function ($query) use ($isStaff) {
+        return User::where('banned', 0)->whereNotNull('telegram_admin_id')->where(function ($query) use ($isStaff) {
             $query->where('is_admin', 1);
             if ($isStaff) {
                 $query->orWhere('is_staff', 1);
             }
-        })
-            ->where('telegram_id', '!=', NULL)
-            ->get();
+        });
+    }
+
+    public function sendMessageWithAdmin($message, $isStaff = false)
+    {
+        if (!config('v2board.telegram_bot_enable', 0)) return;
+        $users = self::managementUsers($isStaff)->get();
         foreach ($users as $user) {
-            SendTelegramJob::dispatch($user->telegram_id, $message);
+            SendTelegramJob::dispatch($user->telegram_admin_id, $message, $isStaff, $user->id, $user->telegram_admin_version);
         }
     }
 }

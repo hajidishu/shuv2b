@@ -68,6 +68,7 @@ export const userFields: Field[] = [
     f("banned", "封禁", "switch", { default: 0 }),
     f("is_admin", "管理员", "switch", { default: 0 }),
     f("is_staff", "员工", "switch", { default: 0 }),
+    f("telegram_admin_id", "Telegram 管理账号 ID"),
     f("remarks", "备注", "textarea"),
 ];
 export const generateUserFields = [

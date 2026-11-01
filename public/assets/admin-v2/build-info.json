@@ -1,8 +1,8 @@
 {
   "version": "1.0.0",
   "kind": "production",
-  "entry": "assets/index-BdB05YUb.js",
-  "entrySha256": "602a32bc27c1c84eb41d4801dde0adbff12c4f5ab934eabbfcb907ff6ca428de",
+  "entry": "assets/index-BRJF9KdJ.js",
+  "entrySha256": "d1ad6ce7d58eba32b0e5e14aae097333ba1a0954cee97822441ed5f93917fe91",
   "apiVersion": "v1",
   "legacyRuntime": false
 }

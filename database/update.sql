@@ -902,3 +902,8 @@ CREATE TABLE `v2_server_mieru` (
   `updated_at` int(11) NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Telegram management identities must be configured separately from subscription bindings.
+ALTER TABLE `v2_user` ADD `telegram_admin_id` bigint(20) DEFAULT NULL;
+ALTER TABLE `v2_user` ADD UNIQUE INDEX `v2_user_telegram_admin_id_unique` (`telegram_admin_id`);
+ALTER TABLE `v2_user` ADD `telegram_admin_version` bigint(20) unsigned NOT NULL DEFAULT '0';

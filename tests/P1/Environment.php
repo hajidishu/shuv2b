@@ -86,6 +86,8 @@ class Environment
         foreach (['v2_user_email_identity', 'v2_subscribe_audit_total', 'v2_subscribe_audit_count_event', 'v2_server_mieru', 'v2_server_naive', 'v2_passkey_credential', 'v2_passkey_user', 'v2_payment_receipt', 'v2_payment_attempt', 'v2_commission_log', 'v2_giftcard', 'v2_coupon', 'v2_payment', 'v2_order', 'v2_plan', 'v2_user'] as $table) $schema->dropIfExists($table);
         $schema->create('v2_user', function (Blueprint $t) {
             $t->increments('id'); $t->string('email')->unique(); $t->string('password')->nullable();
+            $t->bigInteger('telegram_id')->nullable(); $t->bigInteger('telegram_admin_id')->nullable()->unique();
+            $t->unsignedBigInteger('telegram_admin_version')->default(0);
             foreach (['is_admin', 'is_staff', 'banned', 'commission_type', 'auto_renewal'] as $key) $t->integer($key)->default(0);
             foreach (['balance', 'commission_balance', 'transfer_enable', 'u', 'd'] as $key) $t->bigInteger($key)->default(0);
             foreach (['plan_id', 'group_id', 'expired_at', 'device_limit', 'speed_limit', 'discount', 'invite_user_id', 'commission_rate'] as $key) $t->integer($key)->nullable();

@@ -68,6 +68,7 @@ try {
         { id: 41, type: "vmess", name: "same-id-vmess", host: "vmess.example.test", server_port: 443, port: "443", group_id: [], show: 1, rate: 1, tls: 0, network: "tcp" },
         { id: 41, type: "trojan", name: "same-id-trojan", host: "trojan.example.test", server_port: 443, port: "443", group_id: [], show: 1, rate: 1 },
         { id: 42, type: "vless", name: "hidden-vless", host: "hidden.example.test", server_port: 8443, port: "8443", group_id: [], show: 0, rate: 1, tls: 0, network: "tcp" },
+        { id: 43, type: "vmess", parent_id: 41, name: "child-vmess", host: "child.example.test", server_port: 443, port: "443", group_id: [], show: 1, rate: 1, tls: 0, network: "tcp" },
     );
 
     const login = await context.request.post(fixture.origin + "/api/v1/passport/auth/login", {
@@ -222,6 +223,26 @@ try {
     // Node drag handles work without entering edit-sort first; preserve filtered-out nodes
     // and distinguish same numeric IDs by protocol. Failed sort remains retryable.
     await goto("/server/manage");
+    const childRow = page.locator(".nodes-table tr.ant-table-row").filter({ hasText: "child-vmess" });
+    const parentRow = page.locator(".nodes-table tr.ant-table-row").filter({ hasText: "same-id-vmess" });
+    await childRow.waitFor({ state: "visible" });
+    assert.ok(await childRow.evaluate((row) => row.classList.contains("child_node")));
+    assert.equal(await parentRow.evaluate((row) => row.classList.contains("child_node")), false);
+    assert.equal(await childRow.evaluate((row) => getComputedStyle(row).backgroundColor), "rgb(238, 238, 238)");
+    assert.equal(await childRow.evaluate((row) => getComputedStyle(row).opacity), "1");
+    assert.equal(await childRow.locator("td").last().evaluate((cell) => getComputedStyle(cell).backgroundColor), "rgb(238, 238, 238)", "fixed operation cell must retain the child background");
+    await page.screenshot({ path: resolve(output, "node-parent-current.png"), fullPage: true });
+    assert.ok(await childRow.getByRole("switch").isEnabled());
+    await childRow.getByRole("checkbox").check();
+    assert.ok(await childRow.evaluate((row) => row.classList.contains("ant-table-row-selected")));
+    assert.notEqual(await childRow.locator("td").last().evaluate((cell) => getComputedStyle(cell).backgroundColor), "rgb(238, 238, 238)", "selection must keep its highlight");
+    await childRow.getByRole("checkbox").uncheck();
+    await childRow.getByText("child-vmess", { exact: true }).click();
+    const childEditor = page.locator(".ant-drawer-open:visible");
+    await childEditor.waitFor();
+    await childEditor.getByRole("button", { name: "取消", exact: true }).click();
+    await childEditor.waitFor({ state: "hidden" });
+    report.passed.push("original child-node background with working selection and editor");
     await page.getByPlaceholder("输入任意关键字搜索").fill("same-id");
     await page.waitForFunction(() => document.querySelectorAll(".nodes-table tr.ant-table-row").length === 2);
     const vmessRow = page.locator(".nodes-table tr.ant-table-row").filter({ hasText: "same-id-vmess" });
@@ -237,6 +258,7 @@ try {
     const sortCall = apiCalls.filter((call) => call.path === "/server/manage/sort").at(-1);
     assert.ok(sortCall?.data.vmess?.[41] && sortCall?.data.trojan?.[41], "sort payload must keep protocol/id pairs separate");
     assert.ok(sortCall.data.vless?.[42], "filtered/hidden node must remain in the submitted sort payload");
+    assert.ok(sortCall.data.vmess?.[43], "filtered child node must remain in the submitted sort payload");
     assert.ok(sortCall.data.trojan[41] < sortCall.data.vmess[41], "dragging vmess onto trojan should place trojan first");
 
     // Exercise retry without losing the already rearranged full ordering.

@@ -330,7 +330,7 @@ export default function Nodes() {
                         preserveSelectedRowKeys: true,
                     }}
                     onRow={(n) => ({
-                        className: dragOver === nodeKey(n) ? "node-sort-drop-target" : undefined,
+                        className: [n.parent_id ? "child_node" : "", dragOver === nodeKey(n) ? "node-sort-drop-target" : ""].filter(Boolean).join(" "),
                         onDragOver: (e) => {
                             if (!drag || action.busy) return;
                             e.preventDefault();

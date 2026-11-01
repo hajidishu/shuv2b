@@ -128,7 +128,9 @@ const openUserMenu = async () => {
     });
     return menu;
 };
-const editor = () => page.locator(".ant-drawer:visible").last();
+const editor = () => page.locator(".ant-drawer-open:visible").filter({
+    has: page.locator(".user-editor:visible"),
+}).last();
 const waitForEditorSettled = async () => {
     const panel = editor().locator(".ant-drawer-content-wrapper");
     await panel.waitFor();
@@ -436,6 +438,9 @@ try {
     });
 
     await check("user-editor-fields-units-datetime-and-state", async () => {
+        // Loading the selected user and replacing a closing drawer are async.
+        // Observe the opened user editor before checking its layout and fields.
+        await editor().waitFor();
         assert.ok(await page.locator(".user-editor:visible").count());
         assert.equal(
             await editor().locator(".ant-drawer-title").innerText(),

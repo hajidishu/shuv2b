@@ -570,12 +570,14 @@ try {
             1,
         );
         await page.keyboard.press("Escape");
+        await planOptions.waitFor({ state: "hidden" });
         const expired = editor().getByRole("textbox", {
             name: "到期时间",
             exact: true,
         });
         await expired.click();
         await page.locator(".ant-picker-dropdown:visible").waitFor();
+        await page.locator(".ant-picker-time-panel:visible").waitFor();
         assert.ok(
             (await page.locator(".ant-picker-dropdown:visible").count()) > 0,
         );

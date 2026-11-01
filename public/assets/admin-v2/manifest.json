@@ -1,18 +1,18 @@
 {
-  "_antd-BWMm2DLL.js": {
-    "file": "assets/antd-BWMm2DLL.js",
+  "_antd-DP3ejrRk.js": {
+    "file": "assets/antd-DP3ejrRk.js",
     "name": "antd"
   },
   "index.html": {
-    "file": "assets/index-BRJF9KdJ.js",
+    "file": "assets/index-DAC0TAFq.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
     "imports": [
-      "_antd-BWMm2DLL.js"
+      "_antd-DP3ejrRk.js"
     ],
     "css": [
-      "assets/index-CXnv1NIL.css"
+      "assets/index-DMGcXqGv.css"
     ],
     "assets": [
       "assets/simple-line-icons-D0KobG-u.woff2",

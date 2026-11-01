@@ -237,6 +237,11 @@ try {
     assert.ok(await childRow.getByRole("switch").isEnabled());
     await childRow.getByRole("checkbox").check();
     assert.ok(await childRow.evaluate((row) => row.classList.contains("ant-table-row-selected")));
+    await page.waitForFunction(() => {
+        const cell = document.querySelector(".nodes-table tr.child_node.ant-table-row-selected > td:last-child");
+        return !!cell && getComputedStyle(cell).backgroundColor !== "rgb(238, 238, 238)" &&
+            cell.getAnimations().every((animation) => animation.playState !== "running");
+    });
     assert.notEqual(await childRow.locator("td").last().evaluate((cell) => getComputedStyle(cell).backgroundColor), "rgb(238, 238, 238)", "selection must keep its highlight");
     await childRow.getByRole("checkbox").uncheck();
     await childRow.getByText("child-vmess", { exact: true }).click();

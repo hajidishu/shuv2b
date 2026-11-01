@@ -687,10 +687,17 @@ a {
     height: 100vh;
     position: sticky !important;
     top: 0;
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: none;
     z-index: 12;
     background: #fff !important;
     box-shadow: none;
+}
+.admin-sidebar::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
 }
 .admin-sidebar.ant-layout-sider-dark {
     background: #243447 !important;

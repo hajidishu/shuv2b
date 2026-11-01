@@ -23,6 +23,7 @@ import { cents, yuan } from "./domain.mjs";
 import KnowledgeInput from "./KnowledgeInput";
 import DateInput from "./DateInput";
 import { QuestionCircleOutlined } from "@ant-design/icons";
+import { UserLink, OrderLink, NodeLink, ResourceLink } from "./navigation";
 export function useResource(path: string, params: Row = {}, enabled = true) {
     const [response, setResponse] = useState<Row>({ data: [] });
     const [loading, setLoading] = useState(false);
@@ -925,14 +926,20 @@ export const formatDate = (value: any) =>
         ? new Date(value * 1000).toLocaleString("zh-CN", { hour12: false })
         : "长期有效";
 export const formatMoney = (value: any) => "¥" + (yuan(value) ?? "0.00");
-export function KeyValues({ data }: { data: Row }) {
+export function KeyValues({ data, fieldLabels = {}, userId }: { data: Row; fieldLabels?: Row; userId?: number | string }) {
     return (
         <div className="key-values">
             {Object.entries(data ?? {}).map(([key, value]) => (
                 <div key={key}>
-                    <strong>{key}</strong>
+                    <strong>{fieldLabels[key] ?? key}</strong>
                     <span>
-                        {typeof value === "object"
+                        {["email", "user_email"].includes(key) && value ? <UserLink userId={userId ?? data.user_id} email={String(value)} /> :
+                         key === "trade_no" && value ? <OrderLink tradeNo={String(value)} /> :
+                         ["user_id", "invite_user_id"].includes(key) && value ? <UserLink userId={value}>{String(value)}</UserLink> :
+                         key === "plan_id" && value ? <ResourceLink route="/plan" id={value}>{String(value)}</ResourceLink> :
+                         key === "group_id" && value ? <ResourceLink route="/server/group" id={value}>{String(value)}</ResourceLink> :
+                         key === "node_id" && value && data.node_type ? <NodeLink nodeType={data.node_type} nodeId={value}>{String(value)}</NodeLink> :
+                         typeof value === "object"
                             ? JSON.stringify(value)
                             : String(value ?? "—")}
                     </span>

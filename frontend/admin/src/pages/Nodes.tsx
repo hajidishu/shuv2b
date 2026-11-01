@@ -33,6 +33,7 @@ import {
 import type { Row } from "../types";
 import NodeEditor from "./NodeEditor";
 import { nodeEditorFields, nodeSubmissionFields } from "../schema/node-editor";
+import { routeQuery, ResourceLink } from "../navigation";
 const nodeTypeOrder: Array<keyof typeof nodeTypes> = [
     "v2node",
     "shadowsocks",
@@ -63,7 +64,8 @@ export default function Nodes() {
     const action = useAction();
     const [selected, setSelected] = useState<React.Key[]>([]);
     const [search, setSearch] = useState("");
-    const [type, setType] = useState<string>();
+    const [type, setType] = useState<string | undefined>(() => routeQuery("/server/manage").get("type") ?? undefined);
+    const linkedId = routeQuery("/server/manage").get("id");
     const [groupFilter, setGroupFilter] = useState<string[]>([]);
     const [editing, setEditing] = useState<Row>();
     const [batch, setBatch] = useState(false);
@@ -83,6 +85,7 @@ export default function Nodes() {
     }, [resource.data]);
     const filtered = ordered.filter(
         (n) =>
+            (!linkedId || String(n.id) === linkedId) &&
             (!type || n.type === type) &&
             (!groupFilter.length ||
                 (n.group_id ?? []).some((id: any) =>
@@ -270,6 +273,7 @@ export default function Nodes() {
                         </Button>
                     </Space>
                 </div>
+                {linkedId && <div className="selection-toolbar"><Tag closable onClose={() => { location.hash = "/server/manage"; }}>节点 ID：{linkedId}</Tag></div>}
                 {selected.length > 0 && (
                     <div className="selection-toolbar">
                         <span>已选 {selected.length} 个节点</span>
@@ -332,7 +336,7 @@ export default function Nodes() {
                     onRow={(n) => ({
                         className: [n.parent_id ? "child_node" : "", dragOver === nodeKey(n) ? "node-sort-drop-target" : ""].filter(Boolean).join(" "),
                         onDragOver: (e) => {
-                            if (!drag || action.busy) return;
+                            if (!sorting || !drag || action.busy) return;
                             e.preventDefault();
                             e.dataTransfer.dropEffect = "move";
                             setDragOver(nodeKey(n));
@@ -341,7 +345,7 @@ export default function Nodes() {
                             e.preventDefault();
                             setDrag(undefined);
                             setDragOver(undefined);
-                            if (!drag || drag === nodeKey(n) || action.busy) return;
+                            if (!sorting || !drag || drag === nodeKey(n) || action.busy) return;
                             const list = [...ordered];
                             const from = list.findIndex(
                                     (x) => nodeKey(x) === drag,
@@ -356,32 +360,31 @@ export default function Nodes() {
                         },
                     })}
                     columns={[
-                        {
+                        ...(sorting ? [{
                             title: "排序",
                             key: "sort-handle",
                             width: 64,
-                            render: (_, n) => (
+                            render: (_: any, n: Row) => (
                                 <span className="node-drag-handle" role="button" tabIndex={0}
                                     aria-label={"拖动排序 " + n.name}
                                     title="拖动调整排序；也可使用上下方向键"
-                                    draggable={!action.busy}
+                                    draggable={sorting && !action.busy}
                                     onDragStart={(e) => {
                                         e.stopPropagation();
                                         e.dataTransfer.effectAllowed = "move";
                                         e.dataTransfer.setData("text/plain", nodeKey(n));
                                         setDrag(nodeKey(n));
-                                        setSorting(true);
                                     }}
                                     onDragEnd={() => { setDrag(undefined); setDragOver(undefined); }}
                                     onKeyDown={(e) => {
-                                        if (!action.busy && ["ArrowUp", "ArrowDown"].includes(e.key)) {
+                                        if (sorting && !action.busy && ["ArrowUp", "ArrowDown"].includes(e.key)) {
                                             e.preventDefault();
                                             move(n, e.key === "ArrowUp" ? -1 : 1);
                                         }
                                     }}
                                 ><MenuOutlined /></span>
                             ),
-                        },
+                        }] : []),
                         {
                             title: "节点ID",
                             dataIndex: "id",
@@ -392,6 +395,7 @@ export default function Nodes() {
                                 text: nodeTypes[value],
                             })),
                             filterMultiple: false,
+                            filteredValue: type ? [type] : null,
                             onFilter: (value, node) =>
                                 node.type === String(value).toLowerCase(),
                             render: (id, node) => (
@@ -562,14 +566,12 @@ export default function Nodes() {
                             })),
                             filterMultiple: true,
                             render: (value) =>
-                                (value ?? [])
-                                    .map(
-                                        (id: any) =>
-                                            refs.groups.find(
-                                                (g: Row) => g.id === id,
-                                            )?.name ?? id,
-                                    )
-                                    .join(", "),
+                                (value ?? []).flatMap((id: any, index: number) => [
+                                    index ? ", " : null,
+                                    <ResourceLink route="/server/group" id={id} key={id}>
+                                        {refs.groups.find((group: Row) => group.id === id)?.name ?? id}
+                                    </ResourceLink>,
+                                ]),
                         },
                         {
                             title: "操作",
@@ -611,7 +613,6 @@ export default function Nodes() {
             )}
             {batch && (
                 <Editor
-                    key={"batch-" + patchKeys.join(",")}
                     title={`批量编辑 ${chosen.length} 个节点`}
                     fields={batchFields}
                     references={{

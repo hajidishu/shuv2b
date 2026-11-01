@@ -10,6 +10,11 @@ export function createLeakFixture(store) {
         store.nodes.find(
             (node) => node.id === pool.node_id && node.type === pool.node_type,
         );
+    const snapshot = (pool) => ({
+        ...server(pool),
+        node_type: pool.node_type,
+        node_id: pool.node_id,
+    });
     const roster = (data) =>
         store.users.filter(
             (user) =>
@@ -30,8 +35,8 @@ export function createLeakFixture(store) {
             selected_from: data.branch,
             a_node_id: a.id,
             b_node_id: b.id,
-            a_snapshot: server(a),
-            b_snapshot: server(b),
+            a_snapshot: snapshot(a),
+            b_snapshot: snapshot(b),
             created_at: now(),
             result_a: "unknown",
             result_b: "unknown",

@@ -33,6 +33,7 @@ import {
 } from "../components";
 import { Filters, convertFilters } from "../UserFilters";
 import type { Filter, Row } from "../types";
+import { UserLink, NodeLink, ManagementLink, managementHref } from "../navigation";
 
 const statuses: Row = {
     active: "观察中",
@@ -592,7 +593,7 @@ export default function LeakProbe() {
                     pagination={false}
                     scroll={{ x: 750 }}
                     columns={[
-                        { title: "节点", render: (_, node) => nodeLabel(node) },
+                        { title: "节点", render: (_, node) => <NodeLink nodeType={node.node_type} nodeId={node.node_id}>{nodeLabel(node)}</NodeLink> },
                         {
                             title: "状态",
                             dataIndex: "state",
@@ -765,11 +766,11 @@ export default function LeakProbe() {
                                             <div className="leak-group-card">
                                                 <strong>
                                                     {group.toUpperCase()}组 ·{" "}
-                                                    {
+                                                    <NodeLink nodeType={selectedRound[`${group}_snapshot`]?.node_type} nodeId={selectedRound[`${group}_snapshot`]?.node_id}>{
                                                         selectedRound[
                                                             `${group}_snapshot`
                                                         ]?.name
-                                                    }
+                                                    }</NodeLink>
                                                 </strong>
                                                 <p>
                                                     {
@@ -970,25 +971,11 @@ export default function LeakProbe() {
                                         {
                                             title: "用户邮箱（轮次快照）",
                                             dataIndex: "email",
-                                            render: (email) => (
-                                                <a
-                                                    href="#/subscribe-audit"
-                                                    onClick={() =>
-                                                        sessionStorage.setItem(
-                                                            "subscription-audit-filters",
-                                                            JSON.stringify([
-                                                                {
-                                                                    key: "email",
-                                                                    condition:
-                                                                        "=",
-                                                                    value: email,
-                                                                },
-                                                            ]),
-                                                        )
-                                                    }
-                                                >
-                                                    {email}
-                                                </a>
+                                            render: (email, member) => (
+                                                <Space>
+                                                    <UserLink userId={member.user_id} email={email} />
+                                                    <ManagementLink href={managementHref("/subscribe-audit", member.user_id ? { user_id: member.user_id } : { email })}>订阅审计</ManagementLink>
+                                                </Space>
                                             ),
                                         },
                                         {

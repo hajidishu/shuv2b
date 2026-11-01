@@ -33,6 +33,7 @@ import {
 } from "../components";
 import { convertFilters, Filters } from "../UserFilters";
 import type { Filter, Row } from "../types";
+import { initialManagementFilters, UserLink, ManagementLink, managementHref } from "../navigation";
 
 const results = [
     { value: "success", label: "成功", color: "green" },
@@ -40,15 +41,7 @@ const results = [
     { value: "error", label: "失败", color: "red" },
 ];
 export default function SubscriptionAudit() {
-    const [filters, setFilters] = useState<Filter[]>(() => {
-            const value = sessionStorage.getItem("subscription-audit-filters");
-            sessionStorage.removeItem("subscription-audit-filters");
-            try {
-                return value ? JSON.parse(value) : [];
-            } catch {
-                return [];
-            }
-        }),
+    const [filters, setFilters] = useState<Filter[]>(() => initialManagementFilters("/subscribe-audit", "subscription-audit-filters")),
         [draft, setDraft] = useState<Filter[]>([]);
     const [open, setOpen] = useState(false),
         [settingsOpen, setSettingsOpen] = useState(false);
@@ -171,10 +164,11 @@ export default function SubscriptionAudit() {
                         {
                             title: rankLabel,
                             dataIndex: "label",
-                            render: (label) => (
+                            render: (label, record) => (
                                 <Tooltip title={label}>
                                     <span className="audit-ranking-label">
-                                        {label}
+                                        {dimension === "user" ? <UserLink userId={record.value} email={label} /> : record.value ?
+                                            <ManagementLink href={managementHref("/subscribe-audit", { [dimension]: record.value })}>{label}</ManagementLink> : label}
                                     </span>
                                 </Tooltip>
                             ),
@@ -272,8 +266,8 @@ export default function SubscriptionAudit() {
                             title: "用户邮箱",
                             dataIndex: "email",
                             width: 230,
-                            render: (value) => (
-                                <span className="break-word">{value}</span>
+                            render: (value, record) => (
+                                <span className="break-word"><UserLink userId={record.user_id} email={value} /></span>
                             ),
                         },
                         {
@@ -412,7 +406,7 @@ export default function SubscriptionAudit() {
                             column={1}
                         >
                             <Descriptions.Item label="用户邮箱">
-                                {selected.email}
+                                <UserLink userId={selected.user_id} email={selected.email} />
                             </Descriptions.Item>
                             <Descriptions.Item label="用户当前订阅链接">
                                 {selected.current_subscribe_url ? (

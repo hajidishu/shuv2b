@@ -389,15 +389,19 @@ try {
         assert.equal(detailCall.data.id, -1);
         const userInfo = await waitForCall("/user/getUserInfoById");
         assert.equal(userInfo.query.id, "-1");
-        await detail
-            .getByRole("link", { name: "demo@example.test", exact: true })
-            .click();
-        await page.waitForURL("**#/user");
-        const userFetch = await waitForCall("/user/fetch");
+        const userLink = detail.getByRole("link", { name: "demo@example.test", exact: true });
+        const href = await userLink.getAttribute("href");
+        assert.equal(href, "#/user?id=" + userInfo.query.id);
+        const beforeUserFetch = callsFor("/user/fetch").length;
+        await Promise.all([
+            page.waitForURL((url) => url.hash === href),
+            userLink.click(),
+        ]);
+        const userFetch = await waitForCall("/user/fetch", beforeUserFetch);
         const filter = filterFromCall(userFetch);
-        assert.equal(filter.key, "email");
+        assert.equal(filter.key, "id");
         assert.equal(filter.condition, "=");
-        assert.equal(filter.value, "demo@example.test");
+        assert.equal(filter.value, userInfo.query.id);
         await screenshot("order-detail-user-filter");
     });
 

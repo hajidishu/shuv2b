@@ -23,6 +23,7 @@ import { labels, resourceSchemas } from "../schema/resources";
 import type { Row } from "../types";
 import PlanEditor from "./PlanEditor";
 import CardEditor from "./CardEditor";
+import { routeQuery, ResourceLink } from "../navigation";
 
 const routeActions: Record<string, string> = {
     block: "禁止访问(域名目标)",
@@ -46,7 +47,8 @@ export default function Resources({ path }: { path: string }) {
         current: page,
         pageSize: size,
     });
-    const rows: Row[] = Array.isArray(resource.data) ? resource.data : [];
+    const linkedId = ["/plan", "/server/group", "/server/route"].includes(path) ? routeQuery(path).get("id") : null;
+    const rows: Row[] = (Array.isArray(resource.data) ? resource.data : []).filter((row: Row) => !linkedId || String(row.id) === linkedId);
     const editorFields = (values: Row) =>
         schema.fields
             .filter((field) => !field.when || field.when(values))
@@ -227,6 +229,7 @@ export default function Resources({ path }: { path: string }) {
     };
     return (
         <Page title={schema.title}>
+            {linkedId && <Tag closable onClose={() => { location.hash = path; }}>ID：{linkedId}</Tag>}
             <DataCard
                 error={resource.error || refs.error}
                 loading={resource.loading}
@@ -250,7 +253,7 @@ export default function Resources({ path }: { path: string }) {
                     pagination={{
                         current: page,
                         pageSize: size,
-                        total: resource.response.total ?? rows.length,
+                        total: linkedId ? rows.length : resource.response.total ?? rows.length,
                         onChange: (p, s) => {
                             setPage(p);
                             setSize(s);
@@ -324,11 +327,11 @@ export default function Resources({ path }: { path: string }) {
                                     )[v];
                                 if (key === "group_name")
                                     return (
-                                        refs.groups.find(
+                                        <ResourceLink route="/server/group" id={r.group_id}>{refs.groups.find(
                                             (group: Row) =>
                                                 Number(group.id) ===
                                                 Number(r.group_id),
-                                        )?.name ?? "—"
+                                        )?.name ?? "—"}</ResourceLink>
                                     );
                                 if (key === "match_count") {
                                     const count = Array.isArray(r.match)
@@ -378,10 +381,10 @@ export default function Resources({ path }: { path: string }) {
                                 }
                                 if (key === "plan_id") {
                                     return (
-                                        refs.plans.find(
+                                        <ResourceLink route="/plan" id={v}>{refs.plans.find(
                                             (plan: Row) =>
                                                 Number(plan.id) === Number(v),
-                                        )?.name ?? "—"
+                                        )?.name ?? "—"}</ResourceLink>
                                     );
                                 }
                                 if (Array.isArray(v))

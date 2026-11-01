@@ -1,5 +1,6 @@
 import { Radio } from "antd";
 import { useState } from "react";
+import { UserLink, managementHref } from "../navigation";
 import { Button, Divider, Input, Space, Table, Tag } from "antd";
 import { api } from "../api";
 import {
@@ -44,21 +45,7 @@ export default function Tickets({ id }: { id?: string }) {
                 <DataCard error={resource.error} loading={resource.loading}>
                     <div className="table-toolbar">
                         <Space>
-                            <Button
-                                onClick={() => {
-                                    sessionStorage.setItem(
-                                        "admin-user-initial-filters",
-                                        JSON.stringify([
-                                            {
-                                                key: "id",
-                                                condition: "=",
-                                                value: ticket?.user_id,
-                                            },
-                                        ]),
-                                    );
-                                    location.hash = "/user";
-                                }}
-                            >
+                            <Button href={managementHref("/user", { id: ticket?.user_id })}>
                                 用户管理
                             </Button>
                             <Button href="#/ticket">返回工单列表</Button>
@@ -72,7 +59,7 @@ export default function Tickets({ id }: { id?: string }) {
                         <Space></Space>
                     </div>
                     <p>
-                        用户 ID：{ticket?.user_id}{" "}
+                        用户 ID：<UserLink userId={ticket?.user_id}>{ticket?.user_id}</UserLink>{" "}
                         <Tag>{ticket?.status ? "已关闭" : "处理中"}</Tag>
                     </p>
                     <div className="ticket-thread">

@@ -38,15 +38,9 @@ import UserMailModal from "./UserMailModal";
 import { Filters, convertFilters } from "../UserFilters";
 export { Filters, convertFilters } from "../UserFilters";
 import { labels } from "../schema/resources";
+import { initialManagementFilters, OrderLink, ResourceLink } from "../navigation";
 function initialUserFilters(): Filter[] {
-    try {
-        const value = sessionStorage.getItem("admin-user-initial-filters");
-        sessionStorage.removeItem("admin-user-initial-filters");
-        const filters = value ? (JSON.parse(value) as Filter[]) : [];
-        return filters;
-    } catch {
-        return [];
-    }
+    return initialManagementFilters("/user", "admin-user-initial-filters");
 }
 export default function Users() {
     const [filtersOpen, setFiltersOpen] = useState(false);
@@ -529,7 +523,7 @@ export default function Users() {
                                     dataIndex: "plan_name",
                                     key: "plan_id",
                                     sorter: true,
-                                    render: (v) => v || "-",
+                                    render: (v, r) => <ResourceLink route="/plan" id={r.plan_id}>{v || "-"}</ResourceLink>,
                                 },
                                 {
                                     title: "权限组",
@@ -537,10 +531,10 @@ export default function Users() {
                                     key: "group_id",
                                     sorter: true,
                                     render: (v) =>
-                                        refs.groups.find(
+                                        <ResourceLink route="/server/group" id={v}>{refs.groups.find(
                                             (g: Row) =>
                                                 Number(g.id) === Number(v),
-                                        )?.name ?? "-",
+                                        )?.name ?? "-"}</ResourceLink>,
                                 },
                                 {
                                     title: "已用(G)",
@@ -737,6 +731,8 @@ export default function Users() {
                                 children: (
                                     <>
                                         <KeyValues
+                                            fieldLabels={labels}
+                                            userId={detail.id}
                                             data={Object.fromEntries(
                                                 Object.entries(detail)
                                                     .filter(
@@ -747,10 +743,6 @@ export default function Users() {
                                                                 "password_algo",
                                                             ].includes(key),
                                                     )
-                                                    .map(([k, v]) => [
-                                                        labels[k] ?? k,
-                                                        v,
-                                                    ]),
                                             )}
                                         />
                                         <Input.TextArea
@@ -797,7 +789,9 @@ export default function Users() {
                                             ].map((k) => ({
                                                 title: labels[k],
                                                 dataIndex: k,
-                                                render: (v) =>
+                                                render: (v, r) =>
+                                                    k === "trade_no" ? <OrderLink tradeNo={v} /> :
+                                                    k === "plan_name" ? <ResourceLink route="/plan" id={r.plan_id}>{String(v ?? "—")}</ResourceLink> :
                                                     k === "total_amount"
                                                         ? formatMoney(v)
                                                         : String(v ?? "—"),

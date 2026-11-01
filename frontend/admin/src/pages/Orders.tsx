@@ -33,6 +33,7 @@ import {
 import { orderFields } from "../schema/resources";
 import { convertFilters, Filters } from "./Users";
 import type { Filter, Row } from "../types";
+import { initialManagementFilters, UserLink, OrderLink, ResourceLink, ManagementLink, managementHref } from "../navigation";
 
 const statuses = ["未支付", "已支付", "已取消", "已完成", "已折抵"];
 const commissions = ["待确认", "发放中", "已发放", "无效"];
@@ -58,15 +59,7 @@ const date = (value: any) =>
 
 export default function Orders() {
     const [filtersOpen, setFiltersOpen] = useState(false),
-        [filters, setFilters] = useState<Filter[]>(() => {
-            try {
-                const v = sessionStorage.getItem("admin-order-initial-filters");
-                sessionStorage.removeItem("admin-order-initial-filters");
-                return v ? JSON.parse(v) : [];
-            } catch {
-                return [];
-            }
-        });
+        [filters, setFilters] = useState<Filter[]>(() => initialManagementFilters("/order", "admin-order-initial-filters"));
     const draftFilters = (items: Filter[]) =>
         items.map((f) => ({
             ...f,
@@ -223,7 +216,7 @@ export default function Orders() {
                                 dataIndex: "type",
                                 render: (value) => orderTypes[value] ?? "-",
                             },
-                            { title: "订阅计划", dataIndex: "plan_name" },
+                            { title: "订阅计划", dataIndex: "plan_name", render: (name, row) => <ResourceLink route="/plan" id={row.plan_id}>{name || "-"}</ResourceLink> },
                             {
                                 title: "周期",
                                 dataIndex: "period",
@@ -528,50 +521,18 @@ export default function Orders() {
                                     <div key={String(label)}>
                                         <label>{label}</label>
                                         <span>
-                                            {label === "邮箱" &&
-                                            detail.email?.includes("@") ? (
-                                                <a
-                                                    href="#/user"
-                                                    onClick={() =>
-                                                        sessionStorage.setItem(
-                                                            "admin-user-initial-filters",
-                                                            JSON.stringify([
-                                                                {
-                                                                    key: "email",
-                                                                    condition:
-                                                                        "=",
-                                                                    value: detail.email,
-                                                                },
-                                                            ]),
-                                                        )
-                                                    }
-                                                >
-                                                    {value}
-                                                </a>
-                                            ) : label === "邀请人" &&
-                                              detail.invite_user_id ? (
-                                                <a
-                                                    href="#/user"
-                                                    title="查看TA邀请的人"
-                                                    onClick={() =>
-                                                        sessionStorage.setItem(
-                                                            "admin-user-initial-filters",
-                                                            JSON.stringify([
-                                                                {
-                                                                    key: "invite_user_id",
-                                                                    condition:
-                                                                        "=",
-                                                                    value: detail.invite_user_id,
-                                                                },
-                                                            ]),
-                                                        )
-                                                    }
-                                                >
-                                                    {value}
-                                                </a>
-                                            ) : (
-                                                (value ?? "-")
-                                            )}
+                                            {label === "邮箱" ? (
+                                                <UserLink userId={detail.user_id} email={detail.email}>{value}</UserLink>
+                                            ) : label === "订单号" ? (
+                                                <OrderLink tradeNo={detail.trade_no}>{value}</OrderLink>
+                                            ) : label === "订阅计划" ? (
+                                                <ResourceLink route="/plan" id={detail.plan_id}>{value}</ResourceLink>
+                                            ) : label === "邀请人" && detail.invite_user_id ? (
+                                                <Space>
+                                                    <UserLink userId={detail.invite_user_id} email={detail.invite_email}>{value}</UserLink>
+                                                    <ManagementLink href={managementHref("/user", { invite_user_id: detail.invite_user_id })} title="查看TA邀请的人">查看邀请</ManagementLink>
+                                                </Space>
+                                            ) : (value ?? "-")}
                                         </span>
                                     </div>
                                 ))}

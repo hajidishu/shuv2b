@@ -223,6 +223,8 @@ try {
     // Node drag handles work without entering edit-sort first; preserve filtered-out nodes
     // and distinguish same numeric IDs by protocol. Failed sort remains retryable.
     await goto("/server/manage");
+    assert.equal(await page.locator(".nodes-table .node-drag-handle").count(), 0, "sorting handles should be hidden before editing sort");
+    assert.equal(await page.getByRole("columnheader", { name: "排序", exact: true }).count(), 0, "sorting column should be hidden before editing sort");
     const childRow = page.locator(".nodes-table tr.ant-table-row").filter({ hasText: "child-vmess" });
     const parentRow = page.locator(".nodes-table tr.ant-table-row").filter({ hasText: "same-id-vmess" });
     await childRow.waitFor({ state: "visible" });
@@ -245,8 +247,11 @@ try {
     report.passed.push("original child-node background with working selection and editor");
     await page.getByPlaceholder("输入任意关键字搜索").fill("same-id");
     await page.waitForFunction(() => document.querySelectorAll(".nodes-table tr.ant-table-row").length === 2);
+    await page.getByRole("button", { name: "编辑排序", exact: true }).click();
+    await page.getByRole("columnheader", { name: "排序", exact: true }).waitFor({ state: "visible" });
     const vmessRow = page.locator(".nodes-table tr.ant-table-row").filter({ hasText: "same-id-vmess" });
     const vmessHandle = vmessRow.getByRole("button", { name: "拖动排序 same-id-vmess" });
+    await vmessHandle.waitFor({ state: "visible" });
     const trojanRow = page.locator(".nodes-table tr.ant-table-row").filter({ hasText: "same-id-trojan" });
     await vmessHandle.waitFor({ state: "visible" });
     await vmessHandle.dragTo(trojanRow);
@@ -255,6 +260,8 @@ try {
     await initialSortResponse;
     await page.getByText("排序已保存", { exact: true }).waitFor({ state: "visible" });
     await page.locator(".ant-spin-spinning").waitFor({ state: "detached" });
+    await page.getByRole("columnheader", { name: "排序", exact: true }).waitFor({ state: "detached" });
+    assert.equal(await page.locator(".nodes-table .node-drag-handle").count(), 0, "sorting handles should disappear after saving");
     const sortCall = apiCalls.filter((call) => call.path === "/server/manage/sort").at(-1);
     assert.ok(sortCall?.data.vmess?.[41] && sortCall?.data.trojan?.[41], "sort payload must keep protocol/id pairs separate");
     assert.ok(sortCall.data.vless?.[42], "filtered/hidden node must remain in the submitted sort payload");
@@ -270,6 +277,8 @@ try {
         if (sortRequests === 1) await route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ message: "fixture sort failure" }) });
         else await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: true }) });
     });
+    await page.getByRole("button", { name: "编辑排序", exact: true }).click();
+    await page.getByRole("columnheader", { name: "排序", exact: true }).waitFor({ state: "visible" });
     const firstHandle = page.locator(".nodes-table tr.ant-table-row .node-drag-handle").first();
     const secondRow = page.locator(".nodes-table tr.ant-table-row").nth(1);
     await firstHandle.dragTo(secondRow);
@@ -288,6 +297,62 @@ try {
     const retriedPayload = interceptedSortPayloads[1];
     assert.equal(interceptedSortPayloads.length, 2, "failure and retry should both reach the intercepting route");
     assert.deepEqual(retriedPayload, failedPayload, "retry must submit the preserved pending order");
+    await page.getByRole("columnheader", { name: "排序", exact: true }).waitFor({ state: "detached" });
+    assert.equal(await page.locator(".nodes-table .node-drag-handle").count(), 0, "sorting handles should disappear after retry succeeds");
+
+    // Adding a patch field keeps the batch editor mounted and preserves values.
+    await page.getByPlaceholder("输入任意关键字搜索").fill("");
+    const batchParent = page.locator(".nodes-table tr.ant-table-row").filter({ hasText: "same-id-vmess" });
+    const batchChild = page.locator(".nodes-table tr.ant-table-row").filter({ hasText: "child-vmess" });
+    await batchParent.getByRole("checkbox").check();
+    await batchChild.getByRole("checkbox").check();
+    await page.getByRole("button", { name: "批量编辑", exact: true }).click();
+    const batchDrawer = page.locator(".ant-drawer-open:visible").filter({ has: page.locator(".original-editor-drawer") }).last();
+    await batchDrawer.waitFor({ state: "visible" });
+    await batchDrawer.locator(".ant-drawer-content-wrapper").evaluate(async (wrapper) => {
+        await Promise.all(wrapper.getAnimations().map((animation) => animation.finished.catch(() => {})));
+    });
+    const rateField = batchDrawer.getByLabel("流量倍率");
+    await rateField.click();
+    await rateField.fill("2.75");
+    await batchDrawer.evaluate((drawer) => {
+        const wrapper = drawer.querySelector(".ant-drawer-content-wrapper");
+        window.__batchDrawerNode = drawer;
+        window.__batchWrapperNode = wrapper;
+        window.__batchOpenTransitions = 0;
+        wrapper.addEventListener("transitionrun", (event) => {
+            if (event.target === wrapper && event.propertyName === "transform") window.__batchOpenTransitions++;
+        });
+        wrapper.addEventListener("animationstart", (event) => {
+            if (event.target === wrapper) window.__batchOpenTransitions++;
+        });
+    });
+    const patchSelect = batchDrawer.getByRole("combobox", { name: "批量修改字段", exact: true });
+    await patchSelect.locator("xpath=ancestor::div[contains(concat(' ',normalize-space(@class),' '),' ant-select ')][1]").locator(".ant-select-selector").click();
+    await page.locator(".ant-select-dropdown:visible .ant-select-item-option-content").getByText("节点名称", { exact: true }).click();
+    const batchName = batchDrawer.getByLabel("节点名称");
+    await batchName.waitFor({ state: "visible" });
+    const editorState = await page.evaluate(() => {
+        const drawer = document.querySelector(".original-editor-drawer")?.closest(".ant-drawer-open");
+        return {
+            sameDrawer: window.__batchDrawerNode === drawer,
+            sameWrapper: window.__batchWrapperNode === drawer?.querySelector(".ant-drawer-content-wrapper"),
+            openTransitions: window.__batchOpenTransitions,
+        };
+    });
+    assert.ok(editorState.sameDrawer && editorState.sameWrapper, "batch field updates must preserve Drawer DOM identity");
+    assert.equal(editorState.openTransitions, 0, "adding a batch field must not replay the Drawer opening animation");
+    assert.equal(await rateField.inputValue(), "2.75", "existing rate value should survive adding another field");
+    await batchName.fill("batch-preserved");
+    const batchResponse = page.waitForResponse((response) => response.url().endsWith("/server/manage/batch"));
+    await batchDrawer.getByRole("button", { name: "保存", exact: true }).click();
+    await batchResponse;
+    await batchDrawer.waitFor({ state: "hidden" });
+    const batchCall = apiCalls.filter((call) => call.path === "/server/manage/batch").at(-1);
+    assert.deepEqual(Object.keys(batchCall.data.changes).sort(), ["name", "rate"], "batch payload should contain only checked fields");
+    assert.deepEqual(batchCall.data.changes, { name: "batch-preserved", rate: 2.75 });
+    assert.deepEqual(batchCall.data.nodes.map((node) => node.type + ":" + node.id).sort(), ["vmess:41", "vmess:43"]);
+    report.passed.push("batch editor field expansion preserves drawer/value and submits only selected fields");
     report.passed.push("node drag ordering, mixed protocol IDs, hidden row retention, failed sort retry");
 
     console.log("admin-ui-controls: all fixture browser checks passed");

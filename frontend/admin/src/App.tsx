@@ -117,13 +117,17 @@ const icons: Record<string, React.ReactNode> = {
     "/queue": <OriginalIcon name="si-bar-chart" />,
 };
 function usePath() {
-    const [path, setPath] = useState(location.hash.slice(1) || "/dashboard");
+    const [state, setState] = useState({ path: location.hash.slice(1) || "/dashboard", revision: 0 });
     useEffect(() => {
-        const update = () => setPath(location.hash.slice(1) || "/dashboard");
+        const update = () => setState((current) => ({ path: location.hash.slice(1) || "/dashboard", revision: current.revision + 1 }));
         window.addEventListener("hashchange", update);
-        return () => window.removeEventListener("hashchange", update);
+        window.addEventListener("admin-link-refresh", update);
+        return () => {
+            window.removeEventListener("hashchange", update);
+            window.removeEventListener("admin-link-refresh", update);
+        };
     }, []);
-    return path;
+    return state;
 }
 function Login({ done }: { done: () => void }) {
     const [passkeyEnabled, setPasskeyEnabled] = useState(false);
@@ -301,7 +305,8 @@ function Shell({
     appearance: UiTheme;
     changeAppearance: (value: UiTheme | null) => void;
 }) {
-    const path = usePath();
+    const { path, revision } = usePath();
+    const route = path.split("?")[0];
     const { message } = AntApp.useApp();
     const [authenticated, setAuth] = useState(!!session.get()),
         [checking, setChecking] = useState(!!session.get()),
@@ -332,11 +337,11 @@ function Shell({
             window.removeEventListener("admin-session-expired", expired);
         };
     }, [authenticated]);
-    const selected = path.startsWith("/ticket/")
+    const selected = route.startsWith("/ticket/")
         ? "/ticket"
-        : path === "/"
+        : route === "/"
           ? "/dashboard"
-          : path;
+          : route;
     const name =
         sections
             .flatMap((s) => s.items)
@@ -379,8 +384,8 @@ function Shell({
                 page = (
                     <Tickets
                         id={
-                            path.startsWith("/ticket/")
-                                ? path.split("/")[2]
+                            route.startsWith("/ticket/")
+                                ? route.split("/")[2]
                                 : undefined
                         }
                     />
@@ -524,7 +529,7 @@ function Shell({
                     </Space>
                 </Layout.Header>
                 <Layout.Content className="admin-content">
-                    <PageErrorBoundary key={path}>{page}</PageErrorBoundary>
+                    <PageErrorBoundary key={path + ":" + revision}>{page}</PageErrorBoundary>
                 </Layout.Content>
             </Layout>
             <Drawer

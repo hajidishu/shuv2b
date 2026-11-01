@@ -16,7 +16,7 @@ import {
     UsergroupAddOutlined,
     SolutionOutlined,
 } from "@ant-design/icons";
-import { Dropdown, Drawer, Tooltip } from "antd";
+import { Dropdown, Drawer, Popover, Tooltip } from "antd";
 import { useRef, useState } from "react";
 import dayjs from "dayjs";
 import { Badge, Button, Input, Space, Table, Tag, Tabs } from "antd";
@@ -435,7 +435,8 @@ export default function Users() {
                                 const s = Array.isArray(sorting)
                                     ? sorting[0]
                                     : sorting;
-                                if (s.field && s.order)
+                                if (s.field && s.order) {
+                                    setCurrent(1);
                                     setSort({
                                         sort: String(s.columnKey ?? s.field),
                                         sort_type:
@@ -443,6 +444,7 @@ export default function Users() {
                                                 ? "ASC"
                                                 : "DESC",
                                     });
+                                }
                             }}
                             onRow={(row) => ({
                                 onContextMenu: (event) => {
@@ -572,18 +574,38 @@ export default function Users() {
                                 },
                                 {
                                     title: "设备数",
-                                    dataIndex: "device_limit",
-                                    sorter: (a, b) =>
-                                        Number(a.alive_ip ?? 0) -
-                                        Number(b.alive_ip ?? 0),
-                                    render: (_, r) => (
-                                        <span title={r.ips || undefined}>
+                                    dataIndex: "alive_ip",
+                                    sorter: true,
+                                    render: (_, r) => {
+                                        const entries = String(r.ips ?? "").split(/,\s*/).filter(Boolean);
+                                        const addresses = [...new Set(entries.map((entry) => entry.split("_")[0]))];
+                                        const count = <span className="user-device-count" tabIndex={0}>
                                             {Number(r.alive_ip ?? 0)} /{" "}
                                             {r.device_limit == null
                                                 ? "∞"
                                                 : r.device_limit}
-                                        </span>
-                                    ),
+                                        </span>;
+                                        return entries.length ? <Popover
+                                            title="在线 IP"
+                                            trigger={["hover", "click"]}
+                                            content={<div className="user-device-ips">
+                                                {entries.map((entry, index) => {
+                                                    const [ip, ...node] = entry.split("_");
+                                                    return <div className="user-device-ip" key={index}>
+                                                        <code>{ip}</code>
+                                                        <span>{node.join("_")}</span>
+                                                        <Button type="text" size="small" icon={<CopyOutlined />}
+                                                            aria-label={"复制 IP " + ip}
+                                                            onClick={() => act.run(() => copyText(ip), "IP 已复制").catch(() => {})} />
+                                                    </div>;
+                                                })}
+                                                <Button size="small" icon={<CopyOutlined />}
+                                                    onClick={() => act.run(() => copyText(addresses.join("\n")), "IP 已复制").catch(() => {})}>
+                                                    复制全部 IP
+                                                </Button>
+                                            </div>}
+                                        >{count}</Popover> : count;
+                                    },
                                 },
                                 {
                                     title: "到期时间",

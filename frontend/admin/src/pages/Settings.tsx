@@ -1,4 +1,5 @@
 import { Alert } from "antd";
+import { CheckCircleOutlined, LoadingOutlined } from "@ant-design/icons";
 import { useRef } from "react";
 import { Collapse } from "antd";
 import { ErrorNotice } from "../components";
@@ -344,12 +345,14 @@ export default function Settings() {
         const payload = pending.current;
         if (!Object.keys(payload).length) return;
         pending.current = {};
-        setSaveState("保存中");
         queue.current = queue.current.then(async () => {
+            setSaveState("保存中");
+            act.message.open({ key: "settings-save", type: "loading", content: "正在保存设置", duration: 0 });
             try {
                 await api("/config/save", payload, "POST");
                 setError("");
-                setSaveState("已保存");
+                setSaveState(Object.keys(pending.current).length ? "尚未保存" : "已保存");
+                act.message.success({ key: "settings-save", content: "设置已保存", duration: 1.5 });
                 if (
                     payload.secure_path &&
                     payload.secure_path !== window.settings?.secure_path
@@ -361,6 +364,7 @@ export default function Settings() {
                 pending.current = { ...payload, ...pending.current };
                 setError((e as Error).message);
                 setSaveState("保存失败");
+                act.message.error({ key: "settings-save", content: "设置保存失败，请重试" });
             }
         });
     };
@@ -614,7 +618,11 @@ export default function Settings() {
                     )}
                 </Form>
                 <div className="settings-save-state">
-                    <span>{saveState}</span>
+                    <Space role="status" aria-live="polite">
+                        {saveState === "保存中" && <LoadingOutlined spin />}
+                        {saveState === "已保存" && <CheckCircleOutlined style={{ color: "#52c41a" }} />}
+                        <span>{saveState}</span>
+                    </Space>
                     <Space>
                         {error && (
                             <Button

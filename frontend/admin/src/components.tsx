@@ -756,6 +756,7 @@ export function Fields({
                         }
                         rules={rules}
                         className={
+                            settings && f.kind === "switch" ? "settings-switch-field" :
                             ["json", "textarea", "html"].includes(f.kind ?? "")
                                 ? "full-width"
                                 : ""

@@ -3,6 +3,7 @@
     PlusOutlined,
     QuestionCircleOutlined,
     UserOutlined,
+    MenuOutlined,
 } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import {
@@ -71,6 +72,7 @@ export default function Nodes() {
     const [sorting, setSorting] = useState(false);
     const [dirty, setDirty] = useState(false);
     const [drag, setDrag] = useState<string>();
+    const [dragOver, setDragOver] = useState<string>();
     const all: Row[] = Array.isArray(resource.data)
         ? resource.data
         : (Object.values(resource.data ?? {}).flat() as Row[]);
@@ -161,6 +163,7 @@ export default function Nodes() {
         [list[i], list[j]] = [list[j], list[i]];
         setOrdered(list);
         setDirty(true);
+        setSorting(true);
     };
     const saveSort = async () => {
         const payload: Row = Object.fromEntries(
@@ -317,6 +320,7 @@ export default function Nodes() {
                         setGroupFilter((filters.group_id ?? []).map(String));
                     }}
                     rowKey={nodeKey}
+                    className="nodes-table"
                     dataSource={filtered}
                     scroll={{ x: 1300 }}
                     pagination={{ defaultPageSize: 20, showSizeChanger: true }}
@@ -326,11 +330,18 @@ export default function Nodes() {
                         preserveSelectedRowKeys: true,
                     }}
                     onRow={(n) => ({
-                        draggable: sorting,
-                        onDragStart: () => setDrag(nodeKey(n)),
-                        onDragOver: (e) => e.preventDefault(),
-                        onDrop: () => {
-                            if (!drag || drag === nodeKey(n)) return;
+                        className: dragOver === nodeKey(n) ? "node-sort-drop-target" : undefined,
+                        onDragOver: (e) => {
+                            if (!drag || action.busy) return;
+                            e.preventDefault();
+                            e.dataTransfer.dropEffect = "move";
+                            setDragOver(nodeKey(n));
+                        },
+                        onDrop: (e) => {
+                            e.preventDefault();
+                            setDrag(undefined);
+                            setDragOver(undefined);
+                            if (!drag || drag === nodeKey(n) || action.busy) return;
                             const list = [...ordered];
                             const from = list.findIndex(
                                     (x) => nodeKey(x) === drag,
@@ -338,12 +349,39 @@ export default function Nodes() {
                                 to = list.findIndex(
                                     (x) => nodeKey(x) === nodeKey(n),
                                 );
+                            if (from < 0 || to < 0) return;
                             list.splice(to, 0, list.splice(from, 1)[0]);
                             setOrdered(list);
                             setDirty(true);
                         },
                     })}
                     columns={[
+                        {
+                            title: "排序",
+                            key: "sort-handle",
+                            width: 64,
+                            render: (_, n) => (
+                                <span className="node-drag-handle" role="button" tabIndex={0}
+                                    aria-label={"拖动排序 " + n.name}
+                                    title="拖动调整排序；也可使用上下方向键"
+                                    draggable={!action.busy}
+                                    onDragStart={(e) => {
+                                        e.stopPropagation();
+                                        e.dataTransfer.effectAllowed = "move";
+                                        e.dataTransfer.setData("text/plain", nodeKey(n));
+                                        setDrag(nodeKey(n));
+                                        setSorting(true);
+                                    }}
+                                    onDragEnd={() => { setDrag(undefined); setDragOver(undefined); }}
+                                    onKeyDown={(e) => {
+                                        if (!action.busy && ["ArrowUp", "ArrowDown"].includes(e.key)) {
+                                            e.preventDefault();
+                                            move(n, e.key === "ArrowUp" ? -1 : 1);
+                                        }
+                                    }}
+                                ><MenuOutlined /></span>
+                            ),
+                        },
                         {
                             title: "节点ID",
                             dataIndex: "id",
@@ -536,7 +574,7 @@ export default function Nodes() {
                         {
                             title: "操作",
                             fixed: "right",
-                            width: sorting ? 190 : 90,
+                            width: 90,
                             render: (_, node) => (
                                 <Space size={8}>
                                     <Dropdown
@@ -550,22 +588,6 @@ export default function Nodes() {
                                             操作 <DownOutlined />
                                         </a>
                                     </Dropdown>
-                                    {sorting && (
-                                        <>
-                                            <Button
-                                                size="small"
-                                                onClick={() => move(node, -1)}
-                                            >
-                                                ↑
-                                            </Button>
-                                            <Button
-                                                size="small"
-                                                onClick={() => move(node, 1)}
-                                            >
-                                                ↓
-                                            </Button>
-                                        </>
-                                    )}
                                 </Space>
                             ),
                         },

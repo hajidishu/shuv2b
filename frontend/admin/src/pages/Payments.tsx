@@ -147,9 +147,9 @@ export default function Payments() {
                             align: "right",
                             render: (_, r, i) => (
                                 <span className="inline-row-actions">
-                                    <a onClick={() => open(r)}>编辑</a>
+                                    <a className="row-menu-link" onClick={() => open(r)}>编辑</a>
                                     <Divider type="vertical" />
-                                    <a onClick={() => remove(r)}>删除</a>
+                                    <a className="row-menu-link" onClick={() => remove(r)}>删除</a>
                                     <Divider type="vertical" />
                                     <Dropdown
                                         menu={{

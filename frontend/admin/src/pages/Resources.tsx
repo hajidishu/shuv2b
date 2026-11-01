@@ -394,7 +394,7 @@ export default function Resources({ path }: { path: string }) {
                         {
                             title: "操作",
                             fixed: "right",
-                            width: 90,
+                            width: schema.sort ? 130 : 110,
                             render: (_, r) => {
                                 const remove = () =>
                                     act.modal.confirm({
@@ -430,7 +430,7 @@ export default function Resources({ path }: { path: string }) {
                                 const sortingMenu = sortingItems.length > 0;
                                 if (legacyInline)
                                     return (
-                                        <Space size={6}>
+                                        <Space className="inline-row-actions" size={6}>
                                             <a onClick={edit}>编辑</a>
                                             <span aria-hidden="true">|</span>
                                             <a onClick={remove}>删除</a>

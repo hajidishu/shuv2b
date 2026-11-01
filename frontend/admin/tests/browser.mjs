@@ -282,20 +282,48 @@ try {
                             input = el
                                 .querySelector(".ant-form-item-control")
                                 .getBoundingClientRect();
+                        const isSwitch = !!el.closest(".settings-switch-field"),
+                            switchControl = el.querySelector(".ant-switch"),
+                            switchX = switchControl
+                                ? switchControl.getBoundingClientRect().x
+                                : null,
+                            switchRight = switchControl
+                                ? switchControl.getBoundingClientRect().right
+                                : null,
+                            card = el.closest(".ant-card").getBoundingClientRect();
                         return {
                             labelX: label.x,
                             labelRight: label.right,
                             inputX: input.x,
                             inputRight: input.right,
+                            isSwitch,
+                            switchX,
+                            switchRight,
+                            cardLeft: card.left,
+                            cardRight: card.right,
                         };
                     }),
                 );
             assert.ok(rows.length > 4);
+            const switches = rows.filter((r) => r.isSwitch),
+                inputs = rows.filter((r) => !r.isSwitch);
+            assert.ok(switches.length > 0, "settings layout must include switch fields");
+            assert.ok(inputs.length > 0, "settings layout must include ordinary input fields");
             assert.ok(
-                rows.every(
-                    (r) => r.inputX > r.labelRight && r.inputRight < 1417,
+                inputs.every(
+                    (r) => r.inputX > r.labelRight && r.inputRight < 1417 &&
+                        r.inputX >= r.cardLeft && r.inputRight <= r.cardRight,
                 ),
-                JSON.stringify(rows),
+                "ordinary settings inputs should remain in the right column and inside the card: " + JSON.stringify(inputs),
+            );
+            assert.ok(
+                switches.every(
+                    (r) => Math.abs(r.inputX - r.labelX) < 1 &&
+                        Math.abs(r.switchX - r.labelX) < 1 &&
+                        r.inputX >= r.cardLeft && r.inputRight <= r.cardRight &&
+                        r.switchX >= r.cardLeft && r.switchRight <= r.cardRight,
+                ),
+                "settings switch controls should align with the label at the left edge and remain inside the card: " + JSON.stringify(switches),
             );
             await writeFile(
                 resolve(out, live ? "live-layout.json" : "layout.json"),

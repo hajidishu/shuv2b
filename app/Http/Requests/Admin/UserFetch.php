@@ -16,7 +16,7 @@ class UserFetch extends FormRequest
         return [
             'current' => 'nullable|integer|min:1',
             'pageSize' => 'nullable|integer|min:10|max:500',
-            'sort' => 'nullable|in:id,email,banned,plan_id,group_id,created_at,updated_at,expired_at,subscribe_count,balance,commission_balance,commission_rate,discount,transfer_enable,u,d,total_used,device_limit,speed_limit,last_login_at',
+            'sort' => 'nullable|in:id,email,banned,plan_id,group_id,created_at,updated_at,expired_at,subscribe_count,alive_ip,balance,commission_balance,commission_rate,discount,transfer_enable,u,d,total_used,device_limit,speed_limit,last_login_at',
             'sort_type' => 'nullable|in:ASC,DESC',
             'filter' => 'nullable|array|max:30',
             'ids' => 'nullable|array|min:1|max:500',

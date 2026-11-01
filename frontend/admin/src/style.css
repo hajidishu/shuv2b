@@ -287,6 +287,51 @@
 .inline-row-actions {
     white-space: nowrap;
 }
+.inline-row-actions .ant-space-item {
+    flex-shrink: 0;
+}
+.inline-row-actions a {
+    white-space: nowrap;
+}
+.user-device-count {
+    white-space: nowrap;
+}
+.user-device-ips {
+    max-width: min(520px, calc(100vw - 64px));
+    max-height: 320px;
+    overflow: auto;
+    user-select: text;
+}
+.user-device-ip {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+.user-device-ip code {
+    overflow-wrap: anywhere;
+}
+.user-device-ip > span {
+    color: #8c8c8c;
+    white-space: nowrap;
+}
+.user-device-ip .ant-btn {
+    flex-shrink: 0;
+}
+.node-drag-handle {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px;
+    color: #8c8c8c;
+    cursor: grab;
+    touch-action: none;
+}
+.node-drag-handle:active {
+    cursor: grabbing;
+}
+.node-sort-drop-target > td {
+    box-shadow: inset 0 2px var(--brand);
+}
 .inline-row-actions a[aria-disabled="true"] {
     color: #bfbfbf;
     cursor: default;
@@ -564,7 +609,11 @@
 }
 .settings-fields .ant-form-item-control-input-content:has(> .ant-switch) {
     display: flex;
-    justify-content: flex-end;
+    justify-content: flex-start;
+}
+.settings-fields .settings-switch-field .ant-form-item-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
 }
 .settings-save-state {
     display: flex;
@@ -644,6 +693,7 @@ a {
     height: 52px;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 10px;
     padding: 0 18px;
     background: color-mix(in srgb, var(--brand) 90%, #000);
@@ -657,9 +707,17 @@ a {
     width: 30px;
     height: 30px;
     object-fit: contain;
+    flex-shrink: 0;
 }
 .brand span {
-    white-space: normal;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: center;
+}
+.admin-sidebar.ant-layout-sider-collapsed .brand {
+    padding: 0;
 }
 .sidebar-menu {
     border-inline-end: 0 !important;

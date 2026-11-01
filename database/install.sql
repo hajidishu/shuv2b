@@ -573,6 +573,8 @@ CREATE TABLE `v2_user` (
                            `id` int(11) NOT NULL AUTO_INCREMENT,
                            `invite_user_id` int(11) DEFAULT NULL,
                            `telegram_id` bigint(20) DEFAULT NULL,
+                           `telegram_admin_id` bigint(20) DEFAULT NULL,
+                           `telegram_admin_version` bigint(20) unsigned NOT NULL DEFAULT '0',
                            `email` varchar(64) NOT NULL,
                            `password` varchar(64) NOT NULL,
                            `password_algo` char(10) DEFAULT NULL,
@@ -606,7 +608,8 @@ CREATE TABLE `v2_user` (
                            `updated_at` int(11) NOT NULL,
                            PRIMARY KEY (`id`),
                            UNIQUE KEY `email` (`email`),
-                           UNIQUE KEY `token` (`token`)
+                           UNIQUE KEY `token` (`token`),
+                           UNIQUE KEY `v2_user_telegram_admin_id_unique` (`telegram_admin_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 

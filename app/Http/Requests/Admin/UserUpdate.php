@@ -25,6 +25,7 @@ class UserUpdate extends FormRequest
             'discount' => 'nullable|integer|min:0|max:100',
             'is_admin' => 'required|in:0,1',
             'is_staff' => 'required|in:0,1',
+            'telegram_admin_id' => ['nullable', 'regex:/\A[1-9][0-9]{0,15}\z/', 'integer', 'max:4503599627370495'],
             'u' => 'integer',
             'd' => 'integer',
             'balance' => 'integer',

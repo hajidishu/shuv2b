@@ -14,6 +14,12 @@ class TelegramController extends Controller
 
     public function __construct(Request $request)
     {
+        $this->assertWebhookAuthorization($request);
+        $this->telegramService = new TelegramService();
+    }
+
+    private function assertWebhookAuthorization(Request $request): void
+    {
         $token = config('v2board.telegram_bot_token');
         $accessToken = $request->input('access_token');
         // Never turn an unconfigured bot into a publicly predictable credential.
@@ -22,12 +28,15 @@ class TelegramController extends Controller
             !hash_equals(md5($token), $accessToken)) {
             abort(401);
         }
-
-        $this->telegramService = new TelegramService();
     }
 
     public function webhook(Request $request)
     {
+        // A long-lived worker may reuse the route/controller. Authenticate and
+        // reset request state on every update, not only during construction.
+        $this->msg = null;
+        $this->assertWebhookAuthorization($request);
+        $this->telegramService = new TelegramService();
         $this->formatMessage($request->input());
         $this->formatChatJoinRequest($request->input());
         $this->handle();

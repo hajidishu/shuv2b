@@ -75,17 +75,14 @@ class PaymentSettlementService
 
     private function amountMatches(array $payment, $attempt, Payment $gateway, $gross)
     {
+        $method = $attempt ? $attempt->method : $gateway->payment;
+        if (strpos($method, 'Stripe') === 0 && (!$attempt || !array_key_exists('amount_minor', $payment))) return false;
         if (array_key_exists('amount_minor', $payment)) {
             $amount = filter_var($payment['amount_minor'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
             $currency = $payment['currency'] ?? null;
             if ($amount === false || !is_string($currency) || !preg_match('/\A[a-zA-Z]{3}\z/', $currency)) return false;
-            if ($attempt) return $attempt->gateway_amount_minor !== null && $amount === (int)$attempt->gateway_amount_minor &&
+            return $attempt && $attempt->gateway_amount_minor !== null && $amount === (int)$attempt->gateway_amount_minor &&
                 strtolower($currency) === strtolower((string)$attempt->gateway_currency);
-            // Pre-upgrade foreign Stripe orders lack a frozen FX quote. Preserve their signed
-            // channel/order binding; all new checkouts have an exact minor-unit snapshot above.
-            $configured = $gateway->config['currency'] ?? '';
-            if (!is_string($configured) || strtolower($currency) !== strtolower($configured)) return false;
-            return strtolower($currency) !== 'cny' || $amount === $gross;
         }
         if (!array_key_exists('amount', $payment)) return true; // Legacy signature-only adapters.
         $amount = Money::toCents($payment['amount']);

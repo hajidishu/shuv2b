@@ -8,6 +8,7 @@ namespace App\Payments;
 use Stripe\Source;
 use Stripe\Stripe;
 use App\Utils\StripeCurrency;
+use App\Services\PaymentAttemptService;
 
 class StripeWepay {
     public function __construct($config)
@@ -94,11 +95,12 @@ class StripeWepay {
         switch ($event->type) {
             case 'source.chargeable':
                 $object = $event->data->object;
+                $attempt = PaymentAttemptService::stripeSourceAttempt($object, 'StripeWepay', $this->config['id']);
                 \Stripe\Charge::create([
-                    'amount' => $object->amount,
-                    'currency' => $object->currency,
+                    'amount' => (int)$attempt->gateway_amount_minor,
+                    'currency' => $attempt->gateway_currency,
                     'source' => $object->id,
-                    'metadata' => json_decode($object->metadata, true)
+                    'metadata' => ['user_id' => $attempt->user_id, 'out_trade_no' => $attempt->trade_no]
                 ], ['idempotency_key' => 'stripe-source-charge:' . $object->id]);
                 break;
             case 'charge.succeeded':

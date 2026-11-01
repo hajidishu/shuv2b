@@ -56,4 +56,49 @@ class TelegramWebhookAuthTest extends TestCase
         config(['v2board.telegram_bot_token' => 'fixture-new-bot-token']);
         $this->rejected(md5('fixture-old-bot-token'));
     }
+
+    private function updateRequest(string $token, bool $withMessage = true): Request
+    {
+        $data = $withMessage ? ['message' => ['text' => '/traffic', 'message_id' => 1, 'chat' => ['id' => 12345, 'type' => 'private']]] : [];
+        return Request::create('/api/v1/guest/telegram/webhook?access_token=' . md5($token), 'POST', $data);
+    }
+
+    private function reusedController(Request $request)
+    {
+        return new class($request) extends TelegramController {
+            public $received;
+            public function handle() { $this->received = $this->msg; }
+        };
+    }
+
+    public function testReusedControllerRejectsAnUnauthenticatedSubsequentRequest(): void
+    {
+        config(['v2board.telegram_bot_token' => 'fixture-current-bot-token']);
+        $request = $this->updateRequest('fixture-current-bot-token');
+        $controller = $this->reusedController($request); $controller->webhook($request);
+        $this->assertSame(12345, $controller->received->chat_id);
+        $this->expectException(HttpException::class);
+        $controller->webhook($this->updateRequest('fixture-invalid-token'));
+    }
+
+    public function testReusedControllerRechecksRotatedBotToken(): void
+    {
+        config(['v2board.telegram_bot_token' => 'fixture-old-bot-token']);
+        $controller = $this->reusedController($this->updateRequest('fixture-old-bot-token'));
+        config(['v2board.telegram_bot_token' => 'fixture-new-bot-token']);
+        try { $controller->webhook($this->updateRequest('fixture-old-bot-token')); $this->fail('Cached controller accepted a revoked credential'); }
+        catch (HttpException $error) { $this->assertSame(401, $error->getStatusCode()); }
+        $controller->webhook($this->updateRequest('fixture-new-bot-token'));
+        $this->assertSame(12345, $controller->received->chat_id);
+    }
+
+    public function testReusedControllerDoesNotReplayPreviousMessageOnEmptyUpdate(): void
+    {
+        config(['v2board.telegram_bot_token' => 'fixture-current-bot-token']);
+        $request = $this->updateRequest('fixture-current-bot-token');
+        $controller = $this->reusedController($request); $controller->webhook($request);
+        $this->assertSame('/traffic', $controller->received->command);
+        $controller->webhook($this->updateRequest('fixture-current-bot-token', false));
+        $this->assertNull($controller->received);
+    }
 }

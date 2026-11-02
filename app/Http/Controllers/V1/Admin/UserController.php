@@ -157,17 +157,13 @@ class UserController extends Controller
     {
         return DB::transaction(function () use ($request) {
             $params = $request->validated();
+            unset($params['telegram_admin_id']);
             $user = User::where('id', $request->input('id'))->lockForUpdate()->first();
             if (!$user) {
                 abort(500, '用户不存在');
             }
-            if ((!($params['is_admin'] ?? $user->is_admin) && !($params['is_staff'] ?? $user->is_staff)) || (int)($params['banned'] ?? $user->banned) === 1) {
+            if (!($params['is_admin'] ?? $user->is_admin) || (int)($params['banned'] ?? $user->banned) === 1) {
                 $params['telegram_admin_id'] = null;
-            } elseif (array_key_exists('telegram_admin_id', $params)) {
-                $params['telegram_admin_id'] = $params['telegram_admin_id'] === '' ? null : $params['telegram_admin_id'];
-                if ($params['telegram_admin_id'] !== null && User::where('telegram_admin_id', $params['telegram_admin_id'])->where('id', '!=', $user->id)->exists()) {
-                    throw \Illuminate\Validation\ValidationException::withMessages(['telegram_admin_id' => '该 Telegram 管理账号 ID 已被使用']);
-                }
             }
             if ((array_key_exists('telegram_admin_id', $params) && (string)$params['telegram_admin_id'] !== (string)$user->telegram_admin_id) ||
                 (int)($params['is_admin'] ?? $user->is_admin) !== (int)$user->is_admin ||

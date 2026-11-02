@@ -4,18 +4,21 @@ import {
     DownOutlined,
     PlusOutlined,
     QuestionCircleOutlined,
-    MenuOutlined,
 } from "@ant-design/icons";
 import { Button, Divider, Dropdown, Space, Switch, Table, Tooltip } from "antd";
 import { api } from "../api";
 import { DataCard, Page, useAction, useResource } from "../components";
 import type { Row } from "../types";
+import { useTableSort, SortButtons } from "../TableSort";
 export default function Payments() {
     const resource = useResource("/payment/fetch");
 
     const act = useAction();
     const [editing, setEditing] = useState<Row>();
-    const [dragging, setDragging] = useState<number>();
+    const dragSort = useTableSort(resource.data, async (rows) => {
+        await api("/payment/sort", { ids: rows.map((row) => row.id) }, "POST");
+        resource.reload();
+    });
     const remove = (row: Row) =>
         act.modal.confirm({
             title: "删除支付方式 " + row.name + "？",
@@ -28,9 +31,13 @@ export default function Payments() {
 
     const open = (row: Row) => setEditing(row);
     const sort = async (i: number, delta: number) => {
-        const rows = [...resource.data],
+        const rows = [...dragSort.rows],
             j = i + delta;
         if (j < 0 || j >= rows.length) return;
+        if (dragSort.editing) {
+            dragSort.move(String(rows[i].id), String(rows[j].id));
+            return;
+        }
         [rows[i], rows[j]] = [rows[j], rows[i]];
         await api("/payment/sort", { ids: rows.map((r: Row) => r.id) }, "POST");
         resource.reload();
@@ -48,58 +55,22 @@ export default function Payments() {
                         >
                             添加支付方式
                         </Button>
+                        <SortButtons sorter={dragSort} />
                     </Space>
                 </div>
                 <Table<Row>
+                    className="payments-table"
                     rowKey="id"
                     scroll={{ x: 800 }}
-                    dataSource={resource.data ?? []}
+                    dataSource={dragSort.rows}
                     pagination={false}
-                    onRow={(row) => ({
-                        onDragOver: (event) => event.preventDefault(),
-                        onDrop: (event) => {
-                            event.preventDefault();
-                            if (dragging == null || dragging === row.id) return;
-                            const rows = [...resource.data],
-                                from = rows.findIndex(
-                                    (item) => item.id === dragging,
-                                ),
-                                to = rows.findIndex(
-                                    (item) => item.id === row.id,
-                                );
-                            if (from < 0 || to < 0) return;
-                            rows.splice(to, 0, rows.splice(from, 1)[0]);
-                            act.run(() =>
-                                api(
-                                    "/payment/sort",
-                                    { ids: rows.map((item) => item.id) },
-                                    "POST",
-                                ).then(resource.reload),
-                            ).catch(() => {});
-                            setDragging(undefined);
-                        },
-                    })}
+                    onRow={dragSort.onRow}
                     columns={[
+                        ...(dragSort.editing ? [dragSort.column] : []),
                         {
                             title: "ID",
                             dataIndex: "id",
                             width: 90,
-                            render: (value, row) => (
-                                <span
-                                    draggable
-                                    onDragStart={() => setDragging(row.id)}
-                                    onDragEnd={() => setDragging(undefined)}
-                                    title="拖动排序"
-                                >
-                                    <MenuOutlined
-                                        style={{
-                                            cursor: "move",
-                                            marginRight: 8,
-                                        }}
-                                    />
-                                    {value}
-                                </span>
-                            ),
                         },
                         {
                             title: "启用",
@@ -147,9 +118,19 @@ export default function Payments() {
                             align: "right",
                             render: (_, r, i) => (
                                 <span className="inline-row-actions">
-                                    <a className="row-menu-link" onClick={() => open(r)}>编辑</a>
+                                    <a
+                                        className="row-menu-link"
+                                        onClick={() => open(r)}
+                                    >
+                                        编辑
+                                    </a>
                                     <Divider type="vertical" />
-                                    <a className="row-menu-link" onClick={() => remove(r)}>删除</a>
+                                    <a
+                                        className="row-menu-link"
+                                        onClick={() => remove(r)}
+                                    >
+                                        删除
+                                    </a>
                                     <Divider type="vertical" />
                                     <Dropdown
                                         menu={{

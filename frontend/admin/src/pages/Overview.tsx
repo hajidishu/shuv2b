@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import {
     Alert,
+    App,
+    Button,
     Card,
     Col,
     Drawer,
     Row as GridRow,
     Spin,
     Statistic,
+    Space,
     Table,
     Tag,
 } from "antd";
@@ -21,7 +24,9 @@ import {
 import OriginalIcon from "../OriginalIcon";
 import Chart from "../Chart";
 import { incomeOptions, rankingOptions } from "../chart-options";
-import type { Row } from "../types";
+import type { Filter, Row } from "../types";
+import { Filters, convertFilters } from "../UserFilters";
+import { FilterOutlined, ReloadOutlined } from "@ant-design/icons";
 const names: Record<string, string> = {
     failedJobs: "失败任务",
     jobsPerMinute: "每分钟任务数",
@@ -219,9 +224,24 @@ export function Queue() {
     const status = useResource("/system/getSystemStatus");
     const masters = useResource("/system/getQueueMasters");
     const [current, setCurrent] = useState(1);
+    const [pageSize, setPageSize] = useState(20);
+    const [filters, setFilters] = useState<Filter[]>([]);
+    const [draft, setDraft] = useState<Filter[]>([]);
+    const [filterOpen, setFilterOpen] = useState(false);
+    const { message } = App.useApp();
     const logs = useResource("/system/getSystemLog", {
         current,
-        page_size: 20,
+        page_size: pageSize,
+        filter: filters.map((filter) => ({
+            ...filter,
+            condition:
+                (
+                    { "=": "is", "!=": "not", 模糊: "like" } as Record<
+                        string,
+                        string
+                    >
+                )[filter.condition] ?? filter.condition,
+        })),
     });
     const [detail, setDetail] = useState<Row>();
     useEffect(() => {
@@ -378,14 +398,41 @@ export function Queue() {
                 error={logs.error}
                 loading={logs.loading}
             >
+                <div className="table-toolbar">
+                    <Space>
+                        <Button
+                            aria-label="日志过滤器"
+                            icon={<FilterOutlined />}
+                            onClick={() => {
+                                setDraft(filters);
+                                setFilterOpen(true);
+                            }}
+                        >
+                            过滤器{filters.length ? ` (${filters.length})` : ""}
+                        </Button>
+                        <Button
+                            aria-label="刷新日志"
+                            icon={<ReloadOutlined />}
+                            onClick={logs.reload}
+                        >
+                            刷新
+                        </Button>
+                    </Space>
+                </div>
                 <Table<Row>
+                    className="system-log-table"
                     rowKey="id"
                     dataSource={logs.data ?? []}
                     pagination={{
                         current,
-                        pageSize: 20,
+                        pageSize,
                         total: logs.response.total,
-                        onChange: setCurrent,
+                        showSizeChanger: true,
+                        pageSizeOptions: [10, 20, 50, 100],
+                        onChange: (page, size) => {
+                            setCurrent(size !== pageSize ? 1 : page);
+                            setPageSize(size);
+                        },
                     }}
                     columns={[
                         { title: "等级", dataIndex: "level" },
@@ -397,6 +444,7 @@ export function Queue() {
                             ),
                         },
                         { title: "请求地址", dataIndex: "uri" },
+                        { title: "请求 IP", dataIndex: "ip" },
                         {
                             title: "时间",
                             dataIndex: "created_at",
@@ -405,6 +453,79 @@ export function Queue() {
                     ]}
                 />
             </DataCard>
+            <Drawer
+                title="日志过滤器"
+                className="original-filter-drawer"
+                width={360}
+                open={filterOpen}
+                onClose={() => setFilterOpen(false)}
+                footer={
+                    <Space>
+                        <Button
+                            onClick={() => {
+                                setFilters([]);
+                                setDraft([]);
+                                setCurrent(1);
+                                setFilterOpen(false);
+                            }}
+                        >
+                            重置
+                        </Button>
+                        <Button onClick={() => setFilterOpen(false)}>
+                            取消
+                        </Button>
+                        <Button
+                            type="primary"
+                            onClick={() => {
+                                try {
+                                    setFilters(convertFilters(draft));
+                                    setCurrent(1);
+                                    setFilterOpen(false);
+                                } catch (error) {
+                                    message.error((error as Error).message);
+                                }
+                            }}
+                        >
+                            检索
+                        </Button>
+                    </Space>
+                }
+            >
+                <Filters
+                    value={draft}
+                    onChange={setDraft}
+                    keys={["uri", "ip", "level", "method", "host", "title"]}
+                    fieldLabels={{
+                        uri: "请求地址 / URL Path",
+                        ip: "请求 IP",
+                        level: "日志等级",
+                        method: "请求方法",
+                        host: "请求域名",
+                        title: "日志内容",
+                    }}
+                    valueOptions={{
+                        level: [
+                            "DEBUG",
+                            "INFO",
+                            "NOTICE",
+                            "WARNING",
+                            "ERROR",
+                            "CRITICAL",
+                            "ALERT",
+                            "EMERGENCY",
+                        ].map((value) => ({ label: value, value })),
+                        method: [
+                            "GET",
+                            "POST",
+                            "PUT",
+                            "PATCH",
+                            "DELETE",
+                            "HEAD",
+                            "OPTIONS",
+                        ].map((value) => ({ label: value, value })),
+                    }}
+                />
+            </Drawer>
             {detail && (
                 <Drawer
                     title="日志详情"

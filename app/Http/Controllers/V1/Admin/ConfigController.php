@@ -166,6 +166,7 @@ class ConfigController extends Controller
             'telegram' => [
                 'telegram_bot_enable' => config('v2board.telegram_bot_enable', 0),
                 'telegram_bot_token' => config('v2board.telegram_bot_token'),
+                'telegram_bot_admin_id' => TelegramService::managementUsers()->value('telegram_admin_id'),
                 'telegram_webhook_domain' => config('v2board.telegram_webhook_domain'),
                 'telegram_discuss_link' => config('v2board.telegram_discuss_link')
             ],
@@ -221,6 +222,11 @@ class ConfigController extends Controller
     public function save(ConfigSave $request)
     {
         $data = $request->validated();
+        if (array_key_exists('telegram_bot_admin_id', $data)) {
+            TelegramService::setManagementAccount((int)$request->user['id'], $data['telegram_bot_admin_id']);
+            unset($data['telegram_bot_admin_id']); // The single binding lives in the existing user table.
+            if (!$data) return response(['data' => true]);
+        }
         if (array_key_exists('public_plan_ids', $data)) $data['public_plan_ids'] = array_values(array_map('intval', $data['public_plan_ids'] ?? []));
         $config = config('v2board');
         if (array_key_exists('recaptcha_enable', $data) && !array_key_exists('captcha_provider', $data)) {

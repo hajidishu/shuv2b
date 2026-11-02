@@ -24,6 +24,7 @@ import type { Row } from "../types";
 import PlanEditor from "./PlanEditor";
 import CardEditor from "./CardEditor";
 import { routeQuery, ResourceLink } from "../navigation";
+import { useTableSort, SortButtons } from "../TableSort";
 
 const routeActions: Record<string, string> = {
     block: "禁止访问(域名目标)",
@@ -47,8 +48,20 @@ export default function Resources({ path }: { path: string }) {
         current: page,
         pageSize: size,
     });
-    const linkedId = ["/plan", "/server/group", "/server/route"].includes(path) ? routeQuery(path).get("id") : null;
-    const rows: Row[] = (Array.isArray(resource.data) ? resource.data : []).filter((row: Row) => !linkedId || String(row.id) === linkedId);
+    const linkedId = ["/plan", "/server/group", "/server/route"].includes(path)
+        ? routeQuery(path).get("id")
+        : null;
+    const dragSort = useTableSort(resource.data, async (ordered) => {
+        await api(
+            schema.base + "/sort",
+            { [schema.sort!]: ordered.map((row) => row.id) },
+            "POST",
+        );
+        resource.reload();
+    });
+    const rows: Row[] = dragSort.rows.filter(
+        (row: Row) => !linkedId || String(row.id) === linkedId,
+    );
     const editorFields = (values: Row) =>
         schema.fields
             .filter((field) => !field.when || field.when(values))
@@ -219,6 +232,10 @@ export default function Resources({ path }: { path: string }) {
         const sorted = [...rows],
             j = index + delta;
         if (j < 0 || j >= sorted.length) return;
+        if (path === "/plan" && dragSort.editing) {
+            dragSort.move(String(row.id), String(sorted[j].id));
+            return;
+        }
         [sorted[index], sorted[j]] = [sorted[j], sorted[index]];
         await api(
             schema.base + "/sort",
@@ -229,7 +246,16 @@ export default function Resources({ path }: { path: string }) {
     };
     return (
         <Page title={schema.title}>
-            {linkedId && <Tag closable onClose={() => { location.hash = path; }}>ID：{linkedId}</Tag>}
+            {linkedId && (
+                <Tag
+                    closable
+                    onClose={() => {
+                        location.hash = path;
+                    }}
+                >
+                    ID：{linkedId}
+                </Tag>
+            )}
             <DataCard
                 error={resource.error || refs.error}
                 loading={resource.loading}
@@ -244,16 +270,26 @@ export default function Resources({ path }: { path: string }) {
                         >
                             {schema.add}
                         </Button>
+                        {path === "/plan" && (
+                            <SortButtons
+                                sorter={dragSort}
+                                disabled={!!linkedId}
+                            />
+                        )}
                     </Space>
                 </div>
                 <Table<Row>
+                    className={path === "/plan" ? "plans-table" : undefined}
                     rowKey="id"
                     scroll={{ x: schema.base === "/plan" ? 1400 : 1000 }}
                     dataSource={rows}
+                    onRow={path === "/plan" ? dragSort.onRow : undefined}
                     pagination={{
                         current: page,
                         pageSize: size,
-                        total: linkedId ? rows.length : resource.response.total ?? rows.length,
+                        total: linkedId
+                            ? rows.length
+                            : (resource.response.total ?? rows.length),
                         onChange: (p, s) => {
                             setPage(p);
                             setSize(s);
@@ -261,6 +297,9 @@ export default function Resources({ path }: { path: string }) {
                         showSizeChanger: true,
                     }}
                     columns={[
+                        ...(path === "/plan" && dragSort.editing
+                            ? [dragSort.column]
+                            : []),
                         ...schema.columns.map((key) => ({
                             title:
                                 schema.base === "/plan" && key === "show"
@@ -327,11 +366,16 @@ export default function Resources({ path }: { path: string }) {
                                     )[v];
                                 if (key === "group_name")
                                     return (
-                                        <ResourceLink route="/server/group" id={r.group_id}>{refs.groups.find(
-                                            (group: Row) =>
-                                                Number(group.id) ===
-                                                Number(r.group_id),
-                                        )?.name ?? "—"}</ResourceLink>
+                                        <ResourceLink
+                                            route="/server/group"
+                                            id={r.group_id}
+                                        >
+                                            {refs.groups.find(
+                                                (group: Row) =>
+                                                    Number(group.id) ===
+                                                    Number(r.group_id),
+                                            )?.name ?? "—"}
+                                        </ResourceLink>
                                     );
                                 if (key === "match_count") {
                                     const count = Array.isArray(r.match)
@@ -381,10 +425,13 @@ export default function Resources({ path }: { path: string }) {
                                 }
                                 if (key === "plan_id") {
                                     return (
-                                        <ResourceLink route="/plan" id={v}>{refs.plans.find(
-                                            (plan: Row) =>
-                                                Number(plan.id) === Number(v),
-                                        )?.name ?? "—"}</ResourceLink>
+                                        <ResourceLink route="/plan" id={v}>
+                                            {refs.plans.find(
+                                                (plan: Row) =>
+                                                    Number(plan.id) ===
+                                                    Number(v),
+                                            )?.name ?? "—"}
+                                        </ResourceLink>
                                     );
                                 }
                                 if (Array.isArray(v))
@@ -433,7 +480,10 @@ export default function Resources({ path }: { path: string }) {
                                 const sortingMenu = sortingItems.length > 0;
                                 if (legacyInline)
                                     return (
-                                        <Space className="inline-row-actions" size={6}>
+                                        <Space
+                                            className="inline-row-actions"
+                                            size={6}
+                                        >
                                             <a onClick={edit}>编辑</a>
                                             <span aria-hidden="true">|</span>
                                             <a onClick={remove}>删除</a>

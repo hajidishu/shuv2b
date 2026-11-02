@@ -32,6 +32,7 @@ export async function startFixture({ visual = false, settings = {} } = {}) {
         payment: [],
         ticket: [],
         "subscribe-audit": [],
+        logs: [],
     };
     let auditSettings = { retention_days: 30, max_records: 1000000 };
     if (visual)
@@ -283,6 +284,7 @@ export async function startFixture({ visual = false, settings = {} } = {}) {
             }
             if (path === "/config/fetch") return json(res, { data: config });
             if (path === "/config/save") {
+                if (data.telegram_bot_admin_id != null && (!/^[1-9][0-9]{0,15}$/.test(String(data.telegram_bot_admin_id)) || BigInt(data.telegram_bot_admin_id) > 4503599627370495n)) return json(res, { message: "管理员 TG ID 必须为单个数字用户 ID" }, 422);
                 for (const values of Object.values(config))
                     for (const key of Object.keys(values))
                         if (key in data) values[key] = data[key];
@@ -429,6 +431,17 @@ export async function startFixture({ visual = false, settings = {} } = {}) {
                         },
                     ],
                 });
+            if (path === "/system/getSystemLog") {
+                const query = Object.fromEntries(url.searchParams);
+                let rows = [...store.logs].sort((a, b) => b.created_at - a.created_at || b.id - a.id);
+                const indexes = Object.keys(query).map((key) => key.match(/^filter\[(\d+)\]\[key\]$/)?.[1]).filter((key) => key !== undefined);
+                for (const index of indexes) {
+                    const key = query[`filter[${index}][key]`], condition = query[`filter[${index}][condition]`], value = String(query[`filter[${index}][value]`]);
+                    rows = rows.filter((row) => condition === "like" ? String(row[key]).includes(value) : condition === "not" ? String(row[key]) !== value : String(row[key]) === value);
+                }
+                const size = Number(query.page_size || 10), page = Number(query.current || 1);
+                return json(res, { data: rows.slice((page - 1) * size, page * size), total: rows.length });
+            }
             if (path.startsWith("/system/"))
                 return json(res, {
                     data:
@@ -533,6 +546,12 @@ export async function startFixture({ visual = false, settings = {} } = {}) {
             const list = store[name];
             if (!list) return json(res, { data: true });
             const operation = path.split("/").at(-1);
+            if (operation === "sort" && ["plans", "payment"].includes(name)) {
+                const ids = data.plan_ids ?? data.ids;
+                if (!Array.isArray(ids)) return json(res, { message: "Missing order" }, 422);
+                list.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
+                return json(res, { data: true });
+            }
             const match = (row) => {
                 if (data.ids && !data.ids.includes(row.id)) return false;
                 for (

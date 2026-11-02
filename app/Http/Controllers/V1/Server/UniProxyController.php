@@ -148,8 +148,8 @@ class UniProxyController extends Controller
 
         $cacheKeys = [];
         $keyMap = [];
-        foreach ($data as $uid => $_) {
-            if (!is_numeric($uid)) continue;
+        foreach ($data as $uid => $ips) {
+            if (!is_numeric($uid) || !is_array($ips)) continue;
             $key = 'ALIVE_IP_USER_' . $uid;
             $cacheKeys[] = $key;
             $keyMap[$uid] = $key;

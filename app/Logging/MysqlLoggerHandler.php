@@ -17,8 +17,13 @@ class MysqlLoggerHandler extends AbstractProcessingHandler
     protected function write(array $record): void
     {
         try{
-            if(isset($record['context']['exception']) && is_object($record['context']['exception'])){
-                $record['context']['exception'] = (array)$record['context']['exception'];
+            if(isset($record['context']['exception']) && $record['context']['exception'] instanceof \Throwable){
+                $exception = $record['context']['exception'];
+                $record['context']['exception'] = [
+                    'class' => get_class($exception), 'message' => $exception->getMessage(),
+                    'file' => $exception->getFile(), 'line' => $exception->getLine(),
+                    'trace' => $exception->getTraceAsString(),
+                ];
             }
             $record['request_data'] = request()->all() ??[];
             $log = [
@@ -29,7 +34,7 @@ class MysqlLoggerHandler extends AbstractProcessingHandler
                 'method' => $record['request_method'] ?? request()->getMethod(),
                 'ip' => request()->getClientIp(),
                 'data' => json_encode($record['request_data']) ,
-                'context' => isset($record['context']) ? json_encode($record['context']) : '',
+                'context' => isset($record['context']) ? json_encode($record['context'], JSON_INVALID_UTF8_SUBSTITUTE) : '',
                 'created_at' => strtotime($record['datetime']),
                 'updated_at' => strtotime($record['datetime']),
             ];

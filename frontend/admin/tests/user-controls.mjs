@@ -484,7 +484,6 @@ try {
             "限速",
             "是否管理员",
             "是否员工",
-            "Telegram 管理账号 ID",
             "备注",
         ]);
         const balance = editor().getByLabel("余额", { exact: true });

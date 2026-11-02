@@ -327,7 +327,7 @@ export default function Nodes() {
                     className="nodes-table"
                     dataSource={filtered}
                     scroll={{ x: 1300 }}
-                    pagination={{ defaultPageSize: 20, showSizeChanger: true }}
+                    pagination={{ defaultPageSize: 100, showSizeChanger: true }}
                     rowSelection={{
                         selectedRowKeys: selected,
                         onChange: setSelected,

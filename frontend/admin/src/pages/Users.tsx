@@ -363,34 +363,7 @@ export default function Users() {
                 {!!selected.length && (
                     <div className="selection-toolbar">
                         <span>已选 {selected.length} 个用户</span>
-                        <Button
-                            size="small"
-                            onClick={() =>
-                                act
-                                    .run(
-                                        () =>
-                                            downloadApi(
-                                                "/user/dumpCSV",
-                                                scope,
-                                                "users.csv",
-                                            ),
-                                        "已导出",
-                                    )
-                                    .catch(() => {})
-                            }
-                        >
-                            导出选中用户
-                        </Button>
-                        <Button size="small" onClick={() => setMail(true)}>
-                            发送邮件
-                        </Button>
-                        <Button
-                            size="small"
-                            danger
-                            onClick={() => banOrDelete("ban")}
-                        >
-                            封禁选中用户
-                        </Button>
+                        <Button size="small" onClick={() => setSelected([])}>取消选择</Button>
                     </div>
                 )}
                 <Dropdown trigger={["contextMenu"]} menu={rowMenu()}>

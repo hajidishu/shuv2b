@@ -529,6 +529,13 @@
         "placeholder": "0000000000:xxxxxxxxx_xxxxxxxxxxxxxxx",
         "order": 71
     },
+    "telegram_bot_admin_id": {
+        "group": "telegram",
+        "label": "管理员 TG ID",
+        "help": "仅支持一个 Telegram 管理账号，请先私聊机器人，再填写数字用户 ID。首次设置或更换时，关联保存此设置的面板管理员；该管理员被封禁或撤权后失效。留空关闭管理员通知和工单回复。",
+        "placeholder": "请输入 Telegram 数字用户 ID",
+        "order": 71.05
+    },
     "telegram_webhook_domain": {
         "group": "telegram",
         "label": "Webhook 域名",
@@ -539,7 +546,7 @@
     "telegram_bot_enable": {
         "group": "telegram",
         "label": "开启机器人通知",
-        "help": "开启后bot将会对绑定了telegram的管理员和用户进行基础通知。",
+        "help": "开启后向配置的管理员 TG 账号和已绑定的普通用户发送相应通知。",
         "placeholder": "",
         "order": 72
     },

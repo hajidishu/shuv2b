@@ -425,21 +425,6 @@ class Singbox
 
     protected function buildHysteria($password, $server, $user)
     {
-        $parts = array_map('trim', explode(',', $server['port']));
-        $portConfig = [];
-        
-        // 检查是否为单端口
-        if (count($parts) === 1 && !str_contains($parts[0], '-')) {
-            $port = (int)$parts[0];
-        } else {
-            // 处理多端口情况 舍弃单独的端口 只保留范围端口
-            foreach ($parts as $part) {
-                if (str_contains($part, '-')) {
-                    $portConfig[] = str_replace('-', ':', $part);
-                }
-            }
-        }
-
         $array = [
             'tag' => $server['name'],
             'server' => $server['host'],
@@ -451,12 +436,7 @@ class Singbox
             ]
         ];
 
-        // 设置端口配置
-        if (isset($port)) {
-            $array['server_port'] = $port;
-        } else {
-            $array['server_ports'] = $portConfig;
-        }
+        $array = array_merge($array, HysteriaPorts::build($server['port']));
 
         if (is_null($server['version']) || $server['version'] == 1) {
             $array['auth_str'] = $password;
@@ -485,18 +465,9 @@ class Singbox
 
     protected function buildHysteria2($password, $server)
     {
-        $parts = explode(",",$server['port']);
-        $firstPart = $parts[0];
-        if (strpos($firstPart, '-') !== false) {
-            $range = explode('-', $firstPart);
-            $firstPort = $range[0];
-        } else {
-            $firstPort = $firstPart;
-        }
         $tlsSettings = $server['tls_settings'] ?? [];
         $array = [
             'server' => $server['host'],
-            'server_port' => (int)$firstPort,
             'tls' => [
                 'enabled' => true,
                 'insecure' => ($tlsSettings['allow_insecure'] ?? 0) == 1 ? true : false,
@@ -507,6 +478,7 @@ class Singbox
             'tag' => $server['name'],
             'type' => 'hysteria2'
         ];
+        $array = array_merge($array, HysteriaPorts::build($server['port']));
         if (isset($server['obfs'])) {
             $array['obfs']['type'] = $server['obfs'];
             $array['obfs']['password'] = $server['obfs_password'];

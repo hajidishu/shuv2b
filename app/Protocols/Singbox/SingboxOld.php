@@ -9,11 +9,13 @@ class SingboxOld
     private $servers;
     private $user;
     private $config;
+    private $version;
 
     public function __construct($user, $servers, array $options = null)
     {
         $this->user = $user;
         $this->servers = $servers;
+        $this->version = $options['version'] ?? null;
     }
 
     public function handle()
@@ -305,24 +307,16 @@ class SingboxOld
 
     protected function buildHysteria($password, $server, $user)
     {
-        $parts = explode(",",$server['port']);
-        $firstPart = $parts[0];
-        if (strpos($firstPart, '-') !== false) {
-            $range = explode('-', $firstPart);
-            $firstPort = $range[0];
-        } else {
-            $firstPort = $firstPart;
-        }
-
         $array = [
             'server' => $server['host'],
-            'server_port' => (int)$firstPort,
             'tls' => [
                 'enabled' => true,
                 'insecure' => $server['insecure'] ? true : false,
                 'server_name' => $server['server_name']
             ]
         ];
+        $hopping = (int)$server['version'] === 2 && $this->version !== null && version_compare($this->version, '1.11.0', '>=');
+        $array = array_merge($array, HysteriaPorts::build($server['port'], $hopping));
 
         if (is_null($server['version']) || $server['version'] == 1) {
             $array['auth_str'] = $password;
@@ -352,18 +346,9 @@ class SingboxOld
 
     protected function buildHysteria2($password, $server, $user)
     {
-        $parts = explode(",",$server['port']);
-        $firstPart = $parts[0];
-        if (strpos($firstPart, '-') !== false) {
-            $range = explode('-', $firstPart);
-            $firstPort = $range[0];
-        } else {
-            $firstPort = $firstPart;
-        }
         $tlsSettings = $server['tls_settings'] ?? [];
         $array = [
             'server' => $server['host'],
-            'server_port' => (int)$firstPort,
             'tls' => [
                 'enabled' => true,
                 'insecure' => ($tlsSettings['allow_insecure'] ?? 0) == 1 ? true : false,
@@ -373,6 +358,8 @@ class SingboxOld
             'tag' => $server['name'],
             'type' => 'hysteria2'
         ];
+        $hopping = $this->version !== null && version_compare($this->version, '1.11.0', '>=');
+        $array = array_merge($array, HysteriaPorts::build($server['port'], $hopping));
         if (isset($server['obfs'])) {
             $array['obfs']['type'] = $server['obfs'];
             $array['obfs']['password'] = $server['obfs_password'];

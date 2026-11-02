@@ -3,6 +3,8 @@ namespace App\Services;
 
 use App\Jobs\SendTelegramJob;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use \Curl\Curl;
 use Illuminate\Mail\Markdown;
 
@@ -136,11 +138,30 @@ class TelegramService {
 
     public static function managementUsers($isStaff = true)
     {
-        return User::where('banned', 0)->whereNotNull('telegram_admin_id')->where(function ($query) use ($isStaff) {
-            $query->where('is_admin', 1);
-            if ($isStaff) {
-                $query->orWhere('is_staff', 1);
-            }
+        // Ambiguous legacy bindings grant no management access until one is selected.
+        return User::where('banned', 0)->where('is_admin', 1)->whereNotNull('telegram_admin_id')
+            ->whereRaw('(SELECT COUNT(*) FROM v2_user WHERE banned = 0 AND is_admin = 1 AND telegram_admin_id IS NOT NULL) = 1');
+    }
+
+    public static function setManagementAccount(int $adminId, $telegramId): void
+    {
+        Cache::lock('TELEGRAM_ADMIN_SETTING', 15)->block(3, function () use ($adminId, $telegramId) {
+            DB::transaction(function () use ($adminId, $telegramId) {
+                $bindings = User::whereNotNull('telegram_admin_id')->orWhere('id', $adminId)->orderBy('id')->lockForUpdate()->get();
+                $admin = $bindings->firstWhere('id', $adminId);
+                if (!$admin || !$admin->is_admin || $admin->banned) abort(403, '仅有效面板管理员可设置 Telegram 管理账号');
+                $id = $telegramId === null || $telegramId === '' ? null : (string)$telegramId;
+                $existing = $bindings->filter(fn($user) => $user->telegram_admin_id !== null);
+                if ($id !== null && $existing->count() === 1 && (string)$existing->first()->telegram_admin_id === $id &&
+                    $existing->first()->is_admin && !$existing->first()->banned) return;
+                User::whereNotNull('telegram_admin_id')->update(['telegram_admin_id' => null, 'telegram_admin_version' => DB::raw('telegram_admin_version + 1')]);
+                if ($id !== null) {
+                    $admin->refresh();
+                    $admin->telegram_admin_id = $id;
+                    $admin->telegram_admin_version = (int)$admin->telegram_admin_version + 1;
+                    $admin->save();
+                }
+            });
         });
     }
 

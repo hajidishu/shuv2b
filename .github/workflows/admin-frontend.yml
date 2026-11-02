@@ -57,12 +57,15 @@ jobs:
         run: |
           export ADMIN_BROWSER_PATH="$(node -e 'console.log(require("playwright").chromium.executablePath())')"
           node tests/user-controls.mjs
+          node tests/user-action-scope.mjs
           node tests/admin-ui-controls.mjs
           node tests/admin-navigation.mjs
           node tests/telegram-management.mjs
+          node tests/resource-interactions.mjs
           node tests/ui-parity.mjs
           node tests/resource-parity.mjs
           node tests/editor-layout.mjs
+          node tests/queue-logs.mjs
           node tests/filter-payment-ui.mjs
           node tests/telegram-webhook.mjs
           node tests/captcha-settings.mjs

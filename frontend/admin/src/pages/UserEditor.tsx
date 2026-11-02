@@ -63,8 +63,6 @@ export default function UserEditor({
     close: () => void;
 }) {
     const [form] = Form.useForm();
-    const isAdmin = Form.useWatch("is_admin", form);
-    const isStaff = Form.useWatch("is_staff", form);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState("");
     useEffect(() => {
@@ -76,6 +74,7 @@ export default function UserEditor({
         setError("");
         try {
             const payload: UserRow = { ...values, id: user.id };
+            delete payload.telegram_admin_id;
             if (!values.password) delete payload.password;
             payload.balance = cents(values.balance);
             payload.commission_balance = cents(values.commission_balance);
@@ -97,8 +96,6 @@ export default function UserEditor({
             payload.commission_type = Number(values.commission_type ?? 0);
             payload.is_admin = values.is_admin ? 1 : 0;
             payload.is_staff = values.is_staff ? 1 : 0;
-            payload.telegram_admin_id = payload.is_admin || payload.is_staff
-                ? (String(values.telegram_admin_id ?? "").trim() || null) : null;
             payload.plan_id =
                 Number(values.plan_id) > 0 ? Number(values.plan_id) : null;
             for (const key of [
@@ -332,14 +329,6 @@ export default function UserEditor({
                 )}
                 {item("is_admin", <Switch aria-label="是否管理员" />)}
                 {item("is_staff", <Switch aria-label="是否员工" />)}
-                <Form.Item
-                    name="telegram_admin_id"
-                    label="Telegram 管理账号 ID"
-                    extra="管理员和员工须在此手动设置，不能使用 /bind。请先私聊机器人，再填写自己的数字用户 ID；留空解除管理绑定。"
-                    rules={[{ pattern: /^[1-9][0-9]{0,15}$/, message: "请输入有效的 Telegram 数字用户 ID" }]}
-                >
-                    <Input aria-label="Telegram 管理账号 ID" inputMode="numeric" maxLength={16} disabled={!isAdmin && !isStaff} />
-                </Form.Item>
                 {item(
                     "remarks",
                     <Input.TextArea

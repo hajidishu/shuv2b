@@ -53,6 +53,9 @@ const text = new Set([
     "ip",
     "ua",
     "format",
+    "uri",
+    "host",
+    "title",
 ]);
 
 export function Filters({

@@ -274,7 +274,8 @@ class ServerService
         array_multisort($tmp, SORT_ASC, $servers);
         $servers = $probe->filterServers($user, $servers, $visibility);
         return array_map(function ($server) {
-            if (strpos($server['port'], '-')) {
+            $hysteria = $server['type'] === 'hysteria' || ($server['type'] === 'v2node' && $server['protocol'] === 'hysteria2');
+            if (strpos($server['port'], '-') !== false || ($hysteria && strpos($server['port'], ',') !== false)) {
                 $server['mport'] = (string)$server['port'];
             } else {
                 $server['port'] = (int)$server['port'];

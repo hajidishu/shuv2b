@@ -153,12 +153,18 @@ class TelegramBindingTest extends DatabaseTestCase
     }
     public function bannedManagementRoles(): array { return [['admin'], ['staff']]; }
 
-    public function testUnbannedAdminAndStaffCanReplyToTickets()
+    public function testOnlyTheSingleUnbannedAdminCanReplyToTickets()
     {
         foreach ([['is_admin' => 1, 'is_staff' => 0, 'id' => 808011], ['is_admin' => 0, 'is_staff' => 1, 'id' => 808012]] as $fixture) {
             $owner = $this->user();
             $manager = $this->user(['is_admin' => $fixture['is_admin'], 'is_staff' => $fixture['is_staff'], 'telegram_admin_id' => $fixture['id']]);
             $ticket = $this->tickets($owner); $command = $this->command(ReplyTicket::class);
+            if (!$fixture['is_admin']) {
+                try { $command->handle($this->message('', $fixture['id']), ['', $ticket->id]); $this->fail('Staff cannot be the Telegram administrator'); }
+                catch (HttpException $error) { $this->assertSame(403, $error->getStatusCode()); }
+                $this->assertSame(0, TicketMessage::where('ticket_id', $ticket->id)->count());
+                continue;
+            }
             $command->handle($this->message('', $fixture['id']), ['', $ticket->id]);
             $reply = TicketMessage::where('ticket_id', $ticket->id)->first();
             $this->assertNotNull($reply);
@@ -168,9 +174,14 @@ class TelegramBindingTest extends DatabaseTestCase
     }
     private function adminUpdate($user, array $changes)
     {
+        $hasBinding = array_key_exists('telegram_admin_id', $changes);
+        $binding = $changes['telegram_admin_id'] ?? null;
+        unset($changes['telegram_admin_id']);
         $r = new TelegramAdminUpdate(['id' => $user->id]);
         $r->values = array_merge(['email' => $user->email, 'is_admin' => (int)$user->is_admin, 'is_staff' => (int)$user->is_staff, 'banned' => 0], $changes);
-        return (new AdminUsers())->update($r);
+        $result = (new AdminUsers())->update($r);
+        if ($hasBinding) TelegramService::setManagementAccount((int)$user->id, $binding);
+        return $result;
     }
     public function testPromotionDoesNotPromoteOrdinaryTelegramBinding()
     {
@@ -192,7 +203,7 @@ class TelegramBindingTest extends DatabaseTestCase
         (new TelegramService())->sendMessageWithAdmin('Synthetic ticket', true);
         $jobs = Environment::$queue->pushed(SendTelegramJob::class);
         $ids = $jobs->map(function ($job) { $p = new \ReflectionProperty($job, 'telegramId'); $p->setAccessible(true); return $p->getValue($job); })->all();
-        sort($ids); $this->assertSame([808003,808003,808004], $ids);
+        sort($ids); $this->assertSame([808003,808003], $ids);
         $sender = new TelegramFakeSender(); Environment::$app->instance(TelegramService::class, $sender);
         // Legacy and banned recipients cannot send via a stale or malformed job.
         (new SendTelegramJob(808001, 'Legacy queued notification'))->handle();
@@ -210,11 +221,12 @@ class TelegramBindingTest extends DatabaseTestCase
     }
     public function testManagementIdValidationRejectsInvalidAndUnsafeIntegerInputs()
     {
-        $rules = (new UserUpdate())->rules()['telegram_admin_id'];
+        $rules = (new \App\Http\Requests\Admin\ConfigSave())->rules()['telegram_bot_admin_id'];
         foreach (['-100123','0','1e6','4503599627370496',[],true,'user-name'] as $value) $this->assertTrue(app('validator')->make(['id' => $value], ['id' => $rules])->fails());
         foreach ([null,'808001','4503599627370495'] as $value) $this->assertFalse(app('validator')->make(['id' => $value], ['id' => $rules])->fails());
         $this->assertArrayNotHasKey('telegram_admin_id', (new \App\Http\Requests\Staff\UserUpdate())->rules());
         $this->assertArrayNotHasKey('telegram_admin_id', (new \App\Http\Requests\User\UserUpdate())->rules());
+        $this->assertArrayNotHasKey('telegram_admin_id', (new UserUpdate())->rules());
     }
     public function testTelegramMigrationIsRepeatableAndDoesNotTrustOrEraseOldBindings()
     {
@@ -260,6 +272,7 @@ class TelegramBindingTest extends DatabaseTestCase
             $p = new \ReflectionProperty($job, 'managementUserId'); $p->setAccessible(true);
             return (int)$p->getValue($job) === (int)$manager->id;
         });
+        if ($staff) { $this->assertNull($job, 'Staff have no Telegram management notification access'); return; }
         $this->assertNotNull($job);
         // Update only the ban flag so the queued job still has a valid role and binding.
         \App\Models\User::whereKey($manager->id)->update(['banned' => 1]);

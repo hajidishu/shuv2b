@@ -82,6 +82,7 @@ class ConfigSave extends FormRequest
         // telegram
         'telegram_bot_enable' => 'in:0,1',
         'telegram_bot_token' => '',
+        'telegram_bot_admin_id' => ['nullable', 'regex:/\A[1-9][0-9]{0,15}\z/', 'integer', 'max:4503599627370495'],
         'telegram_webhook_domain' => 'nullable|string|max:2048',
         'telegram_discuss_id' => '',
         'telegram_channel_id' => '',

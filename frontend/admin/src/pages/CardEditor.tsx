@@ -49,6 +49,8 @@ export default function CardEditor({
     const end = record.ended_at ? dayjs(Number(record.ended_at) * 1000) : null;
     const initial = {
         ...record,
+        limit_plan_ids: (record.limit_plan_ids ?? []).map(Number),
+        plan_id: record.plan_id == null ? undefined : Number(record.plan_id),
         type: record.type ?? 1,
         value:
             record.value == null
@@ -113,9 +115,19 @@ export default function CardEditor({
     const showCode = !generateCount;
     const showBatch = !record.id && !code;
     const plansOptions = plans.map((plan) => ({
-        value: plan.id,
+        value: Number(plan.id),
         label: plan.name,
     }));
+    for (const id of [
+        ...initial.limit_plan_ids,
+        ...(initial.plan_id == null ? [] : [initial.plan_id]),
+    ]) {
+        if (!plansOptions.some((option) => option.value === id))
+            plansOptions.push({
+                value: id,
+                label: `未找到的套餐（ID：${id}）`,
+            });
+    }
 
     return (
         <Modal

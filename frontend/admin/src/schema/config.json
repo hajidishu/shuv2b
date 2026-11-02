@@ -85,6 +85,7 @@
     "telegram": {
         "telegram_bot_enable": 0,
         "telegram_bot_token": null,
+        "telegram_bot_admin_id": null,
         "telegram_webhook_domain": null,
         "telegram_discuss_link": null,
         "telegram_discuss_id": "",

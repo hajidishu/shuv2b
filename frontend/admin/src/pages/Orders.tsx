@@ -20,7 +20,7 @@ import {
     Tooltip,
 } from "antd";
 import { api } from "../api";
-import { periods } from "../domain.mjs";
+import { periods, findReference } from "../domain.mjs";
 import {
     DataCard,
     Editor,
@@ -477,9 +477,7 @@ export default function Orders() {
                                     ["订单状态", statuses[detail.status]],
                                     [
                                         "订阅计划",
-                                        refs.plans.find(
-                                            (p: Row) => p.id === detail.plan_id,
-                                        )?.name ?? "-",
+                                        findReference<Row>(refs.plans, detail.plan_id)?.name ?? "-",
                                     ],
                                     ["回调单号", detail.callback_no || "-"],
                                     ["支付金额", money(detail.total_amount)],

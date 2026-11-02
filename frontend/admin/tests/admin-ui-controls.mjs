@@ -121,7 +121,7 @@ try {
     }
     report.passed.push("resource action rows and table toggles at narrow widths");
 
-    // Settings switch sits at the left edge of its content; saving exposes loading and success.
+    // Settings labels stay on the left and switches use the right control column.
     await page.setViewportSize({ width: 1360, height: 950 });
     await goto("/config/system");
     const settingsSwitchField = page.locator(".settings-fields .settings-switch-field").first();
@@ -132,10 +132,12 @@ try {
     const settingAlignment = await settingsSwitchField.evaluate((field) => {
         const control = field.querySelector(".ant-switch").getBoundingClientRect();
         const label = field.querySelector(".settings-label").getBoundingClientRect();
-        return { delta: control.left - label.left };
+        const input = field.querySelector('.ant-form-item-control').getBoundingClientRect();
+        return { delta: control.left - input.left, gap: control.left - label.right,
+            vertical: Math.abs(control.top + control.height / 2 - label.top - label.height / 2) };
     });
-    assert.ok(Math.abs(settingAlignment.delta) < 1,
-        `settings switch should align with its label left edge (delta ${settingAlignment.delta}px)`);
+    assert.ok(Math.abs(settingAlignment.delta) < 1 && settingAlignment.gap >= 8 && settingAlignment.vertical < 2,
+        `settings switch should remain beside the label in the right control column: ${JSON.stringify(settingAlignment)}`);
     let saveCount = 0;
     await page.route("**/config/save", async (route) => {
         saveCount++;

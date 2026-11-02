@@ -21,6 +21,7 @@ import {
 } from "../components";
 import { planFields } from "../schema/resources";
 import type { Field, Row } from "../types";
+import { findReference, referenceValue } from "../domain.mjs";
 
 const field = (key: string, extra: Partial<Field> = {}): Field => ({
     ...planFields.find((item) => item.key === key)!,
@@ -102,9 +103,7 @@ export default function PlanEditor({
         ...(references.groups ?? []),
         ...addedGroups.filter(
             (group) =>
-                !(references.groups ?? []).some(
-                    (existing: Row) => existing.id === group.id,
-                ),
+                !findReference<Row>(references.groups, group.id),
         ),
     ];
     const details = [
@@ -288,7 +287,7 @@ export default function PlanEditor({
                         const created = [...list]
                             .sort((a, b) => b.id - a.id)
                             .find((item) => item.name === groupName.trim());
-                        if (created) form.setFieldValue("group_id", created.id);
+                        if (created) form.setFieldValue("group_id", referenceValue(created.id));
                         references.reloadGroups?.();
                         setAddingGroup(false);
                         setGroupName("");

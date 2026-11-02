@@ -221,7 +221,7 @@ test("用户编辑绝不回填密码哈希，金额和零值仍保留", async ()
     const module = await import(
         "data:text/javascript;base64," +
             Buffer.from(
-                "import {cents,yuan} from " +
+                "import {cents,yuan,referenceValue,isReferenceField} from " +
                     JSON.stringify(
                         pathToFileURL(resolve(root, "src/domain.mjs")).href,
                     ) +
@@ -248,6 +248,14 @@ test("用户编辑绝不回填密码哈希，金额和零值仍保留", async ()
     assert.equal(payload.balance, 1999);
     assert.equal(payload.banned, 0);
     assert.equal(payload.expired_at, 1791993637);
+    const referenceFields = nodeSchema.nodeFields("v2node").filter(field => field.reference);
+    const old = { group_id: ["13"], route_id: ["7"], parent_id: "8" };
+    const referenceDisplay = module.displayValues(referenceFields, old);
+    assert.deepEqual(referenceDisplay, { group_id: [13], route_id: [7], parent_id: 8 });
+    assert.deepEqual(module.payloadValues(referenceFields, referenceDisplay), referenceDisplay);
+    assert.deepEqual(old, { group_id: ["13"], route_id: ["7"], parent_id: "8" });
+    const selectedFieldOnly = referenceFields.filter(field => field.key === "group_id");
+    assert.deepEqual(module.payloadValues(selectedFieldOnly, old), { group_id: [13] });
 });
 test("原有节点表单覆盖后端保存规则中的全部可编辑字段", async () => {
     for (const type of [

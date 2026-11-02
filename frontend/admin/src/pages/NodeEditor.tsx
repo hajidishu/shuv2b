@@ -10,6 +10,7 @@ import {
 import { nodeFields, mieruDefaults } from "../schema/nodes";
 import { nodeEditorFields, nodeSubmissionFields } from "../schema/node-editor";
 import type { Row } from "../types";
+import { referenceValue } from "../domain.mjs";
 
 export default function NodeEditor({
     node,
@@ -236,7 +237,7 @@ export default function NodeEditor({
                         if (created)
                             form.setFieldValue("group_id", [
                                 ...(form.getFieldValue("group_id") ?? []),
-                                created.id,
+                                referenceValue(created.id),
                             ]);
                         setAddingGroup(false);
                         setGroupName("");

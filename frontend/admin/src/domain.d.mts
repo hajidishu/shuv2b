@@ -12,3 +12,6 @@ export function encodeQuery(
 export function nodeKey(n: Row): string;
 export function batchPayload(n: Row[], a: string, c?: Row): Row;
 export function escapeCsv(v: any): string;
+export function referenceValue(value: any): any;
+export function findReference<T extends Row>(rows: T[] | undefined, id: any): T | undefined;
+export function isReferenceField(field: { key: string; kind?: string; reference?: string }): boolean;

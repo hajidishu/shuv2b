@@ -3,6 +3,7 @@ import { Alert, Form, Input, Modal, Select, DatePicker } from "antd";
 import dayjs from "dayjs";
 import type { Row } from "../types";
 import { api, downloadApi } from "../api";
+import { referenceValue } from "../domain.mjs";
 
 export default function UserGenerateModal({
     plans,
@@ -133,7 +134,7 @@ export default function UserGenerateModal({
                         options={[
                             { value: 0, label: "无" },
                             ...plans.map((plan) => ({
-                                value: plan.id,
+                                value: referenceValue(plan.id),
                                 label: plan.name,
                             })),
                         ]}

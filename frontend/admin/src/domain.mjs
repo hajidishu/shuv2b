@@ -1,3 +1,17 @@
+export function referenceValue(value) {
+    if (Array.isArray(value)) return value.map(referenceValue);
+    if (typeof value === "string" && /^-?\d+$/.test(value.trim()) && Number.isSafeInteger(Number(value))) return Number(value);
+    return value;
+}
+export function findReference(rows, id) {
+    const key = referenceValue(id);
+    return (rows ?? []).find(row => referenceValue(row.id) === key);
+}
+const referenceKeys = new Set(["group_id", "route_id", "parent_id", "plan_id", "limit_plan_ids", "public_plan_ids", "try_out_plan_id"]);
+export function isReferenceField(field) {
+    return !!field.reference || (field.kind === "select" && referenceKeys.has(field.key));
+}
+
 export const nodeTypes = {
     shadowsocks: "Shadowsocks",
     vmess: "VMess",

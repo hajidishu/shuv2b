@@ -17,7 +17,7 @@ import {
 } from "antd";
 import { QuestionCircleOutlined } from "@ant-design/icons";
 import { ApiError } from "../api";
-import { cents, yuan } from "../domain.mjs";
+import { cents, yuan, referenceValue } from "../domain.mjs";
 import type { Row as UserRow } from "../types";
 import { userEditFields, commissionTypeOptions } from "../schema/user-editor";
 
@@ -27,7 +27,7 @@ function initialValues(user: UserRow) {
     return {
         ...user,
         password: undefined,
-        plan_id: user.plan_id ?? 0,
+        plan_id: referenceValue(user.plan_id ?? 0),
         balance: yuan(user.balance),
         commission_balance: yuan(user.commission_balance),
         u: user.u == null ? null : Number(user.u) / GIB,
@@ -277,10 +277,12 @@ export default function UserEditor({
                         aria-label="订阅计划"
                         placeholder="请选择用户订阅计划"
                         allowClear
+                        labelRender={({ value }) => Number(value) === 0 ? "无" :
+                            plans.find(plan => referenceValue(plan.id) === referenceValue(value))?.name ?? `未找到的套餐（ID：${value}）`}
                         options={[
                             { value: 0, label: "无" },
                             ...plans.map((plan) => ({
-                                value: plan.id,
+                                value: referenceValue(plan.id),
                                 label: plan.name,
                             })),
                         ]}

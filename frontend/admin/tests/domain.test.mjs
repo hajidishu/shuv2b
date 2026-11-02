@@ -8,7 +8,25 @@ import {
     batchPayload,
     escapeCsv,
     routes,
+    referenceValue,
+    findReference,
+    isReferenceField,
 } from "../src/domain.mjs";
+test("关联ID兼容数字和旧字符串，不修改原数组或非数字标识", () => {
+    const values = ["13", "7"];
+    assert.deepEqual(referenceValue(values), [13, 7]);
+    assert.deepEqual(values, ["13", "7"]);
+    for (const value of [null, undefined, "", "none", "9007199254740993"]) assert.equal(referenceValue(value), value);
+    assert.equal(referenceValue("0"), 0);
+    assert.equal(referenceValue(" 13 "), 13);
+    const numeric = [{ id: 13, name: "权限组" }], strings = [{ id: "13", name: "权限组" }];
+    assert.equal(findReference(numeric, "13"), numeric[0]);
+    assert.equal(findReference(strings, 13), strings[0]);
+    assert.equal(findReference(numeric, "14"), undefined);
+    assert.equal(isReferenceField({ key: "route_id", reference: "routes" }), true);
+    assert.equal(isReferenceField({ key: "public_plan_ids", kind: "select" }), true);
+    assert.equal(isReferenceField({ key: "telegram_bot_admin_id", kind: "text" }), false);
+});
 test("金额转换保留 0、分和大金额，不接受隐式舍入", () => {
     for (const [value, expected] of [
         ["0", 0],

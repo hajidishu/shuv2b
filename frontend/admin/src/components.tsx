@@ -19,7 +19,7 @@ import {
 } from "antd";
 import type { Field, Row } from "./types";
 import { api, ApiError, request } from "./api";
-import { cents, yuan } from "./domain.mjs";
+import { cents, yuan, referenceValue, isReferenceField } from "./domain.mjs";
 import KnowledgeInput from "./KnowledgeInput";
 import DateInput from "./DateInput";
 import { QuestionCircleOutlined } from "@ant-design/icons";
@@ -111,6 +111,7 @@ export function displayValues(fields: Field[], data: Row) {
     const out: Row = {};
     for (const f of fields) {
         let v = data[f.key] ?? f.default;
+        if (isReferenceField(f)) v = referenceValue(v);
         // User passwords are write-only: never reuse a hash returned by the legacy API.
         if (f.key === "password") v = undefined;
         if (f.kind === "money") v = yuan(v);
@@ -140,6 +141,7 @@ export function payloadValues(fields: Field[], data: Row) {
         let v = data[f.key];
         if (v === undefined) continue;
         if (v === "") v = null;
+        if (isReferenceField(f)) v = referenceValue(v);
         if (f.kind === "money") v = cents(v);
         if (f.kind === "gb" && v != null) {
             v = Math.round(Number(v) * 1073741824);
@@ -520,7 +522,7 @@ export function Fields({
                     options = [
                         ...(f.options ?? []),
                         ...(references[f.reference] ?? []).map((r: Row) => ({
-                            value: r.id,
+                            value: referenceValue(r.id),
                             label: r.name ?? r.remarks,
                         })),
                     ];
@@ -577,6 +579,11 @@ export function Fields({
                                 optionFilterProp="label"
                                 mode={f.multiple ? "multiple" : undefined}
                                 options={options}
+                                labelRender={isReferenceField(f) ? ({ value }) =>
+                                    f.reference === "parents" && referenceValue(value) === 0 ? "无父节点" :
+                                    options?.find(option => referenceValue(option.value) === referenceValue(value))?.label ??
+                                    `未找到的${({ groups: "权限组", routes: "路由", parents: "父节点", plans: "套餐" } as Row)[f.reference ?? "plans"] ?? "关联记录"}（ID：${value}）`
+                                    : undefined}
                             />
                         );
                         break;

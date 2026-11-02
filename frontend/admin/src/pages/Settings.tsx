@@ -19,6 +19,7 @@ import {
 } from "../components";
 import defaults from "../schema/config.json";
 import type { Field, Row } from "../types";
+import { referenceValue } from "../domain.mjs";
 import PasskeyDeployment from "./PasskeyDeployment";
 const configLabels: Record<string, string> = {
     ticket_status: "工单开关",
@@ -292,7 +293,7 @@ export default function Settings() {
                     { label: "关闭", value: 0 },
                     ...(plans.data ?? []).map((p: Row) => ({
                         label: p.name,
-                        value: p.id,
+                        value: referenceValue(p.id),
                     })),
                 ];
             }
@@ -301,7 +302,7 @@ export default function Settings() {
                 field.multiple = true;
                 field.options = (plans.data ?? []).map((plan: Row) => ({
                     label: plan.name + (Number(plan.show) === 1 ? "" : "（未上架，不公开）"),
-                    value: plan.id,
+                    value: referenceValue(plan.id),
                 }));
             }
             if (key === "captcha_provider") {

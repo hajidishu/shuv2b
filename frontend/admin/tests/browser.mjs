@@ -318,12 +318,12 @@ try {
             );
             assert.ok(
                 switches.every(
-                    (r) => Math.abs(r.inputX - r.labelX) < 1 &&
-                        Math.abs(r.switchX - r.labelX) < 1 &&
+                    (r) => r.inputX > r.labelRight &&
+                        Math.abs(r.switchX - r.inputX) < 1 &&
                         r.inputX >= r.cardLeft && r.inputRight <= r.cardRight &&
                         r.switchX >= r.cardLeft && r.switchRight <= r.cardRight,
                 ),
-                "settings switch controls should align with the label at the left edge and remain inside the card: " + JSON.stringify(switches),
+                "settings labels and switches should share a row, with switches in the right control column: " + JSON.stringify(switches),
             );
             await writeFile(
                 resolve(out, live ? "live-layout.json" : "layout.json"),

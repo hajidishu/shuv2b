@@ -20,7 +20,7 @@ import {
     Tooltip,
 } from "antd";
 import { api, copyText } from "../api";
-import { batchPayload, nodeKey, nodeTypes } from "../domain.mjs";
+import { batchPayload, nodeKey, nodeTypes, findReference, referenceValue } from "../domain.mjs";
 import { commonNodeFields, protocolFields } from "../schema/nodes";
 import {
     DataCard,
@@ -554,7 +554,12 @@ export default function Nodes() {
                             dataIndex: "rate",
                             align: "center",
                             render: (value) => (
-                                <Tag style={{ minWidth: 60 }}>{value} x</Tag>
+                                <Tag
+                                    className="node-rate"
+                                    style={{ minWidth: 60, textAlign: "center", marginInlineEnd: 0 }}
+                                >
+                                    {value} x
+                                </Tag>
                             ),
                         },
                         {
@@ -569,7 +574,7 @@ export default function Nodes() {
                                 (value ?? []).flatMap((id: any, index: number) => [
                                     index ? ", " : null,
                                     <ResourceLink route="/server/group" id={id} key={id}>
-                                        {refs.groups.find((group: Row) => group.id === id)?.name ?? id}
+                                        {findReference<Row>(refs.groups, id)?.name ?? `未找到的权限组（ID：${id}）`}
                                     </ResourceLink>,
                                 ]),
                         },
@@ -604,7 +609,7 @@ export default function Nodes() {
                         ...refs,
                         parents: ordered.filter(
                             (n) =>
-                                n.type === editing.type && n.id !== editing.id,
+                                n.type === editing.type && referenceValue(n.id) !== referenceValue(editing.id),
                         ),
                     }}
                     save={save}

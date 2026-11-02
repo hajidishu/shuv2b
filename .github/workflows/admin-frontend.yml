@@ -59,9 +59,11 @@ jobs:
           node tests/user-controls.mjs
           node tests/user-action-scope.mjs
           node tests/admin-ui-controls.mjs
+          node tests/settings-switch-layout.mjs
           node tests/admin-navigation.mjs
           node tests/telegram-management.mjs
           node tests/resource-interactions.mjs
+          node tests/reference-labels.mjs
           node tests/ui-parity.mjs
           node tests/resource-parity.mjs
           node tests/editor-layout.mjs

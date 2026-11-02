@@ -84,7 +84,7 @@ class PaymentSettlementService
             return $attempt && $attempt->gateway_amount_minor !== null && $amount === (int)$attempt->gateway_amount_minor &&
                 strtolower($currency) === strtolower((string)$attempt->gateway_currency);
         }
-        if (!array_key_exists('amount', $payment)) return true; // Legacy signature-only adapters.
+        if (!array_key_exists('amount', $payment)) return !in_array($method, ['EPayQrcode', 'Paytaro'], true); // Other legacy signature-only adapters.
         $amount = Money::toCents($payment['amount']);
         return $amount !== null && $amount > 0 && $amount === $gross &&
             is_string($payment['currency'] ?? null) && is_string($payment['expected_currency'] ?? null) &&

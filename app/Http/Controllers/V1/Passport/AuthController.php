@@ -7,10 +7,8 @@ use App\Http\Requests\Passport\AuthForget;
 use App\Http\Requests\Passport\AuthLogin;
 use App\Http\Requests\Passport\AuthRegister;
 use App\Services\AuthService;
-use App\Utils\CacheKey;
-use App\Utils\Helper;
+use App\Services\PasswordLoginLimiter;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 
 class AuthController extends Controller
 {
@@ -23,33 +21,10 @@ class AuthController extends Controller
     {
         $email = \App\Services\EmailAddress::key($request->input('email'));
         $password = $request->input('password');
-
-        if ((int)config('v2board.password_limit_enable', 1)) {
-            $passwordErrorCount = (int)Cache::get(CacheKey::get('PASSWORD_ERROR_LIMIT', $email), 0);
-            if ($passwordErrorCount >= (int)config('v2board.password_limit_count', 5)) {
-                abort(500, __('There are too many password errors, please try again after :minute minutes.', [
-                    'minute' => config('v2board.password_limit_expire', 60)
-                ]));
-            }
-        }
-
+        $limiter = new PasswordLoginLimiter();
+        $limiter->throttle($request);
         $user = \App\Services\EmailIdentity::find($email);
-        if (!$user) {
-            abort(500, __('Incorrect email or password'));
-        }
-        if (!Helper::multiPasswordVerify(
-            $user->password_algo,
-            $user->password_salt,
-            $password,
-            $user->password)
-        ) {
-            if ((int)config('v2board.password_limit_enable')) {
-                Cache::put(
-                    CacheKey::get('PASSWORD_ERROR_LIMIT', $email),
-                    (int)$passwordErrorCount + 1,
-                    60 * (int)config('v2board.password_limit_expire', 60)
-                );
-            }
+        if (!$limiter->verify($user, $email, $password)) {
             abort(500, __('Incorrect email or password'));
         }
 

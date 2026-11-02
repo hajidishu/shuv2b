@@ -135,6 +135,37 @@ class TelegramBindingTest extends DatabaseTestCase
         $this->assertSame($admin->id, (int)TicketMessage::first()->user_id);
         $this->assertSame($ticket->id, (int)TicketMessage::first()->ticket_id);
     }
+    /** @dataProvider bannedManagementRoles */
+    public function testBannedManagementUsersCannotReplyToTickets($role)
+    {
+        $owner = $this->user();
+        $staff = $role === 'staff';
+        $manager = $this->user(['is_admin' => $staff ? 0 : 1, 'is_staff' => $staff ? 1 : 0, 'telegram_admin_id' => 808010, 'banned' => 1]);
+        $ticket = $this->tickets($owner); $command = $this->command(ReplyTicket::class);
+        try {
+            $command->handle($this->message('', 808010), ['', $ticket->id]);
+            $this->fail('Banned management account replied to a ticket');
+        } catch (HttpException $error) {
+            $this->assertSame(403, $error->getStatusCode());
+        }
+        $this->assertSame(0, TicketMessage::count());
+        $this->assertSame([], $command->telegramService->sent);
+    }
+    public function bannedManagementRoles(): array { return [['admin'], ['staff']]; }
+
+    public function testUnbannedAdminAndStaffCanReplyToTickets()
+    {
+        foreach ([['is_admin' => 1, 'is_staff' => 0, 'id' => 808011], ['is_admin' => 0, 'is_staff' => 1, 'id' => 808012]] as $fixture) {
+            $owner = $this->user();
+            $manager = $this->user(['is_admin' => $fixture['is_admin'], 'is_staff' => $fixture['is_staff'], 'telegram_admin_id' => $fixture['id']]);
+            $ticket = $this->tickets($owner); $command = $this->command(ReplyTicket::class);
+            $command->handle($this->message('', $fixture['id']), ['', $ticket->id]);
+            $reply = TicketMessage::where('ticket_id', $ticket->id)->first();
+            $this->assertNotNull($reply);
+            $this->assertSame($manager->id, (int)$reply->user_id);
+            $this->assertCount(1, $command->telegramService->sent);
+        }
+    }
     private function adminUpdate($user, array $changes)
     {
         $r = new TelegramAdminUpdate(['id' => $user->id]);
@@ -215,5 +246,24 @@ class TelegramBindingTest extends DatabaseTestCase
         $currentJob = Environment::$queue->pushed(SendTelegramJob::class)->last();
         $currentJob->handle();
         $this->assertSame([[808001, 'Synthetic current authorization']], $sender->sent);
+    }
+
+    /** @dataProvider bannedManagementRoles */
+    public function testQueuedManagementNotificationIsDroppedIfRecipientIsBannedBeforeDelivery($role)
+    {
+        config(['v2board.telegram_bot_enable' => 1]);
+        $staff = $role === 'staff';
+        $manager = $this->user(['is_admin' => $staff ? 0 : 1, 'is_staff' => $staff ? 1 : 0, 'telegram_admin_id' => $staff ? 808022 : 808021]);
+        $sender = new TelegramFakeSender(); Environment::$app->instance(TelegramService::class, $sender);
+        (new TelegramService())->sendMessageWithAdmin('Queued before ban', true);
+        $job = Environment::$queue->pushed(SendTelegramJob::class)->first(function ($job) use ($manager) {
+            $p = new \ReflectionProperty($job, 'managementUserId'); $p->setAccessible(true);
+            return (int)$p->getValue($job) === (int)$manager->id;
+        });
+        $this->assertNotNull($job);
+        // Update only the ban flag so the queued job still has a valid role and binding.
+        \App\Models\User::whereKey($manager->id)->update(['banned' => 1]);
+        $job->handle();
+        $this->assertSame([], $sender->sent, 'A recipient banned after enqueue must not receive the queued message');
     }
 }

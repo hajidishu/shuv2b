@@ -114,21 +114,23 @@ class AdapterSecurityTest extends TestCase
         $key = 'epay-secret';
         $epayParams = [
             'pid' => 'merchant-1', 'out_trade_no' => 'order-1', 'trade_no' => 'tx-1',
-            'trade_status' => 'TRADE_SUCCESS', 'sign_type' => 'MD5',
+            'trade_status' => 'TRADE_SUCCESS', 'money' => '12.34', 'sign_type' => 'MD5',
         ];
         $epayParams['sign'] = $this->epayQrSignature($epayParams, $key);
         $this->assertSame([
-            'trade_no' => 'order-1', 'callback_no' => 'tx-1',
+            'trade_no' => 'order-1', 'callback_no' => 'tx-1', 'amount' => '12.34',
+            'currency' => 'CNY', 'expected_currency' => 'CNY',
         ], (new EPayQrcode(['pid' => 'merchant-1', 'key' => $key]))->notify($epayParams));
 
         $key = 'paytaro-secret';
         $paytaroParams = [
             'pid' => 'app-1', 'out_trade_no' => 'order-1', 'trade_no' => 'tx-1',
-            'trade_status' => 'TRADE_SUCCESS',
+            'trade_status' => 'TRADE_SUCCESS', 'money' => '12.34',
         ];
         $paytaroParams['sign'] = $this->sortedMd5Signature($paytaroParams, $key);
         $this->assertSame([
-            'trade_no' => 'order-1', 'callback_no' => 'tx-1', 'custom_result' => 'success',
+            'trade_no' => 'order-1', 'callback_no' => 'tx-1', 'amount' => '12.34',
+            'currency' => 'CNY', 'expected_currency' => 'CNY', 'custom_result' => 'success',
         ], (new Paytaro(['pid' => 'app-1', 'key' => $key]))->notify($paytaroParams));
 
         $this->setCallbackSecret('paytaro-qr-secret');

@@ -64,6 +64,7 @@ class QuantumultX
 
     public static function buildShadowsocks($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         // Standardization v2_server_shadowsocks -> v2node format
         if (isset($server['obfs']) && !empty($server['obfs'])) {
             $server['network'] = $server['obfs'];
@@ -80,7 +81,7 @@ class QuantumultX
         }
 
         // ss2022 处理
-        if (in_array($server['cipher'], ['2022-blake3-aes-128-gcm', '2022-blake3-aes-256-gcm'])) {
+        if (!isset($server['_external_auth']) && in_array($server['cipher'], ['2022-blake3-aes-128-gcm', '2022-blake3-aes-256-gcm'])) {
             $length = ($server['cipher'] === '2022-blake3-aes-128-gcm') ? 16 : 32;
             $serverKey = Helper::getServerKey($server['created_at'], $length);
             $userKey = Helper::uuidToBase64($password, $length);
@@ -121,6 +122,7 @@ class QuantumultX
 
     public static function buildVmess($uuid, $server)
     {
+        $uuid = \App\Services\ExternalNodeSettings::auth($server, 'uuid', $uuid);
         // Standardization v2_server_vmess -> v2node format
         if (isset($server['networkSettings'])) {
             $legacy = is_array($server['networkSettings']) ? $server['networkSettings'] : [];
@@ -223,6 +225,7 @@ class QuantumultX
 
     public static function buildVless($uuid, $server)
     {
+        $uuid = \App\Services\ExternalNodeSettings::auth($server, 'uuid', $uuid);
         // 配置生成
         $config = [
             "vless={$server['host']}:{$server['port']}",
@@ -315,6 +318,7 @@ class QuantumultX
 
     public static function buildTrojan($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         // Standardization v2_server_trojan -> v2node format
         $server['tls_settings'] = $server['tls_settings'] ?? [];
 
@@ -383,6 +387,7 @@ class QuantumultX
     // anytls=example.com:443, password=pwd, over-tls=true, tls-host=apple.com, reality-base64-pubkey=..., reality-hex-shortid=..., udp-relay=true, tag=anytls-reality-tls-01
     public static function buildAnytls($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         $config = [
             "anytls={$server['host']}:{$server['port']}",
             "password={$password}",

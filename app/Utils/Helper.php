@@ -206,8 +206,9 @@ class Helper
 
     public static function buildShadowsocksUri($uuid, $server)
     {
+        $uuid = \App\Services\ExternalNodeSettings::auth($server, 'password', $uuid);
         $cipher = $server['cipher'];
-        if (strpos($cipher, '2022-blake3') !== false) {
+        if (!isset($server['_external_auth']) && strpos($cipher, '2022-blake3') !== false) {
             $length = $cipher === '2022-blake3-aes-128-gcm' ? 16 : 32;
             $serverKey = Helper::getServerKey($server['created_at'], $length);
             $userKey = Helper::uuidToBase64($uuid, $length);
@@ -217,10 +218,16 @@ class Helper
         }
         $name = rawurlencode($server['name']);
         $str = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode("{$cipher}:{$password}"));
+        // External AEAD-2022 links use the plain, percent-encoded SIP002 userinfo form.
+        if (isset($server['_external_auth']) && strpos($cipher, '2022-blake3') !== false) $str = rawurlencode($cipher) . ':' . rawurlencode($password);
         $add = self::formatHost($server['host']);
         $uri = "ss://{$str}@{$add}:{$server['port']}";
         if ($server['obfs'] == 'http') {
-            $uri .= "?plugin=obfs-local;obfs=http;obfs-host={$server['obfs-host']};path={$server['obfs-path']}";
+            if (isset($server['_external_auth'])) {
+                $host = \App\Services\ExternalNodeSettings::pluginValue($server['obfs-host']);
+                $path = \App\Services\ExternalNodeSettings::pluginValue($server['obfs-path']);
+                $uri .= '/?plugin=' . rawurlencode("obfs-local;obfs=http;obfs-host={$host};path={$path}");
+            } else $uri .= "?plugin=obfs-local;obfs=http;obfs-host={$server['obfs-host']};path={$server['obfs-path']}";
         } else if ((($server['network'] ?? null) == 'http') && isset($server['network_settings']['Host'])) {
             $path = $server['network_settings']['path'] ?? '/';
             $uri .= "?plugin=obfs-local;obfs=tls;obfs-host={$server['network_settings']['Host']};path={$path}";
@@ -230,6 +237,7 @@ class Helper
 
     public static function buildVmessUri($uuid, $server)
     {
+        $uuid = \App\Services\ExternalNodeSettings::auth($server, 'uuid', $uuid);
         $config = [
             "v" => "2",
             "ps" => $server['name'],
@@ -245,6 +253,7 @@ class Helper
             "tls" => $server['tls'] ? "tls" : "",
             "fp" => 'chrome',
         ];
+        if (isset($server['_external_auth']) && !empty($server['tls_settings']['fingerprint'])) $config['fp'] = $server['tls_settings']['fingerprint'];
 
         if ($server['tls']) {
             $tlsSettings = $server['tls_settings'] ?? $server['tlsSettings'] ?? [];
@@ -282,6 +291,7 @@ class Helper
                 $config['type'] = $networkSettings['header']['type'] ?? 'none';
                 break;
 
+            case 'http':
             case 'httpupgrade':
                 $config['path'] = $networkSettings['path'] ?? null;
                 $config['host'] = $networkSettings['host'] ?? null;
@@ -300,6 +310,7 @@ class Helper
 
     public static function buildVlessUri($uuid, $server)
     {
+        $uuid = \App\Services\ExternalNodeSettings::auth($server, 'uuid', $uuid);
         $name = self::encodeURIComponent($server['name']);
         $tlsSettings = $server['tls_settings'] ?? [];
 
@@ -350,6 +361,8 @@ class Helper
 
     public static function buildTrojanUri($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
+        if (isset($server['_external_auth'])) $password = rawurlencode($password);
         $tlsSettings = $server['tls_settings'] ?? [];
         $config = [
             'allowInsecure' => $server['allow_insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0),
@@ -385,15 +398,18 @@ class Helper
 
     public static function buildHysteriaUri($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
+        if (isset($server['_external_auth'])) $password = rawurlencode($password);
         $remote = self::formatHost($server['host']);
         $name = self::encodeURIComponent($server['name']);
 
         $parts = explode(",", $server['port']);
         $firstPort = strpos($parts[0], '-') !== false ? explode('-', $parts[0])[0] : $parts[0];
+        $serverName = rawurlencode($server['server_name']);
 
         $uri = $server['version'] == 2 ?
-            "hysteria2://{$password}@{$remote}:{$firstPort}/?insecure={$server['insecure']}&sni={$server['server_name']}" :
-            "hysteria://{$remote}:{$firstPort}/?protocol=udp&auth={$password}&insecure={$server['insecure']}&peer={$server['server_name']}&upmbps={$server['down_mbps']}&downmbps={$server['up_mbps']}";
+            "hysteria2://{$password}@{$remote}:{$firstPort}/?insecure={$server['insecure']}&sni={$serverName}" :
+            "hysteria://{$remote}:{$firstPort}/?protocol=udp&auth={$password}&insecure={$server['insecure']}&peer={$serverName}&upmbps={$server['down_mbps']}&downmbps={$server['up_mbps']}";
 
         if (isset($server['obfs']) && isset($server['obfs_password'])) {
             $obfs_password = rawurlencode($server['obfs_password']);
@@ -409,6 +425,8 @@ class Helper
 
     public static function buildHysteria2Uri($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
+        if (isset($server['_external_auth'])) $password = rawurlencode($password);
         $remote = self::formatHost($server['host']);
         $name = self::encodeURIComponent($server['name']);
 
@@ -416,7 +434,7 @@ class Helper
         $firstPort = strpos($parts[0], '-') !== false ? explode('-', $parts[0])[0] : $parts[0];
         $tlsSettings = $server['tls_settings'] ?? [];
         $insecure = $tlsSettings['allow_insecure'] ?? 0;
-        $sni = $tlsSettings['server_name'] ?? '';
+        $sni = rawurlencode($tlsSettings['server_name'] ?? '');
         $pcs = $tlsSettings['pinned_peer_cert_sha256'] ?? '';
         $uri = "hysteria2://{$password}@{$remote}:{$firstPort}/?insecure={$insecure}&sni={$sni}&pcs={$pcs}";
 
@@ -432,6 +450,7 @@ class Helper
 
     public static function buildTuicUri($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         $tlsSettings = $server['tls_settings'] ?? [];
         $config = [
             'sni' => $server['server_name'] ?? ($tlsSettings['server_name'] ?? ''),
@@ -448,11 +467,15 @@ class Helper
         $name = self::encodeURIComponent($server['name']);
 
         $query = http_build_query($config);
-        return "tuic://{$password}:{$password}@{$remote}:{$port}?{$query}#{$name}\r\n";
+        $tuicUuid = \App\Services\ExternalNodeSettings::auth($server, 'uuid', $password);
+        if (isset($server['_external_auth'])) { $tuicUuid = rawurlencode($tuicUuid); $password = rawurlencode($password); }
+        return "tuic://{$tuicUuid}:{$password}@{$remote}:{$port}?{$query}#{$name}\r\n";
     }
 
     public static function buildAnytlsUri($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
+        if (isset($server['_external_auth'])) $password = rawurlencode($password);
         $tlsSettings = $server['tls_settings'] ?? [];
         $config = [
             'type' => $server['network'] ?? 'tcp',
@@ -541,6 +564,7 @@ class Helper
             case 'kcp':
                 self::configureKcpSettings($settings, $config);
                 break;
+            case 'http':
             case 'httpupgrade':
                 self::configureHttpupgradeSettings($settings, $config);
                 break;

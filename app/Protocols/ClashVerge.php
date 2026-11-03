@@ -111,12 +111,13 @@ class ClashVerge
 
     public static function buildShadowsocks($password, $server)
     {
-        if ($server['cipher'] === '2022-blake3-aes-128-gcm') {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
+        if (!isset($server['_external_auth']) && $server['cipher'] === '2022-blake3-aes-128-gcm') {
             $serverKey = Helper::getServerKey($server['created_at'], 16);
             $userKey = Helper::uuidToBase64($password, 16);
             $password = "{$serverKey}:{$userKey}";
         }
-        if ($server['cipher'] === '2022-blake3-aes-256-gcm') {
+        if (!isset($server['_external_auth']) && $server['cipher'] === '2022-blake3-aes-256-gcm') {
             $serverKey = Helper::getServerKey($server['created_at'], 32);
             $userKey = Helper::uuidToBase64($password, 32);
             $password = "{$serverKey}:{$userKey}";
@@ -161,6 +162,7 @@ class ClashVerge
 
     public static function buildVmess($uuid, $server)
     {
+        $uuid = \App\Services\ExternalNodeSettings::auth($server, 'uuid', $uuid);
         $array = [];
         $array['name'] = $server['name'];
         $array['type'] = 'vmess';
@@ -230,6 +232,7 @@ class ClashVerge
 
     public static function buildVless($uuid, $server)
     {
+        $uuid = \App\Services\ExternalNodeSettings::auth($server, 'uuid', $uuid);
         $array = [];
         $array['name'] = $server['name'];
         $array['type'] = 'vless';
@@ -334,6 +337,7 @@ class ClashVerge
 
     public static function buildTrojan($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         $array = [];
         $array['name'] = $server['name'];
         $array['type'] = 'trojan';
@@ -378,12 +382,13 @@ class ClashVerge
 
     public static function buildTuic($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         $array = [
             'name' => $server['name'],
             'type' => 'tuic',
             'server' => $server['host'],
             'port' => $server['port'],
-            'uuid' => $password,
+            'uuid' => \App\Services\ExternalNodeSettings::auth($server, 'uuid', $password),
             'password' => $password,
             'alpn' => ['h3'],
             'disable-sni' => $server['disable_sni'] ? true : false,
@@ -400,6 +405,7 @@ class ClashVerge
 
     public static function buildAnyTLS($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         $array = [
             'name' => $server['name'],
             'type' => 'anytls',
@@ -421,6 +427,7 @@ class ClashVerge
 
     public static function buildHysteria($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         $array = [];
         $array['name'] = $server['name'];
         $array['server'] = $server['host'];
@@ -467,6 +474,7 @@ class ClashVerge
 
     private function buildHysteria2($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         $tlsSettings = $server['tls_settings'] ?? [];
         $array = [
             'name' => $server['name'],

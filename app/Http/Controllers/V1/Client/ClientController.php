@@ -26,12 +26,13 @@ class ClientController extends Controller
         if ($userService->isAvailable($user)) {
             $serverService = new ServerService();
             $servers = $serverService->getAvailableServers($user);
+            $servers = array_merge($servers, \App\Services\ExternalNodeSettings::available($user));
             if($flag) {
                 if (strpos($flag, 'sing') === false) {
                     $this->setSubscribeInfoToServers($servers, $user);
                     foreach (array_reverse(glob(app_path('Protocols') . '/*.php')) as $file) {
                         $file = 'App\\Protocols\\' . basename($file, '.php');
-                        $class = new $file($user, $servers);
+                        $class = new $file($user, \App\Services\ExternalNodeFormats::filter($servers, $file));
                         if (strpos($flag, $class->flag) !== false) {
                             return $this->renderSubscription($request, $class);
                         }
@@ -47,9 +48,9 @@ class ClientController extends Controller
                         }
                     }
                     if (!is_null($version) && version_compare($version, '1.12.0', '>=')) {
-                        $class = new Singbox($user, $servers, ['version' => $version]);
+                        $class = new Singbox($user, \App\Services\ExternalNodeFormats::filter($servers, Singbox::class), ['version' => $version]);
                     } else {
-                        $class = new SingboxOld($user, $servers, ['version' => $version]);
+                        $class = new SingboxOld($user, \App\Services\ExternalNodeFormats::filter($servers, SingboxOld::class), ['version' => $version]);
                     }
                     return $this->renderSubscription($request, $class);
                 }

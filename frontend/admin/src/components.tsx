@@ -343,6 +343,8 @@ function JsonInput({
     } catch {
         valid = false;
     }
+    if (valid && field.nested?.some(n => n.kind === "json" && parsed[n.key] != null &&
+        (typeof parsed[n.key] !== "object" || parsed[n.key] === null))) valid = false;
     const update = (key: string, value: any) => {
         const next = { ...parsed };
         if (value === undefined || value === "") delete next[key];
@@ -463,6 +465,15 @@ function JsonInput({
                                                     : Number(parsed[n.key])
                                             }
                                             onChange={(v) => update(n.key, v)}
+                                        />
+                                    ) : n.kind === "json" ? (
+                                        <JsonInput
+                                            field={{ key: n.key, label: n.label, kind: "json" }}
+                                            value={typeof parsed?.[n.key] === "string" ? parsed[n.key] : JSON.stringify(parsed?.[n.key] ?? {}, null, 2)}
+                                            onChange={(text) => {
+                                                try { update(n.key, JSON.parse(text)); }
+                                                catch { update(n.key, text); }
+                                            }}
                                         />
                                     ) : (
                                         <Input

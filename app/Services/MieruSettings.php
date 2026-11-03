@@ -88,9 +88,11 @@ class MieruSettings
 
     public static function mihomo($userId, string $uuid, array $node): ?array
     {
+        $userId = ExternalNodeSettings::auth($node, 'username', $userId);
+        $uuid = ExternalNodeSettings::auth($node, 'password', $uuid);
         $s = $node['network_settings'] ?? [];
         // Mihomo has no MTU option. Do not emit a UDP profile that cannot match its server.
-        if (!$userId || (($node['network'] ?? 'tcp') === 'udp' && (int)($s['mtu'] ?? 1400) !== 1400)) return null;
+        if ((!$userId && !isset($node['_external_auth']['username'])) || (($node['network'] ?? 'tcp') === 'udp' && (int)($s['mtu'] ?? 1400) !== 1400)) return null;
         $proxy = ['name' => $node['name'], 'type' => 'mieru', 'server' => trim($node['host'], '[]'),
             'transport' => strtoupper($node['network'] ?? 'tcp'), 'udp' => true, 'username' => (string)$userId, 'password' => $uuid,
             'multiplexing' => $s['multiplexing'] ?? 'MULTIPLEXING_LOW', 'handshake-mode' => $s['handshake_mode'] ?? 'HANDSHAKE_STANDARD'];
@@ -102,7 +104,9 @@ class MieruSettings
 
     public static function uri($userId, string $uuid, array $node): string
     {
-        if (!$userId) return '';
+        $userId = ExternalNodeSettings::auth($node, 'username', $userId);
+        $uuid = ExternalNodeSettings::auth($node, 'password', $uuid);
+        if (!$userId && !isset($node['_external_auth']['username'])) return '';
         $s = $node['network_settings'] ?? [];
         $query = ['profile' => $node['name'], 'mtu' => (int)($s['mtu'] ?? 1400),
             'multiplexing' => $s['multiplexing'] ?? 'MULTIPLEXING_LOW', 'handshake-mode' => $s['handshake_mode'] ?? 'HANDSHAKE_STANDARD',

@@ -40,6 +40,7 @@ class Shadowrocket
 
     public static function buildVmess($uuid, $server)
     {
+        $uuid = \App\Services\ExternalNodeSettings::auth($server, 'uuid', $uuid);
         $userinfo = base64_encode('auto:' . $uuid . '@' . $server['host'] . ':' . $server['port']);
         $config = [
             'tfo' => 1,

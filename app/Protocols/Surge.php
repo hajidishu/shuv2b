@@ -89,11 +89,12 @@ class Surge
 
     public static function buildShadowsocks($password, $server)
     {
-        if ($server['cipher'] === '2022-blake3-aes-128-gcm') {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
+        if (!isset($server['_external_auth']) && $server['cipher'] === '2022-blake3-aes-128-gcm') {
             $serverKey = Helper::getServerKey($server['created_at'], 16);
             $userKey = Helper::uuidToBase64($password, 16);
             $password = "{$serverKey}:{$userKey}";
-        } elseif ($server['cipher'] === '2022-blake3-aes-256-gcm') {
+        } elseif (!isset($server['_external_auth']) && $server['cipher'] === '2022-blake3-aes-256-gcm') {
             $serverKey = Helper::getServerKey($server['created_at'], 32);
             $userKey = Helper::uuidToBase64($password, 32);
             $password = "{$serverKey}:{$userKey}";
@@ -125,6 +126,7 @@ class Surge
 
     public static function buildVmess($uuid, $server)
     {
+        $uuid = \App\Services\ExternalNodeSettings::auth($server, 'uuid', $uuid);
         $config = [
             "{$server['name']}=vmess",
             "{$server['host']}",
@@ -165,6 +167,7 @@ class Surge
 
     public static function buildTrojan($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         $config = [
             "{$server['name']}=trojan",
             "{$server['host']}",
@@ -196,6 +199,7 @@ class Surge
     //参考文档: https://manual.nssurge.com/policy/proxy.html
     public static function buildHysteria($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         $parts = explode(",",$server['port']);
         $firstPart = $parts[0];
         if (strpos($firstPart, '-') !== false) {
@@ -226,6 +230,7 @@ class Surge
 
     public static function buildAnyTLS($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         $tlsSettings = $server['tls_settings'] ?? [];
         $allowInsecure = ($server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0)) == 1 ? 'true' : 'false';
         $sni = $server['server_name'] ?? ($tlsSettings['server_name'] ?? '');

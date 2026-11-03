@@ -21,6 +21,9 @@ class GroupController extends Controller
         $serverGroups = ServerGroup::get();
         $serverService = new ServerService();
         $servers = $serverService->getAllServers();
+        if (\Illuminate\Support\Facades\DB::connection()->getSchemaBuilder()->hasTable('v2_server_external')) {
+            $servers = array_merge($servers, \App\Models\ServerExternal::get(['group_id'])->toArray());
+        }
         foreach ($serverGroups as $k => $v) {
             $serverGroups[$k]['user_count'] = User::where('group_id', $v['id'])->count();
             $serverGroups[$k]['server_count'] = 0;
@@ -66,6 +69,12 @@ class GroupController extends Controller
         foreach ($servers as $server) {
             if (in_array($request->input('id'), (array)$server['group_id'])) {
                 abort(500, '该组已被节点所使用，无法删除');
+            }
+        }
+
+        if (\Illuminate\Support\Facades\DB::connection()->getSchemaBuilder()->hasTable('v2_server_external')) {
+            foreach (\App\Models\ServerExternal::get(['group_id']) as $node) {
+                if (in_array((int)$request->input('id'), $node->group_id, true)) abort(422, '该组已被外部节点使用，请先调整外部节点的权限组');
             }
         }
 

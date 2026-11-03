@@ -25,6 +25,7 @@ import PlanEditor from "./PlanEditor";
 import CardEditor from "./CardEditor";
 import { routeQuery, ResourceLink } from "../navigation";
 import { useTableSort, SortButtons } from "../TableSort";
+import GroupExternalNodes from "./GroupExternalNodes";
 
 const routeActions: Record<string, string> = {
     block: "禁止访问(域名目标)",
@@ -42,6 +43,7 @@ export default function Resources({ path }: { path: string }) {
     const [page, setPage] = useState(1);
     const [size, setSize] = useState(20);
     const [editing, setEditing] = useState<Row>();
+    const [externalGroup, setExternalGroup] = useState<Row>();
     const refs = useReferences();
     const act = useAction();
     const resource = useResource(schema.base + "/fetch", {
@@ -444,7 +446,7 @@ export default function Resources({ path }: { path: string }) {
                         {
                             title: "操作",
                             fixed: "right",
-                            width: schema.sort ? 130 : 110,
+                            width: path === "/server/group" ? 190 : schema.sort ? 130 : 110,
                             render: (_, r) => {
                                 const remove = () =>
                                     act.modal.confirm({
@@ -484,6 +486,10 @@ export default function Resources({ path }: { path: string }) {
                                             className="inline-row-actions"
                                             size={6}
                                         >
+                                            {path === "/server/group" && <>
+                                                <a onClick={() => setExternalGroup(r)}>外部节点</a>
+                                                <span aria-hidden="true">|</span>
+                                            </>}
                                             <a onClick={edit}>编辑</a>
                                             <span aria-hidden="true">|</span>
                                             <a onClick={remove}>删除</a>
@@ -557,6 +563,8 @@ export default function Resources({ path }: { path: string }) {
                     ]}
                 />
             </DataCard>
+            {externalGroup && <GroupExternalNodes group={externalGroup} groups={resource.data}
+                close={() => setExternalGroup(undefined)} changed={resource.reload} />}
             {editing && path === "/plan" ? (
                 <PlanEditor
                     key={editing.id ?? "new"}

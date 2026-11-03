@@ -97,6 +97,7 @@ class Clash
 
     public static function buildShadowsocks($uuid, $server)
     {
+        $uuid = \App\Services\ExternalNodeSettings::auth($server, 'password', $uuid);
         $array = [];
         $array['name'] = $server['name'];
         $array['type'] = 'ss';
@@ -114,7 +115,7 @@ class Clash
                 $plugin_opts['host'] = $server['obfs-host'];
             }
             $array['plugin-opts'] = $plugin_opts;
-        } elseif ($server['network'] ?? null == 'http') {
+        } elseif (($server['network'] ?? null) === 'http') {
             $array['plugin'] = 'obfs';
             $plugin_opts = [
                 'mode' => 'http'
@@ -129,6 +130,7 @@ class Clash
 
     public static function buildVmess($uuid, $server)
     {
+        $uuid = \App\Services\ExternalNodeSettings::auth($server, 'uuid', $uuid);
         $array = [];
         $array['name'] = $server['name'];
         $array['type'] = 'vmess';
@@ -177,6 +179,7 @@ class Clash
 
     public static function buildTrojan($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         $array = [];
         $array['name'] = $server['name'];
         $array['type'] = 'trojan';

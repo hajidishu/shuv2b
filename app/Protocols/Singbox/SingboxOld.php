@@ -99,7 +99,8 @@ class SingboxOld
 
     protected function buildShadowsocks($password, $server)
     {
-        if (strpos($server['cipher'], '2022-blake3') !== false) {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
+        if (!isset($server['_external_auth']) && strpos($server['cipher'], '2022-blake3') !== false) {
             $length = $server['cipher'] === '2022-blake3-aes-128-gcm' ? 16 : 32;
             $serverKey = Helper::getServerKey($server['created_at'], $length);
             $userKey = Helper::uuidToBase64($password, $length);
@@ -139,6 +140,7 @@ class SingboxOld
 
     protected function buildVmess($uuid, $server)
     {
+        $uuid = \App\Services\ExternalNodeSettings::auth($server, 'uuid', $uuid);
         $array = [];
         $array['tag'] = $server['name'];
         $array['type'] = 'vmess';
@@ -177,17 +179,19 @@ class SingboxOld
             if (isset($grpcSettings['serviceName'])) $array['transport']['service_name'] = $grpcSettings['serviceName'];
         }
 
+        if (isset($server['_external_auth']) && empty($array['transport'])) unset($array['transport']);
         return $array;
     }
 
     protected function buildVless($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'uuid', $password);
         $array = [
             "type" => "vless",
             "tag" => $server['name'],
             "server" => $server['host'],
             "server_port" => $server['port'],
-            "uuid" => $password,
+            "uuid" => \App\Services\ExternalNodeSettings::auth($server, 'uuid', $password),
             "packet_encoding" => "xudp"
         ];
 
@@ -246,6 +250,7 @@ class SingboxOld
 
     protected function buildTrojan($password, $server) 
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         $array = [];
         $array['tag'] = $server['name'];
         $array['type'] = 'trojan';
@@ -282,12 +287,13 @@ class SingboxOld
 
     protected function buildTuic($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         $array = [];
         $array['tag'] = $server['name'];
         $array['type'] = 'tuic';
         $array['server'] = $server['host'];
         $array['server_port'] = $server['port'];
-        $array['uuid'] = $password;
+        $array['uuid'] = \App\Services\ExternalNodeSettings::auth($server, 'uuid', $password);
         $array['password'] = $password;
         $array['congestion_control'] = $server['congestion_control'] ?? 'cubic';
         $array['udp_relay_mode'] = $server['udp_relay_mode'] ?? 'native';
@@ -307,6 +313,7 @@ class SingboxOld
 
     protected function buildHysteria($password, $server, $user)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         $array = [
             'server' => $server['host'],
             'tls' => [
@@ -346,6 +353,7 @@ class SingboxOld
 
     protected function buildHysteria2($password, $server, $user)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         $tlsSettings = $server['tls_settings'] ?? [];
         $array = [
             'server' => $server['host'],

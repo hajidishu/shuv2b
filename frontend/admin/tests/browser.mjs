@@ -101,6 +101,7 @@ const input = (name) =>
         .getByLabel(name, { exact: true })
         .and(page.locator("input,textarea,select"));
 const editRow = async (row) => {
+    await row.waitFor({ state: "visible" });
     const direct = row.getByRole("button", { name: "编辑", exact: true });
     if (await direct.count()) await direct.click();
     else if (await row.getByText("编辑", { exact: true }).count())

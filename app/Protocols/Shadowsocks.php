@@ -51,7 +51,7 @@ class Shadowsocks
             "remarks" => $server['name'],
             "server" => $server['host'],
             "server_port" => $server['port'],
-            "password" => $user['uuid'],
+            "password" => \App\Services\ExternalNodeSettings::auth($server, 'password', $user['uuid']),
             "method" => $server['cipher']
         ];
         return $config;

@@ -635,3 +635,17 @@ CREATE TABLE `v2_server_mieru` (
   `updated_at` int(11) NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `v2_server_external` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL,
+  `group_id` text NOT NULL,
+  `group_sort` text DEFAULT NULL,
+  `config` text NOT NULL,
+  `show` tinyint(1) NOT NULL DEFAULT '1',
+  `sort` int(11) NOT NULL DEFAULT '0',
+  `created_at` int(11) NOT NULL,
+  `updated_at` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `v2_server_external_sort_index` (`sort`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

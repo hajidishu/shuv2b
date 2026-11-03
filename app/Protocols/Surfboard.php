@@ -95,6 +95,7 @@ class Surfboard
 
     public static function buildShadowsocks($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         $config = [
             "{$server['name']}=ss",
             "{$server['host']}",
@@ -112,6 +113,7 @@ class Surfboard
 
     public static function buildVmess($uuid, $server)
     {
+        $uuid = \App\Services\ExternalNodeSettings::auth($server, 'uuid', $uuid);
         $config = [
             "{$server['name']}=vmess",
             "{$server['host']}",
@@ -152,6 +154,7 @@ class Surfboard
 
     public static function buildTrojan($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         $config = [
             "{$server['name']}=trojan",
             "{$server['host']}",
@@ -181,6 +184,7 @@ class Surfboard
 
     public static function buildAnyTLS($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         $tlsSettings = $server['tls_settings'] ?? [];
         $allowInsecure = ($server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0)) == 1 ? 'true' : 'false';
         $sni = $server['server_name'] ?? ($tlsSettings['server_name'] ?? '');

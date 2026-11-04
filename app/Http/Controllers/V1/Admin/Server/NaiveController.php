@@ -48,6 +48,7 @@ class NaiveController extends Controller
     {
         $params = $request->validate(['id' => 'required|integer|min:1']);
         $server = ServerNaive::findOrFail($params['id'])->replicate();
+        $server->parent_id = (int)$params['id'];
         $server->show = 0; $server->save();
         return response(['data' => true]);
     }

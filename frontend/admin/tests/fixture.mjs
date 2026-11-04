@@ -491,6 +491,7 @@ export async function startFixture({ visual = false, settings = {} } = {}) {
                     if (data.action === "copy")
                         store.nodes.push({
                             ...structuredClone(row),
+                            parent_id: row.id,
                             show: 0,
                             id: counter++,
                             name: row.name + " 副本",
@@ -527,6 +528,7 @@ export async function startFixture({ visual = false, settings = {} } = {}) {
                 else
                     store.nodes.push({
                         ...structuredClone(row),
+                        parent_id: row.id,
                         show: 0,
                         id: counter++,
                     });

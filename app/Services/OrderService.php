@@ -353,7 +353,7 @@ class OrderService
         }
 
         $this->user->plan_id = $plan->id;
-        $this->user->group_id = $plan->group_id;
+        UserGroupService::applyPlan($this->user,$plan,(int)$order->type);
         $this->user->expired_at = $this->getTime($order->period, $this->user->expired_at);
     }
 
@@ -370,7 +370,7 @@ class OrderService
         $this->user->transfer_enable = $transfer_enable * 1073741824;
         $this->user->device_limit = $plan->device_limit;
         $this->user->plan_id = $plan->id;
-        $this->user->group_id = $plan->group_id;
+        UserGroupService::applyPlan($this->user,$plan,(int)$order->type);
         $this->user->expired_at = NULL;
     }
 

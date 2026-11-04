@@ -89,6 +89,7 @@ class Environment
             $t->bigInteger('telegram_id')->nullable(); $t->bigInteger('telegram_admin_id')->nullable()->unique();
             $t->unsignedBigInteger('telegram_admin_version')->default(0);
             foreach (['is_admin', 'is_staff', 'banned', 'commission_type', 'auto_renewal'] as $key) $t->integer($key)->default(0);
+            $t->unsignedTinyInteger('group_mode')->default(0);
             foreach (['balance', 'commission_balance', 'transfer_enable', 'u', 'd'] as $key) $t->bigInteger($key)->default(0);
             foreach (['plan_id', 'group_id', 'expired_at', 'device_limit', 'speed_limit', 'discount', 'invite_user_id', 'commission_rate'] as $key) $t->integer($key)->nullable();
             foreach (['password_algo', 'password_salt', 'token', 'uuid'] as $key) $t->string($key)->nullable();
@@ -119,6 +120,7 @@ class Environment
         });
         $schema->create('v2_payment', function (Blueprint $t) {
             $t->increments('id'); $t->string('uuid'); $t->string('payment'); $t->text('config');
+            $t->string('name')->nullable();
             $t->integer('enable')->default(1); $t->string('notify_domain')->nullable();
             $t->integer('handling_fee_fixed')->nullable(); $t->decimal('handling_fee_percent', 10, 2)->nullable();
             $t->integer('created_at')->nullable(); $t->integer('updated_at')->nullable();

@@ -177,15 +177,7 @@ class UserController extends Controller
             } else {
                 unset($params['password']);
             }
-            if (isset($params['plan_id'])) {
-                $plan = Plan::find($params['plan_id']);
-                if (!$plan) {
-                    abort(500, '订阅计划不存在');
-                }
-                $params['group_id'] = $plan->group_id;
-            } else {
-                $params['group_id'] = null;
-            }
+            $params = \App\Services\UserGroupService::forUpdate($user,$params);
             if ($request->input('invite_user_email')) {
                 $inviteUser = \App\Services\EmailIdentity::find($request->input('invite_user_email'));
                 if ($inviteUser) {

@@ -83,6 +83,7 @@ class V2boardInstall extends Command
             $this->info('正在导入数据库请稍等...');
             $upgrade = app(\App\Services\DatabaseUpgrade::class);
             $upgrade->run($file, false);
+            app(\App\Services\UserGroupSchema::class)->ensure();
             $upgrade->verify($file);
             app(\App\Services\SubscriptionAuditSchema::class)->ensure();
             app(\App\Services\LeakProbeSchema::class)->ensure();

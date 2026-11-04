@@ -228,7 +228,7 @@ class UserController extends Controller
                         $plan = Plan::where('id', $giftcard->plan_id)->first();
                         if (!$plan) abort(500, __('Subscription plan does not exist'));
                         $user->plan_id = $plan->id;
-                        $user->group_id = $plan->group_id;
+                        if ((int)$user->group_mode!==1) $user->group_id = $plan->group_id;
                         $user->transfer_enable = $plan->transfer_enable * 1073741824;
                         $user->device_limit = $plan->device_limit;
                         $user->u = 0;

@@ -135,6 +135,7 @@ const toggleKeys = new Set([
     "stop_register",
     "try_out_enable",
     "plan_change_enable",
+    "reset_custom_group_on_purchase",
     "surplus_enable",
     "allow_new_period",
     "show_info_to_server_enable",

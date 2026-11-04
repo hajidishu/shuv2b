@@ -14,6 +14,8 @@ const editOrder = [
     "device_limit",
     "expired_at",
     "plan_id",
+    "group_mode",
+    "group_id",
     "banned",
     "commission_type",
     "commission_rate",

@@ -39,7 +39,7 @@ export const planFields: Field[] = [
     f("content", "订阅介绍", "html"),
     f("force_update", "强制更新到用户", "switch", {
         default: 0,
-        help: "将变更的流量、限速和权限组同步到该套餐下的用户",
+        help: "将变更的流量、限速和权限组同步到跟随套餐权限组的用户，跳过自定义权限组用户",
         when: (values) => !!values.id,
     }),
 ];
@@ -47,6 +47,8 @@ export const userFields: Field[] = [
     f("email", "邮箱", "text", { required: true }),
     f("password", "密码", "password", { help: "留空保留原密码" }),
     f("plan_id", "订阅计划", "select", { reference: "plans" }),
+    f("group_mode", "权限组模式", "select", { options: [{value:0,label:"跟随套餐权限组"},{value:1,label:"自定义权限组"}] }),
+    f("group_id", "自定义权限组", "select", { reference: "groups" }),
     f("transfer_enable", "流量额度", "gb"),
     f("u", "已用上传", "gb"),
     f("d", "已用下载", "gb"),

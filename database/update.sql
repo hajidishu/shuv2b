@@ -974,6 +974,8 @@ CREATE TABLE `v2_telegram_member` (
   UNIQUE KEY `v2_telegram_member_chat_id_telegram_id_unique` (`chat_id`,`telegram_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+ALTER TABLE `v2_user` ADD `group_mode` tinyint unsigned NOT NULL DEFAULT '0';
+
 CREATE TABLE `v2_telegram_action` (
   `event_key` char(64) NOT NULL,
   `created_at` int NOT NULL,

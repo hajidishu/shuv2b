@@ -120,4 +120,17 @@ class GiftcardTest extends DatabaseTestCase
         $this->assertSame(3, (int)$newUser->fresh()->group_id);
         $this->assertNull($newUser->fresh()->expired_at);
     }
+
+    public function testPlanGiftCardsKeepCustomGroupsRegardlessOfThePurchaseResetSetting(): void
+    {
+        $plan=Plan::create(['group_id'=>7,'transfer_enable'=>50]);
+        foreach ([0,1] as $reset) foreach ([0,1] as $custom) foreach ([false,true] as $expired) {
+            config(['v2board.reset_custom_group_on_purchase'=>$reset]);
+            $user=$this->user(['plan_id'=>$expired ? $plan->id : null,'expired_at'=>$expired ? time()-86400 : null,'group_id'=>3,'group_mode'=>$custom]);
+            $card=$this->card(['type'=>5,'plan_id'=>$plan->id,'value'=>7]);$this->redeem($user,$card);
+            $this->assertSame($custom ? 3 : 7,(int)$user->fresh()->group_id);$this->assertSame($custom,(int)$user->fresh()->group_mode);
+            $this->assertSame($plan->id,(int)$user->fresh()->plan_id);$this->assertSame(50*1073741824,(int)$user->fresh()->transfer_enable);
+            $this->assertSame(0,(int)$card->fresh()->limit_use);
+        }
+    }
 }

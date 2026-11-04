@@ -211,12 +211,12 @@ class TelegramService {
         });
     }
 
-    public function sendMessageWithAdmin($message, $isStaff = false)
+    public function sendMessageWithAdmin($message, $isStaff = false, string $parseMode = 'markdown')
     {
         if (!config('v2board.telegram_bot_enable', 0)) return;
         $users = self::managementUsers($isStaff)->get();
         foreach ($users as $user) {
-            SendTelegramJob::dispatch($user->telegram_admin_id, $message, $isStaff, $user->id, $user->telegram_admin_version);
+            SendTelegramJob::dispatch($user->telegram_admin_id, $message, $isStaff, $user->id, $user->telegram_admin_version,$parseMode);
         }
     }
 }

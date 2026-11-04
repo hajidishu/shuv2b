@@ -659,6 +659,7 @@ export default function Users() {
                     key={editing.id}
                     user={editing}
                     plans={refs.plans}
+                    groups={refs.groups}
                     save={save}
                     close={() => setEditing(undefined)}
                 />

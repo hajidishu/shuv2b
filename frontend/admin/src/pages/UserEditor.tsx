@@ -28,6 +28,8 @@ function initialValues(user: UserRow) {
         ...user,
         password: undefined,
         plan_id: referenceValue(user.plan_id ?? 0),
+        group_mode: Number(user.group_mode ?? 0),
+        group_id: user.group_id == null ? undefined : referenceValue(user.group_id),
         balance: yuan(user.balance),
         commission_balance: yuan(user.commission_balance),
         u: user.u == null ? null : Number(user.u) / GIB,
@@ -54,15 +56,18 @@ function numberField(key: string) {
 export default function UserEditor({
     user,
     plans,
+    groups,
     save,
     close,
 }: {
     user: UserRow;
     plans: UserRow[];
+    groups: UserRow[];
     save: (values: UserRow) => Promise<void>;
     close: () => void;
 }) {
     const [form] = Form.useForm();
+    const groupMode = Number(Form.useWatch("group_mode", form) ?? user.group_mode ?? 0);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState("");
     useEffect(() => {
@@ -98,6 +103,12 @@ export default function UserEditor({
             payload.is_staff = values.is_staff ? 1 : 0;
             payload.plan_id =
                 Number(values.plan_id) > 0 ? Number(values.plan_id) : null;
+            payload.group_mode = Number(values.group_mode) === 1 ? 1 : 0;
+            if (payload.group_mode === 1) {
+                payload.group_id = Number(values.group_id);
+                if (!Number.isSafeInteger(payload.group_id) || payload.group_id <= 0)
+                    throw new Error("请选择自定义权限组");
+            } else delete payload.group_id;
             for (const key of [
                 "device_limit",
                 "speed_limit",
@@ -149,8 +160,11 @@ export default function UserEditor({
                         field.label
                     )
                 }
+                extra={key === "group_mode" ? (groupMode === 1
+                    ? "自定义权限组不随续费调整，套餐同步将跳过此用户。"
+                    : "使用所选订阅计划的权限组。") : undefined}
                 rules={
-                    field.required
+                    field.required || key === "group_id"
                         ? [{ required: true, message: `请填写${field.label}` }]
                         : undefined
                 }
@@ -288,6 +302,13 @@ export default function UserEditor({
                         ]}
                     />,
                 )}
+                {item("group_mode", <Select aria-label="权限组模式" options={[
+                    {value:0,label:"跟随套餐权限组"},{value:1,label:"自定义权限组"},
+                ]} />)}
+                {groupMode === 1 && item("group_id", <Select aria-label="自定义权限组" placeholder="请选择权限组"
+                    showSearch optionFilterProp="label"
+                    labelRender={({value}) => groups.find(group => referenceValue(group.id) === referenceValue(value))?.name ?? `未找到的权限组（ID：${value}）`}
+                    options={groups.map(group => ({value:referenceValue(group.id),label:group.name}))} />)}
                 {item(
                     "banned",
                     <Select

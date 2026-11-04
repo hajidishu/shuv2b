@@ -128,6 +128,7 @@ class ConfigController extends Controller
                 'public_plan_enabled' => (int)config('v2board.public_plan_enabled', 0),
                 'public_plan_ids' => config('v2board.public_plan_ids', []) ?: [],
                 'plan_change_enable' => (int)config('v2board.plan_change_enable', 1),
+                'reset_custom_group_on_purchase' => (int)config('v2board.reset_custom_group_on_purchase', 0),
                 'reset_traffic_method' => (int)config('v2board.reset_traffic_method', 0),
                 'surplus_enable' => (int)config('v2board.surplus_enable', 1),
                 'allow_new_period' => (int)config('v2board.allow_new_period', 0),

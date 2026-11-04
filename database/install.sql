@@ -596,6 +596,7 @@ CREATE TABLE `v2_user` (
                            `last_login_ip` int(11) DEFAULT NULL,
                            `uuid` varchar(36) NOT NULL,
                            `group_id` int(11) DEFAULT NULL,
+                           `group_mode` tinyint unsigned NOT NULL DEFAULT '0',
                            `plan_id` int(11) DEFAULT NULL,
                            `speed_limit` int(11) DEFAULT NULL,
                            `auto_renewal` tinyint(4) DEFAULT '0',

@@ -235,6 +235,12 @@
         "placeholder": "",
         "order": 28
     },
+    "reset_custom_group_on_purchase": {
+        "group": "subscribe",
+        "label": "购买新套餐时恢复跟随权限组",
+        "help": "默认关闭。开启后，自定义权限组用户新购或变更套餐时，改为跟随新套餐权限组；续费、充值和流量重置不受影响。",
+        "order": 28.1
+    },
     "reset_traffic_method": {
         "group": "subscribe",
         "label": "月流量重置方式",

@@ -73,7 +73,7 @@ function ExternalEditor({ record, groups, close, saved }: { record: Row; groups:
         <div style={{ marginBottom: 20 }}>
             <label htmlFor="external-node-uri">从节点链接导入</label>
             <Input.TextArea id="external-node-uri" value={uri} onChange={event => setUri(event.target.value)} rows={3} placeholder="vless://…、ss://… 等节点链接" />
-            <Button loading={parsing} disabled={!uri.trim() || busy} style={{ marginTop: 8 }} onClick={async () => {
+            <Button aria-label="解析链接" loading={parsing} disabled={!uri.trim() || busy} style={{ marginTop: 8 }} onClick={async () => {
                 setParsing(true); setError("");
                 try {
                     const { data } = await api(base + "/parse", { uri }, "POST");

@@ -168,6 +168,13 @@ class ConfigController extends Controller
                 'telegram_bot_token' => config('v2board.telegram_bot_token'),
                 'telegram_bot_admin_id' => TelegramService::managementUsers()->value('telegram_admin_id'),
                 'telegram_webhook_domain' => config('v2board.telegram_webhook_domain'),
+                'telegram_frontend_url'=>config('v2board.telegram_frontend_url',null),
+                'telegram_remind_enable'=>config('v2board.telegram_remind_enable',0),
+                'telegram_remind_expire_days'=>config('v2board.telegram_remind_expire_days',3),
+                'telegram_remind_traffic_percent'=>config('v2board.telegram_remind_traffic_percent',10),
+                'telegram_group_prune_enable'=>config('v2board.telegram_group_prune_enable',0),
+                'telegram_discuss_id'=>config('v2board.telegram_discuss_id',''),
+                'telegram_channel_id'=>config('v2board.telegram_channel_id',''),
                 'telegram_discuss_link' => config('v2board.telegram_discuss_link')
             ],
             'app' => [

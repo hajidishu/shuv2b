@@ -546,7 +546,7 @@
     "telegram_bot_enable": {
         "group": "telegram",
         "label": "开启机器人通知",
-        "help": "开启后向配置的管理员 TG 账号和已绑定的普通用户发送相应通知。",
+        "help": "向后台配置的管理员发送已有业务通知；用户自动提醒使用下方独立开关。",
         "placeholder": "",
         "order": 72
     },
@@ -641,5 +641,47 @@
         "label": "Turnstile Site Key",
         "help": "在 Cloudflare Turnstile 创建组件后获取，并配置所有用户前端域名。",
         "order": 21
+    },
+    "telegram_frontend_url": {
+        "group": "telegram",
+        "label": "机器人用户端入口",
+        "help": "填写用户端前端地址；留空使用站点地址。前后端分离时请填写用户实际访问的前端。",
+        "order": 71.2
+    },
+    "telegram_remind_enable": {
+        "group": "telegram",
+        "label": "用户自动提醒",
+        "help": "默认关闭。开启后向已确认绑定且未关闭提醒的用户发送到期和流量不足提醒。",
+        "order": 72.1
+    },
+    "telegram_remind_expire_days": {
+        "group": "telegram",
+        "label": "到期提前提醒天数",
+        "help": "每个到期时间提醒一次，范围 1–30 天。",
+        "order": 72.2
+    },
+    "telegram_remind_traffic_percent": {
+        "group": "telegram",
+        "label": "剩余流量提醒阈值（%）",
+        "help": "剩余流量低于此比例时提醒；流量重置或套餐变化后重新计次，范围 1–99。",
+        "order": 72.3
+    },
+    "telegram_discuss_id": {
+        "group": "telegram",
+        "label": "受管群组 ID",
+        "help": "填写数字群 ID，多项用逗号分隔。入群审核只处理所填群组；留空保留原有审核方式。",
+        "order": 73.1
+    },
+    "telegram_channel_id": {
+        "group": "telegram",
+        "label": "受管频道 ID",
+        "help": "填写数字频道 ID，多项用逗号分隔。机器人需要相应管理员权限。",
+        "order": 73.2
+    },
+    "telegram_group_prune_enable": {
+        "group": "telegram",
+        "label": "自动移出失效成员",
+        "help": "默认关闭。仅维护机器人已记录入群的成员，要求确认绑定及有效套餐；不移出群管理员。必须先填写受管群组或频道 ID。",
+        "order": 73.3
     }
 }

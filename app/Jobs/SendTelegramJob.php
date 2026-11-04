@@ -43,6 +43,7 @@ class SendTelegramJob implements ShouldQueue
      */
     public function handle()
     {
+        \App\Services\TelegramRuntime::refresh();
         // Queued messages must also respect subsequent unbinding, bans and role changes.
         if ($this->managementUserId === null || $this->bindingVersion === null) return;
         if (!TelegramService::managementUsers($this->includeStaff)->whereKey($this->managementUserId)

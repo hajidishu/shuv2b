@@ -360,9 +360,7 @@ class UserController extends Controller
         if (!$user) {
             abort(500, __('The user does not exist'));
         }
-        if (!$user->update(['telegram_id' => null])) {
-            abort(500, __('Unbind telegram failed'));
-        }
+        \App\Services\TelegramBindingService::unbind($user);
         return response([
             'data' => true
         ]);

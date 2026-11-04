@@ -139,6 +139,8 @@ const toggleKeys = new Set([
     "allow_new_period",
     "show_info_to_server_enable",
     "telegram_bot_enable",
+    "telegram_remind_enable",
+    "telegram_group_prune_enable",
     "email_verify",
     "safe_mode_enable",
     "email_whitelist_enable",
@@ -152,8 +154,6 @@ const hiddenConfigFields = new Set([
     "frontend_theme",
     "recaptcha_enable",
     "try_out_enable",
-    "telegram_discuss_id",
-    "telegram_channel_id",
 ]);
 const configUiOverrides: Row = {
     windows_download_url: {

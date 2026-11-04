@@ -43,6 +43,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('leak-probe:prune')->daily()->withoutOverlapping();
         // send
         $schedule->command('send:remindMail')->dailyAt('11:30');
+        $schedule->command('telegram:maintain')->everyFifteenMinutes()->withoutOverlapping();
         // horizon metrics
         $schedule->command('horizon:snapshot')->everyFiveMinutes();
     }

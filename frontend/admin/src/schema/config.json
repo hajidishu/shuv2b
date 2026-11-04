@@ -89,7 +89,12 @@
         "telegram_webhook_domain": null,
         "telegram_discuss_link": null,
         "telegram_discuss_id": "",
-        "telegram_channel_id": ""
+        "telegram_channel_id": "",
+        "telegram_frontend_url": null,
+        "telegram_remind_enable": 0,
+        "telegram_remind_expire_days": 3,
+        "telegram_remind_traffic_percent": 10,
+        "telegram_group_prune_enable": 0
     },
     "app": {
         "windows_version": null,

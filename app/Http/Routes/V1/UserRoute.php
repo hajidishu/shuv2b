@@ -68,6 +68,8 @@ class UserRoute
             $router->post('/coupon/check', 'V1\\User\\CouponController@check');
             // Telegram
             $router->get ('/telegram/getBotInfo', 'V1\\User\\TelegramController@getBotInfo');
+            $router->post('/telegram/bind', 'V1\\User\\TelegramController@bind')->middleware('throttle:10,1');
+            $router->post('/telegram/unbind', 'V1\\User\\TelegramController@unbind')->middleware('throttle:10,1');
             // Comm
             $router->get ('/comm/config', 'V1\\User\\CommController@config');
             $router->Post('/comm/getStripePublicKey', 'V1\\User\\CommController@getStripePublicKey');

@@ -62,6 +62,7 @@ jobs:
           node tests/settings-switch-layout.mjs
           node tests/admin-navigation.mjs
           node tests/telegram-management.mjs
+          node tests/telegram-panel.mjs
           node tests/resource-interactions.mjs
           node tests/reference-labels.mjs
           node tests/external-nodes.mjs

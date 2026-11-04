@@ -10,6 +10,6 @@ abstract class Telegram {
 
     public function __construct()
     {
-        $this->telegramService = new TelegramService();
+        $this->telegramService = app(TelegramService::class);
     }
 }

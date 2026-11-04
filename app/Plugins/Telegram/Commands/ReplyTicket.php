@@ -23,7 +23,11 @@ class ReplyTicket extends Telegram {
         $user = DB::transaction(function () use ($msg, $ticketId) {
             $user = TelegramService::managementUsers()->where('telegram_admin_id', $msg->chat_id)->lockForUpdate()->first();
             if (!$user) abort(403, '请由管理员在后台设置 Telegram 管理账号 ID');
+            $key = isset($msg->update_key) ? hash('sha256','ticket-reply:'.$msg->update_key) : null;
+            // Commit the action marker with the reply, before sending the Telegram acknowledgement.
+            if ($key && DB::table('v2_telegram_action')->where('event_key',$key)->exists()) return $user;
             (new TicketService())->replyByAdmin($ticketId, $msg->text, $user->id);
+            if ($key) DB::table('v2_telegram_action')->insert(['event_key'=>$key,'created_at'=>time()]);
             return $user;
         });
         $telegramService = $this->telegramService;

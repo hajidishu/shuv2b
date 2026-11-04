@@ -83,7 +83,7 @@ class Environment
     private static function createSchema()
     {
         $schema = self::$capsule->getConnection('p1')->getSchemaBuilder();
-        foreach (['v2_server_external', 'v2_user_email_identity', 'v2_subscribe_audit_total', 'v2_subscribe_audit_count_event', 'v2_server_mieru', 'v2_server_naive', 'v2_passkey_credential', 'v2_passkey_user', 'v2_payment_receipt', 'v2_payment_attempt', 'v2_commission_log', 'v2_giftcard', 'v2_coupon', 'v2_payment', 'v2_order', 'v2_plan', 'v2_user'] as $table) $schema->dropIfExists($table);
+        foreach (['v2_telegram_action', 'v2_telegram_member', 'v2_telegram_delivery', 'v2_telegram_profile', 'v2_server_external', 'v2_user_email_identity', 'v2_subscribe_audit_total', 'v2_subscribe_audit_count_event', 'v2_server_mieru', 'v2_server_naive', 'v2_passkey_credential', 'v2_passkey_user', 'v2_payment_receipt', 'v2_payment_attempt', 'v2_commission_log', 'v2_giftcard', 'v2_coupon', 'v2_payment', 'v2_order', 'v2_plan', 'v2_user'] as $table) $schema->dropIfExists($table);
         $schema->create('v2_user', function (Blueprint $t) {
             $t->increments('id'); $t->string('email')->unique(); $t->string('password')->nullable();
             $t->bigInteger('telegram_id')->nullable(); $t->bigInteger('telegram_admin_id')->nullable()->unique();

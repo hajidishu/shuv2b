@@ -93,6 +93,7 @@ class V2boardInstall extends Command
         app(\App\Services\NaiveSchema::class)->ensure();
         app(\App\Services\MieruSchema::class)->ensure();
         app(\App\Services\ExternalNodeSchema::class)->ensure();
+        app(\App\Services\TelegramBotSchema::class)->ensure();
             $this->info('数据库导入完成');
             $email = '';
             while (!$email) {

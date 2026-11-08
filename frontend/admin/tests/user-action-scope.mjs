@@ -84,6 +84,12 @@ try {
     };
     const latest = (path) =>
         fixture.calls.filter((call) => call.path === path).at(-1);
+    // Keep the action pending after the fixture mutates its data, as a slow API can.
+    await page.route("**/user/ban", async (route) => {
+        const response = await route.fetch();
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        await route.fulfill({ response });
+    });
 
     const download = page.waitForRequest((request) => request.url().endsWith("/user/dumpCSV"));
     const downloadResponse = page.waitForResponse((response) => response.url().endsWith("/user/dumpCSV"));
@@ -102,18 +108,20 @@ try {
     const mailModal = page.locator(".user-mail-modal");
     await mailModal.getByLabel("主题").fill("Fixture scope check");
     await mailModal.getByLabel("内容").fill("Intercepted by local fixture");
-    const mailRequest = page.waitForRequest((request) => request.url().endsWith("/user/sendMail"));
+    const mailResponse = page.waitForResponse((response) => response.url().endsWith("/user/sendMail"));
     await mailModal.getByRole("button", { name: "确定" }).click();
-    await mailRequest;
+    assert.ok((await mailResponse).ok());
+    await mailModal.waitFor({ state: "hidden" });
     assertScope(latest("/user/sendMail").data);
     assert.equal(latest("/user/sendMail").data.subject, "Fixture scope check");
     report.passed.push("mail-preserves-filter-sort-and-selected-id-with-fixture-only-request");
 
     await actionMenu("批量封禁");
     const banConfirm = page.locator(".ant-modal-confirm");
-    const banRequest = page.waitForRequest((request) => request.url().endsWith("/user/ban"));
+    const banResponse = page.waitForResponse((response) => response.url().endsWith("/user/ban"));
     await banConfirm.getByRole("button", { name: "确定" }).click();
-    await banRequest;
+    assert.ok((await banResponse).ok());
+    await banConfirm.waitFor({ state: "hidden" });
     assertScope(latest("/user/ban").data);
     assert.equal(fixture.store.users.find((user) => user.id === 901).banned, 1);
     assert.equal(fixture.store.users.find((user) => user.id === 902).banned, 0);
@@ -123,9 +131,10 @@ try {
     fixture.store.users.find((user) => user.id === 901).banned = 0;
     await actionMenu("批量删除");
     const deleteConfirm = page.locator(".ant-modal-confirm");
-    const deleteRequest = page.waitForRequest((request) => request.url().endsWith("/user/allDel"));
+    const deleteResponse = page.waitForResponse((response) => response.url().endsWith("/user/allDel"));
     await deleteConfirm.getByRole("button", { name: "确定" }).click();
-    await deleteRequest;
+    assert.ok((await deleteResponse).ok());
+    await deleteConfirm.waitFor({ state: "hidden" });
     assertScope(latest("/user/allDel").data);
     assert.deepEqual(
         fixture.store.users.map((user) => user.id).filter((id) => [901, 902, 903].includes(id)),

@@ -76,15 +76,47 @@ class LeakProbeTest extends DatabaseTestCase
         try { $callback(); $this->fail('Expected HTTP ' . $status); }
         catch (HttpException $e) { $this->assertSame($status, $e->getStatusCode(), $e->getMessage()); }
     }
-    public function testRegistrationReservesNodesBeforeAnyTaskAndRejectsSharedHosts()
+    public function testRegistrationAllowsSharedHostsAndParentChildNodesWhileReservingThePool()
     {
         $this->assertSame(['ordinary'], array_column((new ServerService())->getAvailableServers($this->users[0]), 'name'));
         $this->assertCount(0, (new ServerService())->getAvailableUsers([1], 'vmess', 1));
         $shared = $this->node('same-host', '203.0.113.1');
-        $this->error(422, function () use ($shared) { $this->probe->registerNode('vmess', $shared->id); });
+        $this->assertGreaterThan(0, $this->probe->registerNode('vmess', $shared->id));
         $parent = $this->node('parent', '192.0.2.10'); $child = $this->node('child', '192.0.2.11'); $child->parent_id = $parent->id; $child->save();
-        $this->error(422, function () use ($parent) { $this->probe->registerNode('vmess', $parent->id); });
-        $this->error(422, function () use ($child) { $this->probe->registerNode('vmess', $child->id); });
+        $this->assertGreaterThan(0, $this->probe->registerNode('vmess', $parent->id));
+        $this->assertGreaterThan(0, $this->probe->registerNode('vmess', $child->id));
+        $this->error(409, function () use ($child) { $this->probe->registerNode('vmess', $child->id); });
+    }
+    public function testParentAndChildCanShareAnAddressAndBeUsedForDifferentBranches()
+    {
+        $parent=$this->node('shared-parent','192.0.2.20');$child=$this->node('shared-child','192.0.2.20');
+        $child->update(['parent_id'=>$parent->id,'port'=>'8443','server_port'=>8443]);
+        $a=$this->probe->registerNode('vmess',$parent->id);$b=$this->probe->registerNode('vmess',$child->id);
+        $id=$this->create(['a_node_id'=>$a,'b_node_id'=>$b]);$round=$this->task($id)->current_round_id;
+        foreach ($this->users as $user) {
+            $branch=DB::table(Probe::MEMBER)->where('round_id',$round)->where('user_id',$user->id)->value('branch');
+            $expected=$branch==='a' ? $parent->id : $child->id;$other=$branch==='a' ? $child->id : $parent->id;
+            $nodes=(new ServerService())->getAvailableServers($user);$keys=array_column($nodes,'id');
+            $this->assertContains($expected,$keys);$this->assertNotContains($other,$keys);
+            $this->assertContains($user->id,(new ServerService())->getAvailableUsers([1],'vmess',$expected)->pluck('id')->all());
+            $this->assertNotContains($user->id,(new ServerService())->getAvailableUsers([1],'vmess',$other)->pluck('id')->all());
+        }
+    }
+    public function testLegacyAddressUniqueIndexIsRemovedWithoutLosingRegisteredNodes()
+    {
+        DB::connection()->getSchemaBuilder()->table(Probe::NODE,function (Blueprint $t) {$t->unique('host_key');});
+        (new LeakProbeSchema())->ensure();(new LeakProbeSchema())->ensure();
+        $this->assertSame(4,DB::table(Probe::NODE)->count());
+        $shared=$this->node('shared-after-upgrade','203.0.113.1');$this->assertGreaterThan(0,$this->probe->registerNode('vmess',$shared->id));
+        $this->assertSame(5,DB::table(Probe::NODE)->count());
+    }
+    public function testDisabledOrUnconfiguredNodesCanBeRegisteredBeforeTheyAreMadeUsable()
+    {
+        $node=$this->node('setup-later','');$node->update(['show'=>0]);$pool=$this->probe->registerNode('vmess',$node->id);
+        $this->error(422,function () use ($pool) {$this->create(['a_node_id'=>$pool]);});
+        $node->update(['show'=>1]);$this->error(422,function () use ($pool) {$this->create(['a_node_id'=>$pool]);});
+        $this->assertSame(0,DB::table(Probe::ACTIVE)->count());$this->assertSame(0,DB::table(Probe::TASK)->count());
+        $node->update(['host'=>'192.0.2.30']);$this->assertGreaterThan(0,$this->create(['a_node_id'=>$pool]));
     }
     public function testFixedBalancedGroupsAndConnectionAuthorizationMatchVisibility()
     {
@@ -114,12 +146,12 @@ class LeakProbeTest extends DatabaseTestCase
         $this->error(409, function () { $this->create(['a_node_id' => $this->nodes[2], 'b_node_id' => $this->nodes[3]]); });
         $this->assertSame(1, DB::table(Probe::TASK)->count());
     }
-    public function testChangedNodeConfigRollsBackAndExistingPlanAndMoneyArePreserved()
+    public function testChangedNodeConfigCanStartWithoutChangingUserPlansOrMoney()
     {
         ServerVmess::find(2)->update(['server_port' => 8443]);
-        $this->error(409, function () { $this->create(); });
-        $this->assertSame(0, DB::table(Probe::TASK)->count());
-        $this->assertSame(4, DB::table(Probe::NODE)->where('state', 'ready')->count());
+        $this->assertGreaterThan(0, $this->create());
+        $this->assertSame(1, DB::table(Probe::TASK)->count());
+        $this->assertSame(2, DB::table(Probe::NODE)->where('state', 'ready')->count());
         foreach ($this->users as $user) { $this->assertSame(1999, (int)$user->fresh()->balance); $this->assertSame($this->plan->id, (int)$user->fresh()->plan_id); }
     }
     public function testTaskMembershipGrantsOnlyItsDedicatedNodeAcrossPackageGroups()
@@ -152,7 +184,7 @@ class LeakProbeTest extends DatabaseTestCase
         foreach ($this->users as $user) $this->assertCount(1, (new ServerService())->getAvailableServers($user));
         $this->assertCount(0, (new ServerService())->getAvailableUsers([99], 'vmess', 1));
     }
-    public function testPauseDisabledQuotaAndChangedEntryFailClosedThenResume()
+    public function testPauseAndQuotaStillRevokeAccessWhileEntryEditsRemainUsable()
     {
         $id = $this->create(); $this->change($id, 'pause');
         $this->assertSame(['ordinary'], array_column((new ServerService())->getAvailableServers($this->users[0]), 'name'));
@@ -166,7 +198,11 @@ class LeakProbeTest extends DatabaseTestCase
         $this->assertSame(['ordinary'], array_column((new ServerService())->getAvailableServers($user), 'name'));
         $this->assertNotContains($user->id, (new ServerService())->getAvailableUsers([1], 'vmess', 1)->pluck('id')->all());
         ServerVmess::find(1)->update(['host' => '203.0.113.99']);
-        $this->assertCount(0, (new ServerService())->getAvailableUsers([1], 'vmess', 1));
+        $remaining = (new ServerService())->getAvailableUsers([1], 'vmess', 1)->pluck('id')->all();
+        $this->assertCount(1, $remaining); $this->assertNotContains($user->id, $remaining);
+        $activeUser = \App\Models\User::find($remaining[0]);
+        $servers = (new ServerService())->getAvailableServers($activeUser);
+        $this->assertSame('203.0.113.99', $servers[0]['host']);
     }
     public function testAccountRoleAndPlanChangesRevokeOnlyTheDedicatedAssignment()
     {

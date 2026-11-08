@@ -31,7 +31,7 @@ $fixture=function(string $name,bool $dev=true)use($scratch,$repo,$composer):stri
     $root=$scratch.'/'.$name;mkdir($root);mkdir($root.'/library');mkdir($root.'/vendor/composer',0755,true);
     copy($repo.'/library/WebAuthnPatch.php',$root.'/library/WebAuthnPatch.php');
     $manifest=['name'=>'v2board/v2board','description'=>'Dependency update fixture','license'=>'MIT',
-        'require'=>['php'=>'>=8.0','laravel/framework'=>'^8.0','symfony/yaml'=>'^4.3','lbuchs/webauthn'=>'2.2.0'],
+        'require'=>['php'=>'>=8.0','laravel/framework'=>'^8.0','symfony/yaml'=>'^4.3 || ^5.4.56','lbuchs/webauthn'=>'2.2.0'],
         'require-dev'=>['fixture/dev-package'=>'^1.0'],'minimum-stability'=>'dev','prefer-stable'=>true,
         'scripts'=>['post-autoload-dump'=>'@php -r \'file_put_contents("UNEXPECTED_SCRIPT", "ran");\'']];
     jsonFile($root.'/composer.json',$manifest);

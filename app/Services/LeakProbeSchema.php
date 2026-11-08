@@ -36,11 +36,21 @@ class LeakProbeSchema
         });
         if (!$schema->hasTable('v2_leak_probe_node')) $schema->create('v2_leak_probe_node', function (Blueprint $t) {
             $t->bigIncrements('id'); $t->string('node_type', 20); $t->unsignedInteger('node_id');
-            $t->char('fingerprint', 64); $t->char('host_key', 64)->unique(); $t->string('state', 16)->default('ready');
+            $t->char('fingerprint', 64); $t->char('host_key', 64); $t->string('state', 16)->default('ready');
             $t->unsignedBigInteger('last_pull_at')->nullable(); $t->unsignedBigInteger('last_pull_round_id')->nullable();
             $t->unsignedBigInteger('created_at');
             $t->unique(['node_type', 'node_id']);
         });
+        // Existing pools used to require a different host for every registered node.
+        $indexes = DB::connection()->getDriverName() === 'sqlite'
+            ? DB::select("PRAGMA index_list('v2_leak_probe_node')")
+            : DB::select('SHOW INDEX FROM v2_leak_probe_node');
+        foreach ($indexes as $index) {
+            if (($index->Key_name ?? $index->name) === 'v2_leak_probe_node_host_key_unique') {
+                $schema->table('v2_leak_probe_node', function (Blueprint $t) { $t->dropUnique('v2_leak_probe_node_host_key_unique'); });
+                break;
+            }
+        }
         if (!$schema->hasTable('v2_leak_probe_active_user')) $schema->create('v2_leak_probe_active_user', function (Blueprint $t) {
             $t->unsignedInteger('user_id')->primary(); $t->unsignedBigInteger('task_id')->index();
         });

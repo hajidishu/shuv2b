@@ -38,26 +38,11 @@ class LeakProbeService
     public function registerNode($type, $id)
     {
         $snapshot = $this->snapshot($type, $id);
-        if ($snapshot['parent_id'] || !$snapshot['show'] || !$snapshot['host']) abort(422, '请选择启用且没有父节点的独立节点');
-        foreach (self::TYPES as $otherType) {
-            $class = [
-                'shadowsocks' => \App\Models\ServerShadowsocks::class, 'vmess' => \App\Models\ServerVmess::class,
-                'trojan' => \App\Models\ServerTrojan::class, 'vless' => \App\Models\ServerVless::class,
-                'hysteria' => \App\Models\ServerHysteria::class, 'tuic' => \App\Models\ServerTuic::class,
-                'mieru' => \App\Models\ServerMieru::class, 'naive' => \App\Models\ServerNaive::class, 'anytls' => \App\Models\ServerAnytls::class, 'v2node' => \App\Models\ServerV2node::class,
-            ][$otherType];
-            $query = $class::query();
-            if ($otherType === $type) {
-                if ((clone $query)->where('parent_id', $id)->exists()) abort(422, '该节点有子节点，不能作为独立排查入口');
-                $query->where('id', '!=', $id);
-            }
-            if ($query->whereRaw('LOWER(host) = ?', [$snapshot['host']])->exists()) abort(422, '其他节点共用此入口，请使用独立节点');
-        }
         try {
             return DB::table(self::NODE)->insertGetId(['node_type' => $type, 'node_id' => $id, 'fingerprint' => $snapshot['fingerprint'],
                 'host_key' => $snapshot['host_key'], 'state' => 'ready', 'created_at' => time()]);
         } catch (\Illuminate\Database\QueryException $error) {
-            if ($error->getCode() === '23000' || $error->getCode() === '23505') abort(409, '节点或入口已登记');
+            if ($error->getCode() === '23000' || $error->getCode() === '23505') abort(409, '该节点已登记');
             throw $error;
         }
     }
@@ -103,10 +88,9 @@ class LeakProbeService
             $node = $pool[$nodeId];
             if (!in_array($node->state, ['ready','retired'], true)) abort(409, '所选节点正在被任务占用，请选择空闲节点');
             $snapshot = $this->snapshot($node->node_type, $node->node_id);
-            if (!$snapshot['show'] || $snapshot['parent_id'] || $snapshot['fingerprint'] !== $node->fingerprint) abort(409, '节点配置已变化，请移出专用池后重新登记');
+            if (!$snapshot['show'] || !$snapshot['host']) abort(422, '请先启用节点并填写节点地址');
             $snapshots[] = $snapshot;
         }
-        if ($snapshots[0]['host_key'] === $snapshots[1]['host_key']) abort(422, '两个节点不能共用入口');
         $id = DB::table(self::ROUND)->insertGetId(['task_id' => $task->id, 'parent_id' => $parent ? $parent->id : null,
             'sequence' => $parent ? $parent->sequence + 1 : 1, 'selected_from' => $branch,
             'a_node_id' => $a, 'b_node_id' => $b, 'a_snapshot' => json_encode($snapshots[0]), 'b_snapshot' => json_encode($snapshots[1]), 'created_at' => time()]);
@@ -225,9 +209,6 @@ class LeakProbeService
             if (!$assignment || $pool[$key]->state !== 'active') continue;
             $nodeId = $assignment->branch === 'a' ? $assignment->a_node_id : $assignment->b_node_id;
             if ((int)$pool[$key]->id !== (int)$nodeId) continue;
-            $snapshot = json_decode($assignment->{$assignment->branch . '_snapshot'}, true);
-            $current = $this->snapshot($server['type'], $server['id']);
-            if ($current['fingerprint'] !== $snapshot['fingerprint']) continue;
             $server['_leak_probe'] = ['task_id' => (int)$assignment->task_id, 'round_id' => (int)$assignment->round_id,
                 'user_id' => (int)$user->id, 'branch' => $assignment->branch, 'node_type' => $server['type'], 'node_id' => (int)$server['id']];
             $result[] = $server;
@@ -246,8 +227,6 @@ class LeakProbeService
             ->select('r.*')->first();
         if (!$round) return $query->whereRaw('1 = 0');
         $branch = (int)$round->a_node_id === (int)$node->id ? 'a' : 'b';
-        $snapshot = json_decode($round->{$branch . '_snapshot'}, true);
-        if ($this->snapshot($type, $id)['fingerprint'] !== $snapshot['fingerprint']) return $query->whereRaw('1 = 0');
         $this->pulledNode = ['id' => $node->id, 'round_id' => $round->id, 'branch' => $branch];
         return $query->where('is_admin', 0)
             ->whereExists(function ($q) { $q->selectRaw('1')->from('v2_plan')->whereColumn('v2_plan.id', 'v2_user.plan_id'); })

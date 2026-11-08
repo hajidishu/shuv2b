@@ -55,6 +55,8 @@ try{
         [$c,$o,$e]=$manager('commit',$root,$s);need($c===0,$o.$e);
         $autoload=file_get_contents($root.'/vendor/composer/autoload_static.php');need(!str_contains($autoload,'/.v2board-dependencies-'),'Activated autoload contains stage paths');
         [$c,$o,$e]=$manager('check',$root);need($c===0,$o.$e);$fresh[$runtime]=$root;
+        [$c,$o,$e]=run([PHP_BINARY,$repo.'/tests/symfony-security.php',$root.'/vendor/autoload.php'],$root);need($c===0,$o.$e);
+        $pass($runtime.' Symfony security patches, HEAD matching and YAML compatibility');
         $pass('fresh '.$runtime.' installation uses the published lock and final autoload paths');
     }
     $root=$fresh['fpm'];$before=hashes($root.'/vendor');$s=$snapshot($root);[$c,$o,$e]=$manager('update',$root,$s);need($c===0,$o.$e);[$c,$o,$e]=$manager('commit',$root,$s);need($c===0,$o.$e);

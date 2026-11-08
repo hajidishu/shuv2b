@@ -148,7 +148,7 @@ export default function LeakProbe() {
     const mutable = task && ["active", "paused"].includes(task.status);
     const ready = (pool.data ?? []).filter(
         (node: Row) =>
-            ["ready", "retired"].includes(node.state) && node.config_matches,
+            ["ready", "retired"].includes(node.state) && node.server,
     );
     const nodeOptions = ready.map((node: Row) => ({
         value: Number(node.id),
@@ -157,7 +157,7 @@ export default function LeakProbe() {
     const advanceNodeOptions = (pool.data ?? [])
         .filter(
             (node: Row) =>
-                node.config_matches &&
+                node.server &&
                 (["ready", "retired"].includes(node.state) ||
                     (node.state === "active" &&
                         [currentRound?.a_node_id, currentRound?.b_node_id]
@@ -318,7 +318,7 @@ export default function LeakProbe() {
                     className="leak-intro"
                     type="info"
                     showIcon
-                    message="由管理员人工检测并选择结果；系统按固定分组下发节点，不自动判墙或封禁账号。先登记两个独立、可用的专用节点，再创建任务。"
+                    message="由管理员人工检测并选择结果；系统按固定分组下发节点，不自动判墙或封禁账号。先登记两个可用节点，再创建任务。"
                 />
                 <Table<Row>
                     rowKey="id"
@@ -542,7 +542,7 @@ export default function LeakProbe() {
                 <Alert
                     type="warning"
                     showIcon
-                    message="登记后节点立即从普通订阅撤下，未分配任务时不授权用户。请使用独立入口，且不要与其他节点共用父节点或地址。不同域名是否实际共用IP需要人工核实。"
+                    message="登记后节点立即从普通订阅撤下，未分配任务时不授权用户。支持父子节点、同地址及共享入口，由管理员自行安排部署。"
                 />
                 <Space wrap className="leak-pool-add">
                     <Select
@@ -609,9 +609,9 @@ export default function LeakProbe() {
                             render: (_, node) =>
                                 node.config_matches ? (
                                     "一致"
-                                ) : (
-                                    <Tag color="red">已变化或节点已删除</Tag>
-                                ),
+                                ) : node.server ? (
+                                    <Tag color="blue">配置已调整</Tag>
+                                ) : <Tag color="red">节点已删除</Tag>,
                         },
                         {
                             title: "最近授权请求",
@@ -628,7 +628,7 @@ export default function LeakProbe() {
                                         act.modal.confirm({
                                             title: "移出专用节点池？",
                                             content:
-                                                "移出后恢复节点原有套餐可见范围。重新登记已暴露入口不能证明其适合新一轮排查。",
+                                                "移出后恢复节点原有套餐可见范围。",
                                             onOk: () =>
                                                 poolAction("remove", {
                                                     id: node.id,

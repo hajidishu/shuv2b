@@ -249,7 +249,8 @@ try {
             {
                 name: prefix + "-node-" + i,
                 group_id: [nodeGroupId],
-                host: "203.0.113." + (81 + i),
+                host: live ? "203.0.113." + (81 + i) : "203.0.113.81",
+                ...(!live && i === 1 ? { parent_id: owned.nodes[0].id } : {}),
                 port: "443",
                 server_port: 443,
                 tls: 0,
@@ -290,6 +291,16 @@ try {
         await drawer.waitFor({ state: "hidden" });
         if (live) assert.deepEqual(await nodeUsers(owned.nodes[0]), []);
     });
+    if (!live) {
+        await page.route("**/api/v1/test-admin/leak-probe/nodes", async (route) => {
+            if (route.request().method() !== "GET") return route.continue();
+            const response = await route.fetch();
+            const body = await response.json();
+            for (const node of body.data) node.config_matches = false;
+            await route.fulfill({ response, json: body });
+        });
+        await page.reload({ waitUntil: "networkidle" });
+    }
     await check("preview-and-create-fixed-roster-through-ui", async () => {
         const detail = await createTaskThroughUi(prefix);
         rootRound = detail.rounds[0];

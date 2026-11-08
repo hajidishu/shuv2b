@@ -48,11 +48,12 @@ class Loon
 
     public static function buildShadowsocks($password, $server)
     {
-        if ($server['cipher'] === '2022-blake3-aes-128-gcm') {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
+        if (!isset($server['_external_auth']) && $server['cipher'] === '2022-blake3-aes-128-gcm') {
             $serverKey = Helper::getServerKey($server['created_at'], 16);
             $userKey = Helper::uuidToBase64($password, 16);
             $password = "{$serverKey}:{$userKey}";
-        } elseif ($server['cipher'] === '2022-blake3-aes-256-gcm') {
+        } elseif (!isset($server['_external_auth']) && $server['cipher'] === '2022-blake3-aes-256-gcm') {
             $serverKey = Helper::getServerKey($server['created_at'], 32);
             $userKey = Helper::uuidToBase64($password, 32);
             $password = "{$serverKey}:{$userKey}";
@@ -84,6 +85,7 @@ class Loon
 
     public static function buildVmess($uuid, $server)
     {
+        $uuid = \App\Services\ExternalNodeSettings::auth($server, 'uuid', $uuid);
         $networkSettings = $server['networkSettings'] ?? [];
         $config = [
             "{$server['name']}=vmess",
@@ -136,6 +138,7 @@ class Loon
 
     public static function buildVless($uuid, $server)
     {
+        $uuid = \App\Services\ExternalNodeSettings::auth($server, 'uuid', $uuid);
         $config = [
             "{$server['name']}=vless",
             "{$server['host']}",
@@ -200,6 +203,7 @@ class Loon
     
     public static function buildTrojan($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         $config = [
             "{$server['name']}=trojan",
             "{$server['host']}",
@@ -230,6 +234,7 @@ class Loon
     
     public static function buildHysteria($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
 
         $parts = explode(",",$server['port']);
         $firstPart = $parts[0];
@@ -263,6 +268,7 @@ class Loon
 
     public static function buildAnytls($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         $config = [
             "{$server['name']}=anytls",
             "{$server['host']}",

@@ -17,6 +17,7 @@ class SendTelegramJob implements ShouldQueue
     protected $includeStaff = false;
     protected $managementUserId = null;
     protected $bindingVersion = null;
+    protected $parseMode = 'markdown';
 
     public $tries = 3;
     public $timeout = 10;
@@ -26,7 +27,7 @@ class SendTelegramJob implements ShouldQueue
      *
      * @return void
      */
-    public function __construct(int $telegramId, string $text, bool $includeStaff = false, ?int $managementUserId = null, ?int $bindingVersion = null)
+    public function __construct(int $telegramId, string $text, bool $includeStaff = false, ?int $managementUserId = null, ?int $bindingVersion = null, string $parseMode = 'markdown')
     {
         $this->onQueue('send_telegram');
         $this->telegramId = $telegramId;
@@ -34,6 +35,7 @@ class SendTelegramJob implements ShouldQueue
         $this->includeStaff = $includeStaff;
         $this->managementUserId = $managementUserId;
         $this->bindingVersion = $bindingVersion;
+        $this->parseMode = $parseMode;
     }
 
     /**
@@ -43,11 +45,12 @@ class SendTelegramJob implements ShouldQueue
      */
     public function handle()
     {
+        \App\Services\TelegramRuntime::refresh();
         // Queued messages must also respect subsequent unbinding, bans and role changes.
         if ($this->managementUserId === null || $this->bindingVersion === null) return;
         if (!TelegramService::managementUsers($this->includeStaff)->whereKey($this->managementUserId)
             ->where('telegram_admin_version', $this->bindingVersion)->where('telegram_admin_id', $this->telegramId)->exists()) return;
         $telegramService = app(TelegramService::class);
-        $telegramService->sendMessage($this->telegramId, $this->text, 'markdown');
+        $telegramService->sendMessage($this->telegramId, $this->text, $this->parseMode);
     }
 }

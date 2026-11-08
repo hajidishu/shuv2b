@@ -45,13 +45,7 @@ class UserController extends Controller
             } else {
                 unset($params['password']);
             }
-            if (isset($params['plan_id'])) {
-                $plan = Plan::find($params['plan_id']);
-                if (!$plan) {
-                    abort(500, '订阅计划不存在');
-                }
-                $params['group_id'] = $plan->group_id;
-            }
+            $params = \App\Services\UserGroupService::forUpdate($user,$params);
 
             try {
                 $user->update($params);

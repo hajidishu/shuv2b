@@ -30,6 +30,12 @@ class AdminRoute
             $router->get ('/server/group/fetch', 'V1\\Admin\\Server\\GroupController@fetch');
             $router->post('/server/group/save', 'V1\\Admin\\Server\\GroupController@save');
             $router->post('/server/group/drop', 'V1\\Admin\\Server\\GroupController@drop');
+            $router->get ('/server/group/external/fetch', 'V1\\Admin\\Server\\ExternalController@fetch');
+            $router->post('/server/group/external/parse', 'V1\\Admin\\Server\\ExternalController@parse');
+            $router->post('/server/group/external/save', 'V1\\Admin\\Server\\ExternalController@save');
+            $router->post('/server/group/external/update', 'V1\\Admin\\Server\\ExternalController@update');
+            $router->post('/server/group/external/drop', 'V1\\Admin\\Server\\ExternalController@drop');
+            $router->post('/server/group/external/sort', 'V1\\Admin\\Server\\ExternalController@sort');
             $router->get ('/server/route/fetch', 'V1\\Admin\\Server\\RouteController@fetch');
             $router->post('/server/route/save', 'V1\\Admin\\Server\\RouteController@save');
             $router->post('/server/route/drop', 'V1\\Admin\\Server\\RouteController@drop');

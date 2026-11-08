@@ -9,11 +9,13 @@ class SingboxOld
     private $servers;
     private $user;
     private $config;
+    private $version;
 
     public function __construct($user, $servers, array $options = null)
     {
         $this->user = $user;
         $this->servers = $servers;
+        $this->version = $options['version'] ?? null;
     }
 
     public function handle()
@@ -97,7 +99,8 @@ class SingboxOld
 
     protected function buildShadowsocks($password, $server)
     {
-        if (strpos($server['cipher'], '2022-blake3') !== false) {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
+        if (!isset($server['_external_auth']) && strpos($server['cipher'], '2022-blake3') !== false) {
             $length = $server['cipher'] === '2022-blake3-aes-128-gcm' ? 16 : 32;
             $serverKey = Helper::getServerKey($server['created_at'], $length);
             $userKey = Helper::uuidToBase64($password, $length);
@@ -137,6 +140,7 @@ class SingboxOld
 
     protected function buildVmess($uuid, $server)
     {
+        $uuid = \App\Services\ExternalNodeSettings::auth($server, 'uuid', $uuid);
         $array = [];
         $array['tag'] = $server['name'];
         $array['type'] = 'vmess';
@@ -175,17 +179,19 @@ class SingboxOld
             if (isset($grpcSettings['serviceName'])) $array['transport']['service_name'] = $grpcSettings['serviceName'];
         }
 
+        if (isset($server['_external_auth']) && empty($array['transport'])) unset($array['transport']);
         return $array;
     }
 
     protected function buildVless($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'uuid', $password);
         $array = [
             "type" => "vless",
             "tag" => $server['name'],
             "server" => $server['host'],
             "server_port" => $server['port'],
-            "uuid" => $password,
+            "uuid" => \App\Services\ExternalNodeSettings::auth($server, 'uuid', $password),
             "packet_encoding" => "xudp"
         ];
 
@@ -244,6 +250,7 @@ class SingboxOld
 
     protected function buildTrojan($password, $server) 
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         $array = [];
         $array['tag'] = $server['name'];
         $array['type'] = 'trojan';
@@ -280,12 +287,13 @@ class SingboxOld
 
     protected function buildTuic($password, $server)
     {
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         $array = [];
         $array['tag'] = $server['name'];
         $array['type'] = 'tuic';
         $array['server'] = $server['host'];
         $array['server_port'] = $server['port'];
-        $array['uuid'] = $password;
+        $array['uuid'] = \App\Services\ExternalNodeSettings::auth($server, 'uuid', $password);
         $array['password'] = $password;
         $array['congestion_control'] = $server['congestion_control'] ?? 'cubic';
         $array['udp_relay_mode'] = $server['udp_relay_mode'] ?? 'native';
@@ -305,24 +313,17 @@ class SingboxOld
 
     protected function buildHysteria($password, $server, $user)
     {
-        $parts = explode(",",$server['port']);
-        $firstPart = $parts[0];
-        if (strpos($firstPart, '-') !== false) {
-            $range = explode('-', $firstPart);
-            $firstPort = $range[0];
-        } else {
-            $firstPort = $firstPart;
-        }
-
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         $array = [
             'server' => $server['host'],
-            'server_port' => (int)$firstPort,
             'tls' => [
                 'enabled' => true,
                 'insecure' => $server['insecure'] ? true : false,
                 'server_name' => $server['server_name']
             ]
         ];
+        $hopping = (int)$server['version'] === 2 && $this->version !== null && version_compare($this->version, '1.11.0', '>=');
+        $array = array_merge($array, HysteriaPorts::build($server['port'], $hopping));
 
         if (is_null($server['version']) || $server['version'] == 1) {
             $array['auth_str'] = $password;
@@ -352,18 +353,10 @@ class SingboxOld
 
     protected function buildHysteria2($password, $server, $user)
     {
-        $parts = explode(",",$server['port']);
-        $firstPart = $parts[0];
-        if (strpos($firstPart, '-') !== false) {
-            $range = explode('-', $firstPart);
-            $firstPort = $range[0];
-        } else {
-            $firstPort = $firstPart;
-        }
+        $password = \App\Services\ExternalNodeSettings::auth($server, 'password', $password);
         $tlsSettings = $server['tls_settings'] ?? [];
         $array = [
             'server' => $server['host'],
-            'server_port' => (int)$firstPort,
             'tls' => [
                 'enabled' => true,
                 'insecure' => ($tlsSettings['allow_insecure'] ?? 0) == 1 ? true : false,
@@ -373,6 +366,8 @@ class SingboxOld
             'tag' => $server['name'],
             'type' => 'hysteria2'
         ];
+        $hopping = $this->version !== null && version_compare($this->version, '1.11.0', '>=');
+        $array = array_merge($array, HysteriaPorts::build($server['port'], $hopping));
         if (isset($server['obfs'])) {
             $array['obfs']['type'] = $server['obfs'];
             $array['obfs']['password'] = $server['obfs_password'];

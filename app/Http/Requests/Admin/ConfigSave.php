@@ -48,6 +48,7 @@ class ConfigSave extends FormRequest
         'currency_symbol' => '',
         // subscribe
         'plan_change_enable' => 'in:0,1',
+        'reset_custom_group_on_purchase' => 'in:0,1',
         'reset_traffic_method' => 'in:0,1,2,3,4',
         'surplus_enable' => 'in:0,1',
         'allow_new_period' => 'in:0,1',
@@ -82,7 +83,13 @@ class ConfigSave extends FormRequest
         // telegram
         'telegram_bot_enable' => 'in:0,1',
         'telegram_bot_token' => '',
+        'telegram_bot_admin_id' => ['nullable', 'regex:/\A[1-9][0-9]{0,15}\z/', 'integer', 'max:4503599627370495'],
         'telegram_webhook_domain' => 'nullable|string|max:2048',
+        'telegram_frontend_url' => 'nullable|string|max:2048',
+        'telegram_remind_enable' => 'in:0,1',
+        'telegram_remind_expire_days' => 'integer|between:1,30',
+        'telegram_remind_traffic_percent' => 'integer|between:1,99',
+        'telegram_group_prune_enable' => 'in:0,1',
         'telegram_discuss_id' => '',
         'telegram_channel_id' => '',
         'telegram_discuss_link' => 'nullable|url',
@@ -131,6 +138,12 @@ class ConfigSave extends FormRequest
     public function rules()
     {
         $rules = self::RULES;
+        $rules['telegram_frontend_url'] = ['nullable','string','max:2048',function ($attribute,$value,$fail) {
+            if (!\App\Services\PaymentReturnUrl::normalizeBase($value)) $fail('用户端入口必须为 HTTP(S) 地址，不能包含账号、查询参数或片段');
+        }];
+        foreach (['telegram_discuss_id','telegram_channel_id'] as $key) $rules[$key]=['nullable',function ($attribute,$value,$fail) {
+            if (!\App\Services\TelegramGroupService::validIds($value)) $fail('请填写数字群或频道 ID，多项用逗号分隔');
+        }];
         $rules['public_plan_ids.*'] = 'bail|required|integer|min:1|distinct|exists:v2_plan,id';
         $rules['google_origins.*'] = ['required', 'string', 'max:2048', function ($attribute, $value, $fail) {
             if (!\App\Services\PasskeySettings::origin($value)) $fail('Google 来源必须为完整 HTTPS 来源，不含路径；仅 localhost 允许 HTTP');

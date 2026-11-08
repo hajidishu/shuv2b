@@ -26,7 +26,7 @@
         "php-curl-class/php-curl-class": "^8.6",
         "rybakit/msgpack": "^0.9.1",
         "stripe/stripe-php": "^v14.9.0",
-        "symfony/yaml": "^4.3",
+        "symfony/yaml": "^4.3 || ^5.4.56",
         "workerman/workerman": "5.2.0"
     },
     "suggest": {

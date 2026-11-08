@@ -42,7 +42,7 @@ class PlanController extends Controller
             // update user group id and transfer
             try {
                 if ($request->input('force_update')) {
-                    User::where('plan_id', $plan->id)->update([
+                    User::where('plan_id', $plan->id)->where('group_mode',0)->update([
                         'group_id' => $params['group_id'],
                         'transfer_enable' => $params['transfer_enable'] * 1073741824,
                         'device_limit' => $params['device_limit'],

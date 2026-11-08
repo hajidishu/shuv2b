@@ -20,10 +20,11 @@ class UnBind extends Telegram {
             $telegramService->sendMessage($message->chat_id, '没有查询到您的用户信息，请先绑定账号', 'markdown');
             return;
         }
-        $user->telegram_id = NULL;
-        if (!$user->save()) {
-            abort(500, '解绑失败');
+        if (\App\Services\TelegramBindingService::confirmed($user)) {
+            (new \App\Services\TelegramBotService($this->telegramService))->requestUnbind((int)$message->chat_id);
+            return;
         }
+        \App\Services\TelegramBindingService::unbind($user);
         $telegramService->sendMessage($message->chat_id, '解绑成功', 'markdown');
     }
 }

@@ -14,7 +14,7 @@ class GetLatestUrl extends Telegram {
         $text = sprintf(
             "%s的最新网址是：%s",
             config('v2board.app_name', 'V2Board'),
-            config('v2board.app_url')
+            \App\Services\TelegramBotService::siteUrl() ?? '（尚未配置）'
         );
         $telegramService->sendMessage($message->chat_id, $text, 'markdown');
     }

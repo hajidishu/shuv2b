@@ -128,6 +128,7 @@ class ConfigController extends Controller
                 'public_plan_enabled' => (int)config('v2board.public_plan_enabled', 0),
                 'public_plan_ids' => config('v2board.public_plan_ids', []) ?: [],
                 'plan_change_enable' => (int)config('v2board.plan_change_enable', 1),
+                'reset_custom_group_on_purchase' => (int)config('v2board.reset_custom_group_on_purchase', 0),
                 'reset_traffic_method' => (int)config('v2board.reset_traffic_method', 0),
                 'surplus_enable' => (int)config('v2board.surplus_enable', 1),
                 'allow_new_period' => (int)config('v2board.allow_new_period', 0),
@@ -166,7 +167,15 @@ class ConfigController extends Controller
             'telegram' => [
                 'telegram_bot_enable' => config('v2board.telegram_bot_enable', 0),
                 'telegram_bot_token' => config('v2board.telegram_bot_token'),
+                'telegram_bot_admin_id' => TelegramService::managementUsers()->value('telegram_admin_id'),
                 'telegram_webhook_domain' => config('v2board.telegram_webhook_domain'),
+                'telegram_frontend_url'=>config('v2board.telegram_frontend_url',null),
+                'telegram_remind_enable'=>config('v2board.telegram_remind_enable',0),
+                'telegram_remind_expire_days'=>config('v2board.telegram_remind_expire_days',3),
+                'telegram_remind_traffic_percent'=>config('v2board.telegram_remind_traffic_percent',10),
+                'telegram_group_prune_enable'=>config('v2board.telegram_group_prune_enable',0),
+                'telegram_discuss_id'=>config('v2board.telegram_discuss_id',''),
+                'telegram_channel_id'=>config('v2board.telegram_channel_id',''),
                 'telegram_discuss_link' => config('v2board.telegram_discuss_link')
             ],
             'app' => [
@@ -221,6 +230,11 @@ class ConfigController extends Controller
     public function save(ConfigSave $request)
     {
         $data = $request->validated();
+        if (array_key_exists('telegram_bot_admin_id', $data)) {
+            TelegramService::setManagementAccount((int)$request->user['id'], $data['telegram_bot_admin_id']);
+            unset($data['telegram_bot_admin_id']); // The single binding lives in the existing user table.
+            if (!$data) return response(['data' => true]);
+        }
         if (array_key_exists('public_plan_ids', $data)) $data['public_plan_ids'] = array_values(array_map('intval', $data['public_plan_ids'] ?? []));
         $config = config('v2board');
         if (array_key_exists('recaptcha_enable', $data) && !array_key_exists('captcha_provider', $data)) {

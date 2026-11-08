@@ -57,6 +57,9 @@ class V2boardUpdate extends Command
         app(\App\Services\EmailIdentitySchema::class)->ensure();
         app(\App\Services\NaiveSchema::class)->ensure();
         app(\App\Services\MieruSchema::class)->ensure();
+        app(\App\Services\ExternalNodeSchema::class)->ensure();
+        app(\App\Services\TelegramBotSchema::class)->ensure();
+        app(\App\Services\UserGroupSchema::class)->ensure();
         \Artisan::call('route:clear');
         \Artisan::call('horizon:terminate');
         $this->info('数据库更新完成，已请求 Horizon 退出。请确认守护程序已重新拉起 Horizon，并重载 PHP-FPM 或通过原守护配置重启 Webman。');

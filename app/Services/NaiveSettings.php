@@ -68,6 +68,8 @@ class NaiveSettings
 
     public static function outbound($userId, string $uuid, array $node): array
     {
+        $userId = ExternalNodeSettings::auth($node, 'username', $userId);
+        $uuid = ExternalNodeSettings::auth($node, 'password', $uuid);
         return [
             'type' => 'naive', 'tag' => $node['name'], 'server' => $node['host'],
             'server_port' => (int)$node['port'], 'username' => (string)$userId, 'password' => $uuid,
@@ -78,7 +80,9 @@ class NaiveSettings
 
     public static function uri($userId, string $uuid, array $node): string
     {
-        if (!$userId) return '';
+        $userId = ExternalNodeSettings::auth($node, 'username', $userId);
+        $uuid = ExternalNodeSettings::auth($node, 'password', $uuid);
+        if (!$userId && !isset($node['_external_auth']['username'])) return '';
         $scheme = ($node['network'] ?? 'tcp') === 'udp' ? 'naive+quic' : 'naive+https';
         $auth = rawurlencode((string)$userId) . ':' . rawurlencode($uuid);
         $host = \App\Utils\Helper::formatHost($node['host']);

@@ -907,3 +907,77 @@ CREATE TABLE `v2_server_mieru` (
 ALTER TABLE `v2_user` ADD `telegram_admin_id` bigint(20) DEFAULT NULL;
 ALTER TABLE `v2_user` ADD UNIQUE INDEX `v2_user_telegram_admin_id_unique` (`telegram_admin_id`);
 ALTER TABLE `v2_user` ADD `telegram_admin_version` bigint(20) unsigned NOT NULL DEFAULT '0';
+
+CREATE TABLE `v2_server_external` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL,
+  `group_id` text NOT NULL,
+  `group_sort` text DEFAULT NULL,
+  `config` text NOT NULL,
+  `show` tinyint(1) NOT NULL DEFAULT '1',
+  `sort` int(11) NOT NULL DEFAULT '0',
+  `created_at` int(11) NOT NULL,
+  `updated_at` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `v2_server_external_sort_index` (`sort`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+ALTER TABLE `v2_server_external` ADD `group_sort` text DEFAULT NULL;
+
+
+CREATE TABLE `v2_telegram_profile` (
+  `user_id` int unsigned NOT NULL,
+  `telegram_id` bigint NOT NULL,
+  `binding_version` varchar(32) NOT NULL,
+  `fingerprint` varchar(64) NOT NULL,
+  `remind_expire` tinyint NOT NULL DEFAULT '1',
+  `remind_traffic` tinyint NOT NULL DEFAULT '1',
+  `traffic_cycle` int unsigned NOT NULL DEFAULT '0',
+  `last_usage` bigint NOT NULL DEFAULT '0',
+  `last_limit` bigint NOT NULL DEFAULT '0',
+  `last_plan` int NOT NULL DEFAULT '0',
+  `last_expiry` int DEFAULT NULL,
+  `created_at` int NOT NULL,
+  `updated_at` int NOT NULL,
+  PRIMARY KEY (`user_id`),
+  UNIQUE KEY `v2_telegram_profile_telegram_id_unique` (`telegram_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `v2_telegram_delivery` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int unsigned NOT NULL,
+  `telegram_id` bigint NOT NULL,
+  `binding_version` varchar(32) NOT NULL,
+  `event_key` varchar(64) NOT NULL,
+  `kind` varchar(16) NOT NULL,
+  `payload` text NOT NULL,
+  `status` varchar(16) NOT NULL DEFAULT 'pending',
+  `attempts` int NOT NULL DEFAULT '0',
+  `dispatched_at` int DEFAULT NULL,
+  `sent_at` int DEFAULT NULL,
+  `created_at` int NOT NULL,
+  `updated_at` int NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `v2_telegram_delivery_event_key_unique` (`event_key`),
+  KEY `v2_telegram_delivery_user_id_index` (`user_id`),
+  KEY `v2_telegram_delivery_status_index` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `v2_telegram_member` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int unsigned NOT NULL,
+  `chat_id` bigint NOT NULL,
+  `telegram_id` bigint NOT NULL,
+  `joined_at` int NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `v2_telegram_member_user_id_index` (`user_id`),
+  UNIQUE KEY `v2_telegram_member_chat_id_telegram_id_unique` (`chat_id`,`telegram_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+ALTER TABLE `v2_user` ADD `group_mode` tinyint unsigned NOT NULL DEFAULT '0';
+
+CREATE TABLE `v2_telegram_action` (
+  `event_key` char(64) NOT NULL,
+  `created_at` int NOT NULL,
+  PRIMARY KEY (`event_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -83,6 +83,7 @@ class V2boardInstall extends Command
             $this->info('正在导入数据库请稍等...');
             $upgrade = app(\App\Services\DatabaseUpgrade::class);
             $upgrade->run($file, false);
+            app(\App\Services\UserGroupSchema::class)->ensure();
             $upgrade->verify($file);
             app(\App\Services\SubscriptionAuditSchema::class)->ensure();
             app(\App\Services\LeakProbeSchema::class)->ensure();
@@ -92,6 +93,8 @@ class V2boardInstall extends Command
             app(\App\Services\EmailIdentitySchema::class)->ensure();
         app(\App\Services\NaiveSchema::class)->ensure();
         app(\App\Services\MieruSchema::class)->ensure();
+        app(\App\Services\ExternalNodeSchema::class)->ensure();
+        app(\App\Services\TelegramBotSchema::class)->ensure();
             $this->info('数据库导入完成');
             $email = '';
             while (!$email) {

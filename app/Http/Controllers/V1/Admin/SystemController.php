@@ -104,10 +104,15 @@ class SystemController extends Controller
     }
 
     public function getSystemLog(Request $request) {
-        $current = $request->input('current') ? $request->input('current') : 1;
-        $pageSize = $request->input('page_size') >= 10 ? $request->input('page_size') : 10;
-        $builder = LogModel::orderBy('created_at', 'DESC')
-            ->setFilterAllowKeys('level');
+        $request->validate([
+            'current' => 'nullable|integer|min:1',
+            'page_size' => 'nullable|integer|min:10|max:1000',
+            'filter' => 'nullable|array|max:20',
+        ]);
+        $current = (int)($request->input('current') ?: 1);
+        $pageSize = (int)($request->input('page_size') ?: 10);
+        $builder = LogModel::orderBy('created_at', 'DESC')->orderBy('id', 'DESC')
+            ->setFilterAllowKeys('level', 'uri', 'ip', 'method', 'host', 'title');
         $total = $builder->count();
         $res = $builder->forPage($current, $pageSize)
             ->get();

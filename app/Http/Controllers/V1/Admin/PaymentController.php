@@ -72,9 +72,6 @@ class PaymentController extends Controller
 
     public function save(Request $request)
     {
-        if (!config('v2board.app_url')) {
-            abort(500, '请在站点配置中配置站点地址');
-        }
         $params = $request->validate([
             'name' => 'required',
             'icon' => 'nullable',
@@ -91,11 +88,16 @@ class PaymentController extends Controller
             'handling_fee_fixed.integer' => '固定手续费格式有误',
             'handling_fee_percent.between' => '百分比手续费范围须在0.1-100之间'
         ]);
-        PaymentService::notifyBase($params['notify_domain'] ?? null);
-        PaymentService::validateConfiguration($params['payment'], $params['config']);
+        $payment = null;
         if ($request->input('id')) {
             $payment = Payment::find($request->input('id'));
             if (!$payment) abort(500, '支付方式不存在');
+        }
+        if (!$payment || array_key_exists('notify_domain', $params)) {
+            PaymentService::notifyBase($params['notify_domain'] ?? null);
+        }
+        PaymentService::validateConfiguration($params['payment'], $params['config']);
+        if ($payment) {
             try {
                 $payment->update($params);
             } catch (\Exception $e) {

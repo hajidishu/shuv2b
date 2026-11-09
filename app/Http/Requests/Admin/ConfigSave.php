@@ -188,9 +188,12 @@ class ConfigSave extends FormRequest
     {
         $validator->after(function ($validator) {
             if ($validator->errors()->isNotEmpty()) return;
-            $google = array_merge((array)config('v2board', []), $this->only(['google_login_enabled', 'google_client_id', 'google_origins']));
-            if (!empty($google['google_login_enabled']) && !\App\Services\GoogleSettings::validate($google)) {
-                $validator->errors()->add('google_login_enabled', '启用 Google 登录前请填写部署者自己的 Web Client ID 和允许的前端来源');
+            $google = $this->only(['google_login_enabled', 'google_client_id', 'google_origins']);
+            if ($google) {
+                $google = array_merge((array)config('v2board', []), $google);
+                if (!empty($google['google_login_enabled']) && !\App\Services\GoogleSettings::validate($google)) {
+                    $validator->errors()->add('google_login_enabled', '启用 Google 登录前请填写部署者自己的 Web Client ID 和允许的前端来源');
+                }
             }
             $captcha = $this->only(['captcha_provider', 'recaptcha_enable', 'recaptcha_key', 'recaptcha_site_key', 'turnstile_site_key', 'turnstile_secret_key']);
             if ($captcha) {
@@ -205,9 +208,12 @@ class ConfigSave extends FormRequest
                     if ($field && (!is_string($captcha[$field] ?? null) || trim($captcha[$field]) === '')) $validator->errors()->add($field, '请填写所选人机验证方式的网站密钥和私钥');
                 }
             }
-            $values = array_merge((array)config('v2board', []), $this->only(['passkey_enabled', 'passkey_rp_id', 'passkey_origins']));
-            if (!empty($values['passkey_enabled']) && !\App\Services\PasskeySettings::validate($values)) {
-                $validator->errors()->add('passkey_enabled', '启用 Passkey 前请填写固定 RP ID 和完整 HTTPS 允许来源；修改 RP ID 前请先关闭功能');
+            $values = $this->only(['passkey_enabled', 'passkey_rp_id', 'passkey_origins']);
+            if ($values) {
+                $values = array_merge((array)config('v2board', []), $values);
+                if (!empty($values['passkey_enabled']) && !\App\Services\PasskeySettings::validate($values)) {
+                    $validator->errors()->add('passkey_enabled', '启用 Passkey 前请填写固定 RP ID 和完整 HTTPS 允许来源；修改 RP ID 前请先关闭功能');
+                }
             }
         });
     }

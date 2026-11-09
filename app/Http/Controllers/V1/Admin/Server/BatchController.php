@@ -53,7 +53,7 @@ class BatchController extends Controller
         if ($nodes->count() !== count($payload['nodes'])) {
             throw ValidationException::withMessages(['nodes' => '不能重复选择同一节点']);
         }
-        $changes = $request->input('changes', []);
+        $changes = $payload['action'] === 'update' ? $request->input('changes', []) : [];
         foreach (array_keys($changes) as $field) {
             if (!in_array($field, self::FIELDS, true)) {
                 throw ValidationException::withMessages(['changes' => '不支持修改字段：' . $field]);
@@ -80,17 +80,21 @@ class BatchController extends Controller
                 $method = new \ReflectionMethod($controller, $action);
                 $requestClass = (string)$method->getParameters()[0]->getType();
                 $inner = Request::createFrom($request, new $requestClass());
-                $data = array_merge($server->toArray(), $changes, ['id' => $server->id]);
+                $data = $payload['action'] === 'update'
+                    ? array_merge($server->toArray(), $changes, ['id' => $server->id])
+                    : ['id' => $server->id];
                 if (in_array($node['type'], ['anytls', 'v2node'], true) && isset($data['padding_scheme'])) {
                     $padding = $data['padding_scheme'];
-                    if (is_string($padding)) {
-                        $padding = json_decode($padding, true);
-                        if (json_last_error() !== JSON_ERROR_NONE) {
-                            throw ValidationException::withMessages(['changes.padding_scheme' => '填充方案必须为有效 JSON']);
+                    if (array_key_exists('padding_scheme', $changes)) {
+                        if (is_string($padding)) {
+                            $padding = json_decode($padding, true);
+                            if (json_last_error() !== JSON_ERROR_NONE) {
+                                throw ValidationException::withMessages(['changes.padding_scheme' => '填充方案必须为有效 JSON']);
+                            }
                         }
-                    }
-                    if (!is_array($padding)) {
-                        throw ValidationException::withMessages(['changes.padding_scheme' => '填充方案必须为 JSON 数组']);
+                        if (!is_array($padding)) {
+                            throw ValidationException::withMessages(['changes.padding_scheme' => '填充方案必须为 JSON 数组']);
+                        }
                     }
                     $data['padding_scheme'] = json_encode($padding);
                 }

@@ -254,21 +254,27 @@ class ConfigController extends Controller
         if (!File::put(base_path() . '/config/v2board.php', "<?php\n return $data ;")) {
             abort(500, '修改失败');
         }
-        if (function_exists('opcache_reset')) {
-            if (opcache_reset() === false) {
-                abort(500, '缓存清除失败，请卸载或检查opcache配置状态');
-            }
+        $opcacheEnabled = (bool)ini_get('opcache.enable') &&
+            (PHP_SAPI !== 'cli' || (bool)ini_get('opcache.enable_cli'));
+        $reload = $opcacheEnabled && (!function_exists('opcache_invalidate') ||
+            !@opcache_invalidate(base_path('config/v2board.php'), true));
+        // Never regenerate config.php from stale bytecode when invalidation is unavailable.
+        Artisan::call($reload ? 'config:clear' : 'config:cache');
+        if ($opcacheEnabled && !$reload && !@opcache_invalidate(app()->getCachedConfigPath(), true)) {
+            Artisan::call('config:clear');
+            $reload = true;
         }
-        Artisan::call('config:cache');
+        $result = ['data' => true];
+        if ($reload) {
+            $result['warning'] = (string)ini_get('opcache.file_cache') !== ''
+                ? '配置已保存。请清理 PHP OPcache 文件缓存并完整重启 PHP/FPM 或 Webman 主进程后生效。'
+                : '配置已保存，但 OPcache 清理受限。请完整重启 PHP/FPM 或 Webman 主进程后生效。';
+        }
         if(Cache::has('WEBMANPID')) {
             $pid = Cache::get('WEBMANPID');
             Cache::forget('WEBMANPID');
-            return response([
-                'data' => posix_kill($pid, 15)
-            ]);
+            $result['data'] = posix_kill($pid, 15);
         }
-        return response([
-            'data' => true
-        ]);
+        return response($result);
     }
 }

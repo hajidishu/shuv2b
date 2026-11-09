@@ -138,6 +138,61 @@ class PaymentNotifyUrlTest extends DatabaseTestCase
             PaymentService::notifyUrl('EPay', 'id', 'https://notify.example.test'));
     }
 
+    public function testAdminCanSaveAndPayUsingIndependentUrlsWithoutSiteAddress()
+    {
+        config(['v2board.app_url' => null]);
+        (new PaymentController())->save($this->saveRequest(['name' => 'Separated fixture', 'payment' => 'EPay',
+            'config' => ['pid' => 'fixture-app', 'key' => 'fixture-secret', 'url' => 'https://gateway.example.test'],
+            'notify_domain' => 'https://notify.example.test']));
+        $gateway = Payment::firstOrFail();
+        $result = (new PaymentService('EPay', $gateway->id))->pay($this->orderData());
+        parse_str(parse_url($result['data'], PHP_URL_QUERY), $params);
+        $this->assertSame('https://notify.example.test/api/v1/guest/payment/notify/EPay/' . $gateway->uuid, $params['notify_url']);
+        $this->assertSame('https://customer.example.test/#/order/notify-order', $params['return_url']);
+    }
+
+    public function testAdminStillRejectsMissingConfiguredNotificationBase()
+    {
+        config(['v2board.app_url' => null]);
+        $this->expectException(ValidationException::class);
+        try {
+            (new PaymentController())->save($this->saveRequest(['name' => 'No notify fixture', 'payment' => 'EPay',
+                'config' => ['key' => 'fixture-secret'], 'notify_domain' => '']));
+        } finally {
+            $this->assertSame(0, Payment::count());
+        }
+    }
+
+    public function testAdminPartialUpdateKeepsStoredNotifyDomainWithoutSiteAddress()
+    {
+        config(['v2board.app_url' => null]);
+        $gateway = $this->gateway('EPay', 'https://notify.example.test');
+        $payload = ['id' => $gateway->id, 'name' => 'Renamed fixture', 'payment' => 'EPay',
+            'config' => $gateway->config];
+        (new PaymentController())->save($this->saveRequest($payload));
+        $this->assertSame('https://notify.example.test', $gateway->fresh()->notify_domain);
+        $this->assertSame('Renamed fixture', $gateway->fresh()->name);
+        try {
+            (new PaymentController())->save($this->saveRequest($payload + ['notify_domain' => '']));
+            $this->fail('Clearing the only configured notify base must fail');
+        } catch (ValidationException $error) {
+            $this->assertArrayHasKey('notify_domain', $error->errors());
+        }
+        $this->assertSame('https://notify.example.test', $gateway->fresh()->notify_domain);
+    }
+
+    public function testUnrelatedPartialUpdateDoesNotRevalidateUnchangedLegacyNotifyDomain()
+    {
+        config(['v2board.app_url' => null]);
+        $gateway = $this->gateway('EPay', 'not-a-url');
+        (new PaymentController())->save($this->saveRequest(['id' => $gateway->id, 'name' => 'Legacy renamed',
+            'payment' => 'EPay', 'config' => $gateway->config]));
+        $this->assertSame('Legacy renamed', $gateway->fresh()->name);
+        $this->assertSame('not-a-url', $gateway->fresh()->notify_domain);
+        $this->expectException(ValidationException::class);
+        (new PaymentService('EPay', $gateway->id))->pay($this->orderData());
+    }
+
     public function testInvalidLegacyGatewayCanBeDisabledButNotReenabled()
     {
         $gateway = $this->gateway('EPay', 'not-a-url');

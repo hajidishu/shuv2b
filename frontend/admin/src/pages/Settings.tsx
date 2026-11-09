@@ -351,11 +351,12 @@ export default function Settings() {
             setSaveState("保存中");
             act.message.open({ key: "settings-save", type: "loading", content: "正在保存设置", duration: 0 });
             try {
-                await api("/config/save", payload, "POST");
+                const response = await api("/config/save", payload, "POST");
                 setError("");
-                setSaveState(Object.keys(pending.current).length ? "尚未保存" : "已保存");
-                act.message.success({ key: "settings-save", content: "设置已保存", duration: 1.5 });
+                setSaveState(Object.keys(pending.current).length ? "尚未保存" : response.warning ? "已保存，需重载 PHP" : "已保存");
+                act.message.open({ key: "settings-save", type: response.warning ? "warning" : "success", content: response.warning || "设置已保存", duration: response.warning ? 8 : 1.5 });
                 if (
+                    !response.warning &&
                     payload.secure_path &&
                     payload.secure_path !== window.settings?.secure_path
                 )

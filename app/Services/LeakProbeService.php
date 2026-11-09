@@ -75,7 +75,7 @@ class LeakProbeService
 
     public function preview(array $input)
     {
-        $members = $this->eligible($input)->orderBy('id')->limit(10001)->get(['id','email','group_id']);
+        $members = $this->eligible($input)->orderBy('id')->limit(10001)->get(['id','email']);
         return ['count' => count($members), 'hash' => hash('sha256', $members->toJson()), 'sample' => $members->take(20)->pluck('email')->all()];
     }
 
@@ -110,7 +110,7 @@ class LeakProbeService
     {
         try {
             return DB::transaction(function () use ($input, $actor) {
-                $members = $this->eligible($input)->orderBy('id')->limit(10001)->get(['id','email','group_id']);
+                $members = $this->eligible($input)->orderBy('id')->limit(10001)->get(['id','email']);
                 if (count($members) < 2 || count($members) > 10000) abort(422, '参与人数必须为2至10000人');
                 if (count($members) !== (int)$input['expected_count']) abort(409, '名单人数已变化，请重新预览');
                 if (!hash_equals(hash('sha256', $members->toJson()), $input['expected_hash'])) abort(409, '名单内容已变化，请重新预览');
@@ -153,14 +153,20 @@ class LeakProbeService
                 $branch = $input['branch']; $other = $branch === 'a' ? 'b' : 'a';
                 if ($round->{'result_' . $branch} !== 'abnormal' || $round->{'result_' . $other} !== 'normal') abort(422, '请先保存人工结果：选定分支异常、另一分支正常');
                 $members = DB::table(self::MEMBER)->where('round_id', $round->id)->where('branch', $branch)->get();
+                $users = User::whereIn('id', $members->pluck('user_id')->all())->orderBy('id')->lockForUpdate()->get(['id','email']);
+                $removed = count($members) - count($users);
+                if ($removed) $this->event($task->id, $round->id, 'advance', $actor, '跳过 ' . $removed . ' 个已删除账号，历史候选记录保留');
                 $this->closeRound($round);
-                if (count($members) === 1) {
+                if (count($users) === 1 && !$removed) {
                     DB::table(self::TASK)->where('id', $task->id)->update(['status' => 'identified', 'final_branch' => $branch, 'closed_at' => time(), 'updated_at' => time()]);
                     DB::table(self::ACTIVE)->where('task_id', $task->id)->delete();
                     $action = 'identified';
+                } elseif (count($users) < 2) {
+                    DB::table(self::TASK)->where('id', $task->id)->update(['status' => 'completed', 'closed_at' => time(), 'updated_at' => time()]);
+                    DB::table(self::ACTIVE)->where('task_id', $task->id)->delete();
+                    $action = 'finish';
+                    $note = trim($note . "\n候选账号删除后剩余 " . count($users) . ' 人，结束任务并保留历史证据，不作单一账号归因');
                 } else {
-                    $users = User::whereIn('id', $members->pluck('user_id')->all())->get(['id','email','group_id']);
-                    if (count($users) !== count($members)) abort(409, '候选账号已删除，无法完整推进；请结束任务后重建名单');
                     $new = $this->newRound($task, $users, (int)($input['a_node_id'] ?? 0), (int)($input['b_node_id'] ?? 0), $round, $branch);
                     $this->event($task->id, $new, 'round_started', $actor, '从上一轮 ' . strtoupper($branch) . ' 组拆分');
                 }

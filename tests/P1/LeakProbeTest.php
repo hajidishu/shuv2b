@@ -146,6 +146,74 @@ class LeakProbeTest extends DatabaseTestCase
         $this->error(409, function () { $this->create(['a_node_id' => $this->nodes[2], 'b_node_id' => $this->nodes[3]]); });
         $this->assertSame(1, DB::table(Probe::TASK)->count());
     }
+
+    public function testUnrelatedGroupChangeDoesNotInvalidateThePreview()
+    {
+        $scope = ['scope' => 'plans', 'plan_ids' => [$this->plan->id]];
+        $preview = $this->probe->preview($scope);
+        $this->users[0]->update(['group_id' => 2]);
+        $this->assertSame($preview, $this->probe->preview($scope));
+        $id = $this->create(['expected_count' => $preview['count'], 'expected_hash' => $preview['hash']]);
+        $this->assertSame(4, (int)$this->task($id)->member_count);
+        $this->assertSame(4, DB::table(Probe::MEMBER)->where('round_id', $this->task($id)->current_round_id)->count());
+    }
+
+    public static function survivingCandidates(): array
+    {
+        return ['continue with two' => [2], 'finish with one' => [1], 'finish with none' => [0]];
+    }
+
+    /** @dataProvider survivingCandidates */
+    public function testDeletedCandidatesDoNotBlockProgressOrEraseEvidence($remaining)
+    {
+        if ($remaining === 2) {
+            for ($i = 0; $i < 2; $i++) $this->users->push($this->user(['plan_id' => $this->plan->id,
+                'group_id' => 1, 'transfer_enable' => 100000, 'expired_at' => time() + 86400]));
+        }
+        $id = $this->create(); $round = $this->task($id)->current_round_id;
+        $historical = DB::table(Probe::MEMBER)->where('round_id', $round)->orderBy('id')->get()->toJson();
+        $selected = DB::table(Probe::MEMBER)->where('round_id', $round)->where('branch', 'a')->orderBy('user_id')->pluck('user_id')->all();
+        $deleted = array_slice($selected, $remaining);
+        \App\Models\User::whereIn('id', $deleted)->delete();
+        $this->change($id, 'results', ['result_a' => 'abnormal', 'result_b' => 'normal']);
+        $this->change($id, 'advance', ['branch' => 'a', 'a_node_id' => $this->nodes[2], 'b_node_id' => $this->nodes[3]]);
+        $task = $this->task($id);
+        $this->assertSame($historical, DB::table(Probe::MEMBER)->where('round_id', $round)->orderBy('id')->get()->toJson());
+        $this->assertNotNull(DB::table(Probe::ROUND)->where('id', $round)->value('closed_at'));
+        $notes = implode('\n', DB::table(Probe::EVENT)->where('task_id', $id)->pluck('note')->all());
+        $this->assertStringContainsString('跳过 ' . count($deleted) . ' 个已删除账号', $notes);
+        $this->assertNotSame('identified', $task->status);
+        $this->assertNull($task->final_branch);
+        if ($remaining > 1) {
+            $this->assertSame('active', $task->status);
+            $this->assertNotSame($round, $task->current_round_id);
+            $this->assertSame(array_slice($selected, 0, $remaining), DB::table(Probe::MEMBER)
+                ->where('round_id', $task->current_round_id)->orderBy('user_id')->pluck('user_id')->all());
+            $this->assertSame(2, DB::table(Probe::NODE)->where('state', 'active')->count());
+        } else {
+            $this->assertSame('completed', $task->status);
+            $this->assertNotNull($task->closed_at);
+            $this->assertSame(0, DB::table(Probe::ACTIVE)->where('task_id', $id)->count());
+            $this->assertSame(4, DB::table(Probe::NODE)->where('state', 'ready')->count());
+            $this->assertStringContainsString('不作单一账号归因', $notes);
+        }
+    }
+
+    public function testDeletedSingleCandidateIsNotReportedAsIdentified()
+    {
+        $id = $this->create();
+        $this->change($id, 'results', ['result_a' => 'abnormal', 'result_b' => 'normal']);
+        $this->change($id, 'advance', ['branch' => 'a', 'a_node_id' => $this->nodes[2], 'b_node_id' => $this->nodes[3]]);
+        $round = $this->task($id)->current_round_id;
+        $member = DB::table(Probe::MEMBER)->where('round_id', $round)->where('branch', 'a')->first();
+        \App\Models\User::where('id', $member->user_id)->delete();
+        $this->change($id, 'results', ['result_a' => 'abnormal', 'result_b' => 'normal']);
+        $this->change($id, 'advance', ['branch' => 'a']);
+        $this->assertSame('completed', $this->task($id)->status);
+        $this->assertNull($this->task($id)->final_branch);
+        $this->assertSame(1, DB::table(Probe::MEMBER)->where('id', $member->id)->count());
+        $this->assertSame(0, DB::table(Probe::ACTIVE)->count());
+    }
     public function testChangedNodeConfigCanStartWithoutChangingUserPlansOrMoney()
     {
         ServerVmess::find(2)->update(['server_port' => 8443]);

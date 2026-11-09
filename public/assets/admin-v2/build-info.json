@@ -1,8 +1,8 @@
 {
   "version": "1.0.0",
   "kind": "production",
-  "entry": "assets/index-eubPozhu.js",
-  "entrySha256": "cf2c9e7fb5a25ec650ab4ce02d7e8c6a91fda890a13e2630e5b924a5ca6ae7f1",
+  "entry": "assets/index-DJKyqFFr.js",
+  "entrySha256": "61cf0c6485aa0c7e17bad0553fab086cc590702902fe3f3e7b5c4d2156216bbf",
   "apiVersion": "v1",
   "legacyRuntime": false
 }

@@ -107,4 +107,69 @@ class NodeCopyTest extends DatabaseTestCase
             $this->assertSame((int)($type === 'vmess' ? 41 : 42), (int)$source->fresh()->parent_id, $type . ' source parent');
         }
     }
+
+    private function legacyPaddingNodes(): array
+    {
+        return [
+            $this->insertNode('anytls', ['server_port' => 443, 'insecure' => 0, 'padding_scheme' => 1]),
+            $this->insertNode('v2node', ['server_port' => 443, 'protocol' => 'vmess', 'tls' => 0, 'disable_sni' => 0,
+                'zero_rtt_handshake' => 0, 'padding_scheme' => 'legacy-value']),
+        ];
+    }
+
+    private function paddingBatch(string $action, array $nodes, array $changes = [])
+    {
+        return (new \App\Http\Controllers\V1\Admin\Server\BatchController())->execute(
+            Request::create('/batch', 'POST', ['action' => $action, 'nodes' => [
+                ['type' => 'anytls', 'id' => $nodes[0]->id], ['type' => 'v2node', 'id' => $nodes[1]->id],
+            ]] + ($changes ? ['changes' => $changes] : []))
+        );
+    }
+
+    public function testBatchDeleteDoesNotValidateLegacyPadding(): void
+    {
+        $nodes = $this->legacyPaddingNodes();
+        $this->assertSame(2, $this->paddingBatch('delete', $nodes)->getData(true)['affected']);
+        $this->assertSame(0, \App\Models\ServerAnytls::count());
+        $this->assertSame(0, \App\Models\ServerV2node::count());
+    }
+
+    public function testBatchCopyPreservesLegacyPaddingAndParentWithoutValidatingConfiguration(): void
+    {
+        $nodes = $this->legacyPaddingNodes();
+        $this->assertSame(2, $this->paddingBatch('copy', $nodes)->getData(true)['affected']);
+        foreach ($nodes as $node) {
+            $copy = $node->newQuery()->where('id', '!=', $node->id)->firstOrFail();
+            $this->assertSame($node->padding_scheme, $copy->padding_scheme);
+            $this->assertSame($node->id, (int)$copy->parent_id);
+            $this->assertSame(0, (int)$copy->show);
+        }
+    }
+
+    public function testBatchUnrelatedUpdateKeepsLegacyPaddingIntact(): void
+    {
+        $nodes = $this->legacyPaddingNodes();
+        $this->assertSame(2, $this->paddingBatch('update', $nodes, ['rate' => 3])->getData(true)['affected']);
+        foreach ($nodes as $node) {
+            $this->assertSame($node->padding_scheme, $node->fresh()->padding_scheme);
+            $this->assertSame(3, (int)$node->fresh()->rate);
+        }
+    }
+
+    public function testBatchPaddingChangesStillValidateAndRollbackTogether(): void
+    {
+        $nodes = $this->legacyPaddingNodes();
+        foreach (['1', 'not-json'] as $padding) {
+            try {
+                $this->paddingBatch('update', $nodes, ['rate' => 9, 'padding_scheme' => $padding]);
+                $this->fail('Invalid new padding accepted');
+            } catch (\Illuminate\Validation\ValidationException $error) {
+                $this->assertArrayHasKey('changes.padding_scheme', $error->errors());
+            }
+            foreach ($nodes as $node) $this->assertSame(2, (int)$node->fresh()->rate);
+        }
+        $padding = ['stop=8', '0=30-30'];
+        $this->paddingBatch('update', $nodes, ['padding_scheme' => json_encode($padding)]);
+        foreach ($nodes as $node) $this->assertSame($padding, $node->fresh()->padding_scheme);
+    }
 }

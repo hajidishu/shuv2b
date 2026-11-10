@@ -316,6 +316,7 @@ export default function Settings() {
                 ];
             }
             if (key === "subscribe_url") field.kind = "textarea";
+            if (key === "ticket_create_limit") field.min = 1;
             return field;
         });
     const fields = allFields.filter((field) => {

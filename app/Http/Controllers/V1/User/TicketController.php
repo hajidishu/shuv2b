@@ -15,7 +15,12 @@ use App\Models\Ticket;
 use App\Models\TicketMessage;
 use App\Utils\Dict;
 use Illuminate\Http\Request;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 
 class TicketController extends Controller
 {
@@ -51,8 +56,10 @@ class TicketController extends Controller
 
     public function save(TicketSave $request)
     {
+        $this->limitCreation((int)$request->user['id']);
         try {
             DB::beginTransaction();
+            User::whereKey($request->user['id'])->lockForUpdate()->firstOrFail();
             if ((int)Ticket::where('status', 0)->where('user_id', $request->user['id'])->lockForUpdate()->count()) {
                 throw new \Exception(__('There are other unresolved tickets'));
             }
@@ -169,6 +176,7 @@ class TicketController extends Controller
 
     public function withdraw(TicketWithdraw $request)
     {
+        $this->limitCreation((int)$request->user['id']);
         if ((int)config('v2board.withdraw_close_enable', 0)) {
             abort(500, 'user.ticket.withdraw.not_support_withdraw');
         }
@@ -221,6 +229,21 @@ class TicketController extends Controller
     }
 
     private function sendNotify(Ticket $ticket, string $message, $userid = null)
+    {
+        try {
+            $this->sendNotification($ticket, $message, $userid);
+        } catch (\Throwable $error) {
+            // The ticket is already committed. Notification errors must not turn
+            // a successful submission/reply into a failure or expose bot tokens.
+            try {
+                Log::channel('daily')->warning('Ticket notification failed', ['ticket_id' => $ticket->id, 'exception' => get_class($error)]);
+            } catch (\Throwable $loggingError) {
+                // Logging is best effort after the ticket has been committed.
+            }
+        }
+    }
+
+    private function sendNotification(Ticket $ticket, string $message, $userid = null)
 	{
 		if (!config('v2board.telegram_bot_enable', 0)) return;
 		$telegramService = new TelegramService();
@@ -233,22 +256,9 @@ class TicketController extends Controller
 				$u = $this->getFlowData($user->u); // 上传
 				$d = $this->getFlowData($user->d); // 下载
 				$expired_at = date("Y-m-d H:i:s", $user->expired_at); // 到期时间
-				if (isset($_SERVER['HTTP_X_REAL_IP'])) {
-				$ip_address = $_SERVER['HTTP_X_REAL_IP'];
-				} elseif (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-					$ip_address = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0];
-				} else {
-					$ip_address = $_SERVER['REMOTE_ADDR'];
-				}
-
-				$api_url = "http://ip-api.com/json/{$ip_address}?fields=520191&lang=zh-CN";
-				$response = file_get_contents($api_url);
-				$user_location = json_decode($response, true);
-				if ($user_location && $user_location['status'] === 'success') {
-					$location =  $user_location['city'] . ", " . $user_location['country'];
-				} else {
-					$location =  "无法确定用户地址";
-				}
+				$ip = request()->ip();
+				$ip_address = filter_var($ip, FILTER_VALIDATE_IP) !== false ? $ip : '未知';
+				$location = $this->lookupLocation($ip_address);
 
 				$plan = Plan::where('id', $user->plan_id)->first();
 				$planName = $plan ? $plan->name : '未找到套餐信息'; // Check if plan data is available
@@ -264,6 +274,47 @@ class TicketController extends Controller
 			$telegramService->sendMessageWithAdmin("📮工单提醒 #{$ticket->id}\n———————————————\n主题：\n`{$ticket->subject}`\n内容：\n {$message} ", true);
 		}
 	}
+
+    private function lookupLocation(string $ip): string
+    {
+        $unknown = '无法确定用户地址';
+        if (filter_var($ip, FILTER_VALIDATE_IP) === false) return $unknown;
+        $packed = inet_pton($ip);
+        // IPv4-mapped IPv6 addresses need the same private/range checks as IPv4.
+        if (strlen($packed) === 16 && substr($packed, 0, 12) === str_repeat("\0", 10) . "\xff\xff") {
+            $ip = inet_ntop(substr($packed, 12));
+        }
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) return $unknown;
+        try {
+            $response = Http::withOptions(['connect_timeout' => 1, 'allow_redirects' => false])->timeout(2)
+                ->get('http://ip-api.com/json/' . rawurlencode($ip), ['fields' => 520191, 'lang' => 'zh-CN']);
+            if (!$response->successful()) return $unknown;
+            $data = $response->json();
+            if (($data['status'] ?? null) === 'success' && is_string($data['city'] ?? null) && is_string($data['country'] ?? null)) {
+                return $data['city'] . ', ' . $data['country'];
+            }
+        } catch (\Throwable $error) {
+            // IP location is optional; a timeout or malformed response is not a ticket error.
+        }
+        return $unknown;
+    }
+
+    private function limitCreation(int $userId): void
+    {
+        $limit = (int)config('v2board.ticket_create_limit', 5);
+        if ($limit <= 0) return;
+        $key = 'TICKET_CREATE_RATE:' . $userId;
+        try {
+            Cache::lock($key . ':lock', 5)->block(2, function () use ($key, $limit) {
+                if (RateLimiter::tooManyAttempts($key, $limit)) {
+                    abort(429, '工单提交过于频繁，请稍后重试', ['Retry-After' => RateLimiter::availableIn($key)]);
+                }
+                RateLimiter::hit($key, 60);
+            });
+        } catch (LockTimeoutException $error) {
+            abort(429, '工单提交过于频繁，请稍后重试');
+        }
+    }
 
     private function getFlowData($b)
     {

@@ -1,6 +1,7 @@
 {
     "ticket": {
-        "ticket_status": 0
+        "ticket_status": 0,
+        "ticket_create_limit": 5
     },
     "deposit": {
         "deposit_bounus": []

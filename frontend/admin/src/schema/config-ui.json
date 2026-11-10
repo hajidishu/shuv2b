@@ -311,6 +311,13 @@
         "placeholder": "请输入 充值金额:奖励金额,逗号分割\n如 50:18,100:38, 200:88",
         "order": 38
     },
+    "ticket_create_limit": {
+        "group": "ticket",
+        "label": "工单创建频率限制",
+        "help": "每个账号每分钟最多提交的新建工单请求次数，包括提现工单。留空不限制创建频率，工单回复不受此设置影响。",
+        "placeholder": "留空不限制",
+        "order": 40
+    },
     "ticket_status": {
         "group": "ticket",
         "label": "工单设置",

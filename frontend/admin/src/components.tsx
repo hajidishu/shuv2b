@@ -16,6 +16,7 @@ import {
     Switch,
     Tag,
     Tooltip,
+    Typography,
 } from "antd";
 import type { Field, Row } from "./types";
 import { api, ApiError, request } from "./api";
@@ -957,6 +958,7 @@ export function KeyValues({ data, fieldLabels = {}, userId }: { data: Row; field
                          key === "plan_id" && value ? <ResourceLink route="/plan" id={value}>{String(value)}</ResourceLink> :
                          key === "group_id" && value ? <ResourceLink route="/server/group" id={value}>{String(value)}</ResourceLink> :
                          key === "node_id" && value && data.node_type ? <NodeLink nodeType={data.node_type} nodeId={value}>{String(value)}</NodeLink> :
+                         key === "register_ip" ? value ? <Typography.Text copyable>{String(value)}</Typography.Text> : "未知" :
                          typeof value === "object"
                             ? JSON.stringify(value)
                             : String(value ?? "—")}

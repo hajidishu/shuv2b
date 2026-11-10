@@ -440,6 +440,7 @@ export const labels: Record<string, string> = {
     total_used: "已用流量 GB",
     auto_renewal: "自动续费",
     last_login_at: "最后登录",
+    register_ip: "注册 IP",
     commission_type: "佣金类型",
 };
 export const filterKeys = [
@@ -461,6 +462,7 @@ export const filterKeys = [
     "subscribe_count",
     "created_at",
     "last_login_at",
+    "register_ip",
     "banned",
     "is_admin",
     "is_staff",

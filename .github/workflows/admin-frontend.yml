@@ -57,6 +57,7 @@ jobs:
         run: |
           export ADMIN_BROWSER_PATH="$(node -e 'console.log(require("playwright").chromium.executablePath())')"
           node tests/user-controls.mjs
+          node tests/user-registration-ip.mjs
           node tests/user-groups.mjs
           node tests/user-action-scope.mjs
           node tests/admin-ui-controls.mjs

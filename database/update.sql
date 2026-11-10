@@ -981,3 +981,7 @@ CREATE TABLE `v2_telegram_action` (
   `created_at` int NOT NULL,
   PRIMARY KEY (`event_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+ALTER TABLE `v2_user`
+    ADD `register_ip` varchar(45) DEFAULT NULL,
+    ADD INDEX `v2_user_register_ip_index` (`register_ip`);

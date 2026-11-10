@@ -96,7 +96,7 @@ export function Filters({
         ...valueOptions,
     };
     const conditions = (key: string) =>
-        enums[key] || ["uuid", "token"].includes(key)
+        enums[key] || ["uuid", "token", "register_ip"].includes(key)
             ? ["=", "!="]
             : text.has(key)
               ? ["模糊", "=", "!="]

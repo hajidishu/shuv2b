@@ -138,12 +138,14 @@ class GoogleIdentityTest extends DatabaseTestCase
         $result = $this->service->register($this->request($payload + ['password' => 'new-site-password', 'email' => 'attacker@example.test']));
         $user = User::firstOrFail();
         $this->assertSame('google-user@gmail.com', $user->email);
+        $this->assertSame('192.0.2.17', $user->register_ip);
         $this->assertTrue(password_verify('new-site-password', $user->password));
         $this->assertSame((int)$user->id, (int)AuthService::decryptAuthData($result['auth']['auth_data'])['id']);
         $login = new \App\Http\Requests\Passport\AuthLogin();
         $login->merge(['email' => $user->email, 'password' => 'new-site-password']);
         $passwordLogin = (new \App\Http\Controllers\V1\Passport\AuthController())->login($login)->getData(true)['data'];
         $this->assertSame((int)$user->id, (int)AuthService::decryptAuthData($passwordLogin['auth_data'])['id']);
+        $this->assertSame('192.0.2.17', $user->fresh()->register_ip);
         $this->rejected(fn() => $this->service->register($this->request($payload + ['password' => 'new-site-password'])));
         $this->assertSame(1, User::count());
     }

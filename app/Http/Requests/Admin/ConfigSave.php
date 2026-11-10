@@ -14,6 +14,7 @@ class ConfigSave extends FormRequest
         ],
         // invite & commission
         'ticket_status' => 'in:0,1,2',
+        'ticket_create_limit' => 'nullable|integer|min:1',
         'invite_force' => 'in:0,1',
         'invite_commission' => 'integer',
         'invite_gen_limit' => 'integer',

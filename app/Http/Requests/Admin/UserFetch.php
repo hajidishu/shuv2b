@@ -22,6 +22,14 @@ class UserFetch extends FormRequest
             'ids' => 'nullable|array|min:1|max:500',
             'ids.*' => 'required|integer|min:1|distinct',
             'filter.*' => ['array', function ($attribute, $filter, $fail) {
+                if (is_array($filter) && ($filter['key'] ?? null) === 'register_ip') {
+                    if (!in_array($filter['condition'] ?? null, ['=', '!='], true)
+                        || !is_string($filter['value'] ?? null)
+                        || filter_var(trim($filter['value']), FILTER_VALIDATE_IP) === false) {
+                        $fail('注册 IP 必须为有效的 IPv4 或 IPv6 地址，使用等于或不等于条件');
+                    }
+                    return;
+                }
                 if (!is_array($filter) || ($filter['key'] ?? null) !== 'subscribe_count') return;
                 $value = $filter['value'] ?? null;
                 if (!in_array($filter['condition'] ?? null, ['>', '<', '=', '>=', '<=', '!='], true)
@@ -30,7 +38,7 @@ class UserFetch extends FormRequest
                     $fail('拉取订阅次数必须使用非负整数和数值比较条件');
                 }
             }],
-            'filter.*.key' => 'required|in:id,email,transfer_enable,device_limit,u,d,total_used,expired_at,subscribe_count,created_at,last_login_at,uuid,token,invite_by_email,invite_user_id,plan_id,banned,remarks,is_admin,is_staff,balance,commission_balance,commission_rate,commission_type,discount,speed_limit,auto_renewal',
+            'filter.*.key' => 'required|in:id,email,register_ip,transfer_enable,device_limit,u,d,total_used,expired_at,subscribe_count,created_at,last_login_at,uuid,token,invite_by_email,invite_user_id,plan_id,banned,remarks,is_admin,is_staff,balance,commission_balance,commission_rate,commission_type,discount,speed_limit,auto_renewal',
             'filter.*.condition' => 'required|in:>,<,=,>=,<=,模糊,!=',
             'filter.*.value' => 'required'
         ];

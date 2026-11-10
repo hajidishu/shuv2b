@@ -594,6 +594,7 @@ CREATE TABLE `v2_user` (
                            `last_login_at` int(11) DEFAULT NULL,
                            `is_staff` tinyint(1) NOT NULL DEFAULT '0',
                            `last_login_ip` int(11) DEFAULT NULL,
+                           `register_ip` varchar(45) DEFAULT NULL,
                            `uuid` varchar(36) NOT NULL,
                            `group_id` int(11) DEFAULT NULL,
                            `group_mode` tinyint unsigned NOT NULL DEFAULT '0',
@@ -610,7 +611,8 @@ CREATE TABLE `v2_user` (
                            PRIMARY KEY (`id`),
                            UNIQUE KEY `email` (`email`),
                            UNIQUE KEY `token` (`token`),
-                           UNIQUE KEY `v2_user_telegram_admin_id_unique` (`telegram_admin_id`)
+                           UNIQUE KEY `v2_user_telegram_admin_id_unique` (`telegram_admin_id`),
+                           KEY `v2_user_register_ip_index` (`register_ip`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 

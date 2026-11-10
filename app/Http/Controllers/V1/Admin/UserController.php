@@ -42,6 +42,10 @@ class UserController extends Controller
         $filters = $request->input('filter');
         if ($filters) {
             foreach ($filters as $k => $filter) {
+                if ($filter['key'] === 'register_ip') {
+                    $builder->where('register_ip', $filter['condition'], inet_ntop(inet_pton(trim($filter['value']))));
+                    continue;
+                }
                 if ($filter['key'] === 'subscribe_count') {
                     $builder->where(app(SubscriptionAuditService::class)->userCountQuery(), $filter['condition'], (int)$filter['value']);
                     continue;

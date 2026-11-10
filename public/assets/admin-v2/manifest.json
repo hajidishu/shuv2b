@@ -1,15 +1,15 @@
 {
-  "_antd-DP3ejrRk.js": {
-    "file": "assets/antd-DP3ejrRk.js",
+  "_antd-BspagSAe.js": {
+    "file": "assets/antd-BspagSAe.js",
     "name": "antd"
   },
   "index.html": {
-    "file": "assets/index-Bz26Hk6a.js",
+    "file": "assets/index-B3J8VbVP.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
     "imports": [
-      "_antd-DP3ejrRk.js"
+      "_antd-BspagSAe.js"
     ],
     "css": [
       "assets/index-CLWNOdg_.css"

@@ -51,6 +51,8 @@ class RegistrationService
                 $user->password = password_hash($request->input('password'), PASSWORD_DEFAULT);
                 $user->uuid = Helper::guid(true);
                 $user->token = Helper::guid();
+                $packedIp = @inet_pton((string)$request->ip());
+                $user->register_ip = $packedIp === false ? null : inet_ntop($packedIp);
                 if ($invite) $user->invite_user_id = $invite->user_id ?: null;
                 if ((int)config('v2board.try_out_plan_id', 0)) {
                     $plan = Plan::find(config('v2board.try_out_plan_id'));

@@ -26,7 +26,9 @@ jobs:
       - name: Check legacy dependency recovery with real Composer
         run: php tests/dependency-update.php "$(command -v composer)"
       - name: Check published profile manifests, locks and advisory baseline
-        run: php library/CheckComposerProfiles.php "$(command -v composer)"
+        run: |
+          php tests/composer-advisories.php
+          php library/CheckComposerProfiles.php "$(command -v composer)"
       - name: Check installation, update and rollback with published locks
         run: php tests/runtime-profiles.php "$(command -v composer)"
 

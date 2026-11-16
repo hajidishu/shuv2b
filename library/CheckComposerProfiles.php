@@ -6,6 +6,23 @@ namespace Library;
 /** CI/maintainer check: generated manifests, fresh locks and advisory changes. */
 final class CheckComposerProfiles
 {
+    public static function checkAdvisories(array $advisories, array $baseline, array $lock, string $profile): void
+    {
+        $packages = array_column($lock['packages'], null, 'name');
+        foreach ($advisories as $package => $entries) foreach ($entries as $entry) {
+            $id = $entry['advisoryId'];
+            if (in_array($id, $baseline['profiles'][$profile]['advisories'][$package] ?? [], true)) continue;
+            $review = $baseline['reviews'][$id] ?? [];
+            $locked = $packages[$package] ?? [];
+            // A non-applicability review expires when either the package version
+            // or its exact source changes; it is not an advisory-ID exemption.
+            if (($review['assessment'] ?? '') === 'not_applicable_to_locked_version' && ($review['package'] ?? '') === $package &&
+                isset($review['locked_version'], $review['locked_source_reference'], $locked['version'], $locked['source']['reference']) &&
+                $review['locked_version'] === $locked['version'] && $review['locked_source_reference'] === $locked['source']['reference']) continue;
+            throw new \RuntimeException('Unreviewed security advisory: ' . $profile . ' ' . $package . ' ' . $id);
+        }
+    }
+
     public static function main(string $root, string $composer): void
     {
         require_once __DIR__ . '/GenerateComposerProfiles.php';
@@ -25,9 +42,7 @@ final class CheckComposerProfiles
             fclose($pipes[0]); $out = stream_get_contents($pipes[1]); $err = stream_get_contents($pipes[2]); fclose($pipes[1]); fclose($pipes[2]); $status = proc_close($process);
             $audit = json_decode($out, true);
             if (!is_array($audit) || !isset($audit['advisories'])) throw new \RuntimeException('Audit did not complete for ' . $name . ': ' . $err);
-            foreach ($audit['advisories'] as $package => $entries) foreach ($entries as $entry) {
-                if (!in_array($entry['advisoryId'], $baseline['profiles'][$name]['advisories'][$package] ?? [], true)) throw new \RuntimeException('Unreviewed security advisory: ' . $name . ' ' . $package . ' ' . $entry['advisoryId']);
-            }
+            self::checkAdvisories($audit['advisories'], $baseline, $lock, $name);
             foreach ($audit['abandoned'] ?? [] as $package => $replacement) if (!array_key_exists($package, $baseline['profiles'][$name]['abandoned'])) throw new \RuntimeException('Newly abandoned dependency: ' . $package);
             echo $name, ": lock matches manifest; known legacy advisories remain recorded.\n";
         }

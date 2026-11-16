@@ -72,18 +72,26 @@ class TelegramBotService
             TelegramBindingService::unbind($user); $this->show($from,'home'); return;
         }
         if (!in_array($action,['home','account','traffic','subscribe','notifications','expiry_on','expiry_off','traffic_on','traffic_off','unbind','admin'],true)) return;
-        $this->show($from,$action,is_int($messageId)?$messageId:null);
+        $this->show($from,$action,is_int($messageId)?$messageId:null,$argument);
     }
 
-    private function show(int $chatId,string $action,?int $messageId = null): void
+    private function show(int $chatId,string $action,?int $messageId = null,string $argument = ''): void
     {
         $admin = TelegramService::managementUsers()->where('telegram_admin_id',$chatId)->first();
         if ($admin) {
-            $text = '<b>管理概况</b>\n总用户：'.User::count().'\n可用账号：'.User::where('banned',0)->where('is_admin',0)->where('is_staff',0)->where('transfer_enable','>',0)
-                ->where(function ($q) {$q->whereNull('expired_at')->orWhere('expired_at','>',time());})->count()
-                .'\n今日注册：'.User::where('created_at','>=',strtotime('today'))->count();
-            $buttons=[[self::button('刷新概况','admin')]];if ($this->website()) $buttons[]=$this->website();
-            $this->telegram->sendPanelMessage($chatId,str_replace('\\n',"\n",$text),$buttons,$messageId);return;
+            [$view,$period,$refresh] = array_pad(explode(':',$action === 'admin' ? $argument : ''),3,'');
+            $view = $view ?: 'overview'; $period = $period ?: 'today';
+            if (!isset(TelegramAdminStatsService::VIEWS[$view],TelegramAdminStatsService::PERIODS[$period]) || !in_array($refresh,['','refresh'],true)) return;
+            $text = app(TelegramAdminStatsService::class)->panel($view,$period,$refresh === 'refresh');
+            $periodButtons = [];
+            foreach (TelegramAdminStatsService::PERIODS as $key=>$label) $periodButtons[] = self::button(($period === $key ? '✓ ' : '') . $label,'admin:' . $view . ':' . $key);
+            $buttons = [$periodButtons,
+                [self::button('收款统计','admin:income:' . $period),self::button('订单统计','admin:orders:' . $period)],
+                [self::button('用户统计','admin:users:' . $period),self::button('系统状态','admin:system:' . $period)],
+                [self::button('刷新','admin:' . $view . ':' . $period . ':refresh')]];
+            if ($view !== 'overview') $buttons[] = [self::button('返回概况','admin:overview:' . $period)];
+            if ($this->website()) $buttons[] = $this->website();
+            $this->telegram->sendPanelMessage($chatId,$text,$buttons,$messageId);return;
         }
         if ($action==='admin') abort(403,'没有管理权限');
         $user = $this->user($chatId);

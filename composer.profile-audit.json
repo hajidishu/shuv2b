@@ -1,8 +1,19 @@
 {
   "schema": 1,
-  "recorded_on": "2026-11-09",
+  "recorded_on": "2026-11-16",
   "compatibility_baseline_only": true,
   "notice": "Legacy Laravel 8 compatibility baseline, not a security approval. Remaining Laravel/Flysystem advisories are not fixed by dependency packaging; framework migration is pending. Published Symfony components use security release 5.4.56. No Composer security policy is disabled on deployed sites.",
+  "reviews": {
+    "PKSA-yxbx-3c9s-cjt9": {
+      "package": "laravel/framework",
+      "reviewed_on": "2026-11-16",
+      "locked_version": "v8.83.29",
+      "locked_source_reference": "d841a226a50c715431952a10260ba4fac9e91cc4",
+      "assessment": "not_applicable_to_locked_version",
+      "reason": "GHSA-63hm-g96r-2m2q requires a route reaching Concurrency::run() and user-controlled child-process stdout. The locked Laravel 8 source does not contain Illuminate/Concurrency or the Concurrency facade, and application code does not call this API. Reassess this finding when changing framework versions or adding a concurrency implementation; this is not a framework security patch.",
+      "reference": "https://github.com/laravel/framework/security/advisories/GHSA-63hm-g96r-2m2q"
+    }
+  },
   "profiles": {
     "fpm": {
       "advisories": {

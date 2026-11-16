@@ -65,6 +65,7 @@ jobs:
           node tests/admin-ui-controls.mjs
           node tests/settings-switch-layout.mjs
           node tests/ticket-settings.mjs
+          node tests/ticket-chat.mjs
           node tests/admin-navigation.mjs
           node tests/telegram-management.mjs
           node tests/telegram-panel.mjs

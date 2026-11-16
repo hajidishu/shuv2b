@@ -1240,25 +1240,145 @@ a {
     }
 }
 
-.ticket-thread {
-    padding: 12px 0;
-    max-height: 500px;
-    overflow: auto;
+.ticket-chat {
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    overflow: hidden;
 }
-.ticket-message {
+.ticket-chat-header {
+    min-height: 60px;
+    padding: 12px 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: #f9f9f9;
+    flex-shrink: 0;
+}
+.ticket-chat-subject {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+.ticket-chat-subject strong {
+    color: #000;
+    font-size: 18px;
+    font-weight: 400;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+.ticket-chat-subject .ant-tag {
+    margin: 0;
+    flex-shrink: 0;
+}
+.ticket-chat-controls {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+.ticket-chat-controls .ant-btn {
+    padding: 4px;
+    width: 30px;
+    color: #495057;
+    font-size: 18px;
+}
+.ticket-chat-controls .ant-divider {
+    margin: 0 6px;
+}
+.ticket-chat-messages {
+    flex: 1;
+    min-height: 0;
     padding: 15px;
-    border: 1px solid #eee;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+.ticket-chat-loading {
+    display: grid;
+    height: 100%;
+    place-items: center;
+}
+.ticket-chat-entry {
+    margin: 8px 32px 10px 0;
+}
+.ticket-chat-entry time {
+    display: block;
+    margin: 8px 0;
+    font-size: 13px;
+    color: #6c757d;
+}
+.ticket-chat-bubble {
+    display: inline-block;
+    max-width: 100%;
     border-radius: 4px;
-    margin-bottom: 15px;
+    padding: 8px 15px;
+    background: #e3f3d8;
     white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    text-align: left;
 }
-.ticket-message.staff {
-    background: #f0f7ff;
-    border-color: #d8eaff;
+.ticket-chat-entry.staff {
+    margin: 8px 0 10px 32px;
+    text-align: right;
 }
-.ticket-message small {
-    float: right;
-    color: #999;
+.ticket-chat-entry.staff .ticket-chat-bubble {
+    background: #f2f2f2;
+}
+.ticket-chat-footer {
+    background: #f0f3f8;
+    padding: 8px 12px;
+    flex-shrink: 0;
+}
+.ticket-chat-compose,
+.ticket-chat-footer-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.ticket-chat-compose textarea {
+    border: 0;
+    box-shadow: none;
+    resize: none;
+    background: transparent;
+}
+.ticket-chat-compose > .ant-btn {
+    color: #495057;
+    background: #fff;
+    border-color: #dfe3e8;
+    box-shadow: none;
+}
+.ticket-chat .ticket-chat-compose > .ant-btn:not(:disabled):hover,
+.ticket-chat .ticket-chat-compose > .ant-btn:not(:disabled):focus-visible {
+    color: #343a40;
+    background: #f7f7f7;
+    border-color: #b8c2cc;
+    outline-color: #b8c2cc;
+}
+.ticket-chat-compose > .ant-btn:disabled {
+    color: #b8bcc2;
+    background: #f0f0f0;
+    border-color: #e3e6ea;
+}
+.ticket-chat-footer-actions {
+    justify-content: space-between;
+    margin-top: 4px;
+    font-size: 12px;
+}
+.ticket-chat-footer-actions > a,
+.ticket-chat-footer-actions > .ant-btn-link:not(:disabled) {
+    color: #6c757d;
+}
+.ticket-chat-footer-actions > a:hover,
+.ticket-chat .ticket-chat-footer-actions > .ant-btn-link:not(:disabled):hover {
+    color: #343a40;
+}
+.ticket-traffic-modal .ant-modal-body,
+.ticket-traffic-modal .ant-card-body {
+    padding: 0 !important;
 }
 .html-preview {
     border: 1px solid #ddd;

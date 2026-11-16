@@ -1,7 +1,7 @@
 import { Radio } from "antd";
-import { useState } from "react";
-import { UserLink, managementHref } from "../navigation";
-import { Button, Divider, Input, Space, Table, Tag } from "antd";
+import { useEffect, useRef, useState } from "react";
+import type { MouseEvent } from "react";
+import { Divider, Input, Table } from "antd";
 import { api } from "../api";
 import {
     DataCard,
@@ -11,26 +11,57 @@ import {
     useResource,
 } from "../components";
 import type { Row } from "../types";
+import TicketChat from "./TicketChat";
 export default function Tickets({ id }: { id?: string }) {
+    return id ? <TicketChat key={id} id={id} /> : <TicketList />;
+}
+
+function TicketList() {
     const [status, setStatus] = useState<number>(0);
     const [reply, setReply] = useState<number[]>([]);
     const [email, setEmail] = useState("");
     const [current, setPage] = useState(1);
-    const [message, setMessage] = useState("");
     const act = useAction();
-    const resource = useResource(
-        "/ticket/fetch",
-        id
-            ? { id }
-            : {
-                  current,
-                  pageSize: 20,
-                  status,
-                  reply_status: reply.length ? reply : undefined,
-                  email: email || undefined,
-              },
-    );
+    const resource = useResource("/ticket/fetch", {
+        current,
+        pageSize: 20,
+        status,
+        reply_status: reply.length ? reply : undefined,
+        email: email || undefined,
+    });
     const ticket = resource.data;
+    const reload = useRef(resource.reload);
+    reload.current = resource.reload;
+    useEffect(() => {
+        const refresh = () => reload.current();
+        window.addEventListener("focus", refresh);
+        return () => window.removeEventListener("focus", refresh);
+    }, []);
+    const openChat = (
+        event: MouseEvent<HTMLAnchorElement>,
+        ticketId: number,
+    ) => {
+        if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)
+            return;
+        if (
+            /mobile|ipad/i.test(navigator.userAgent) ||
+            (/Macintosh/i.test(navigator.userAgent) &&
+                navigator.maxTouchPoints > 1)
+        )
+            return;
+        event.preventDefault();
+        const url = new URL(location.href);
+        url.hash = "/ticket/" + ticketId;
+        const popup = window.open(
+            url.href,
+            "_blank",
+            "popup=yes,height=600,width=800,top=0,left=0,toolbar=no,menubar=no,scrollbars=no,resizable=yes,location=no,status=no",
+        );
+        if (popup) {
+            popup.opener = null;
+            popup.focus();
+        } else location.hash = "/ticket/" + ticketId;
+    };
     const close = (ticketId: number) =>
         act.modal.confirm({
             title: "关闭此工单？",
@@ -39,76 +70,6 @@ export default function Tickets({ id }: { id?: string }) {
                     resource.reload,
                 ),
         });
-    if (id)
-        return (
-            <Page title={ticket?.subject ?? "工单详情"}>
-                <DataCard error={resource.error} loading={resource.loading}>
-                    <div className="table-toolbar">
-                        <Space>
-                            <Button href={managementHref("/user", { id: ticket?.user_id })}>
-                                用户管理
-                            </Button>
-                            <Button href="#/ticket">返回工单列表</Button>
-                            <Button
-                                disabled={ticket?.status === 1}
-                                onClick={() => close(Number(id))}
-                            >
-                                关闭工单
-                            </Button>
-                        </Space>
-                        <Space></Space>
-                    </div>
-                    <p>
-                        用户 ID：<UserLink userId={ticket?.user_id}>{ticket?.user_id}</UserLink>{" "}
-                        <Tag>{ticket?.status ? "已关闭" : "处理中"}</Tag>
-                    </p>
-                    <div className="ticket-thread">
-                        {(ticket?.message ?? []).map((m: Row) => (
-                            <div
-                                className={
-                                    m.is_me
-                                        ? "ticket-message staff"
-                                        : "ticket-message"
-                                }
-                                key={m.id}
-                            >
-                                <strong>{m.is_me ? "管理员" : "用户"}</strong>
-                                <small>{formatDate(m.created_at)}</small>
-                                <p>{m.message}</p>
-                            </div>
-                        ))}
-                    </div>
-                    <Input.TextArea
-                        aria-label="工单回复"
-                        placeholder="输入内容回复工单..."
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        autoSize={{ minRows: 4, maxRows: 12 }}
-                    />
-                    <Button
-                        className="filter-actions"
-                        type="primary"
-                        disabled={!message.trim() || ticket?.status === 1}
-                        loading={act.busy}
-                        onClick={() =>
-                            act
-                                .run(async () => {
-                                    await api(
-                                        "/ticket/reply",
-                                        { id: Number(id), message },
-                                        "POST",
-                                    );
-                                    setMessage("");
-                                    resource.reload();
-                                }, "回复成功")
-                                .catch(() => {})
-                        }
-                    >
-                        回复工单
-                    </Button>
-                </DataCard>
-            </Page>
-        );
     return (
         <Page title="工单管理">
             <DataCard error={resource.error} loading={resource.loading}>
@@ -154,7 +115,12 @@ export default function Tickets({ id }: { id?: string }) {
                             title: "主题",
                             dataIndex: "subject",
                             render: (v, r) => (
-                                <a href={"#/ticket/" + r.id}>{v}</a>
+                                <a
+                                    href={"#/ticket/" + r.id}
+                                    onClick={(event) => openChat(event, r.id)}
+                                >
+                                    {v}
+                                </a>
                             ),
                         },
                         {
@@ -188,7 +154,14 @@ export default function Tickets({ id }: { id?: string }) {
                             align: "right",
                             render: (_, r) => (
                                 <span className="inline-row-actions">
-                                    <a href={"#/ticket/" + r.id}>查看</a>
+                                    <a
+                                        href={"#/ticket/" + r.id}
+                                        onClick={(event) =>
+                                            openChat(event, r.id)
+                                        }
+                                    >
+                                        查看
+                                    </a>
                                     <Divider type="vertical" />
                                     <a
                                         aria-disabled={r.status === 1}

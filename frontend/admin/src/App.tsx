@@ -416,6 +416,8 @@ function Shell({
                 }}
             />
         );
+    if (route.startsWith("/ticket/"))
+        return <PageErrorBoundary key={path + ":" + revision}>{page}</PageErrorBoundary>;
     const menuItems = sections.flatMap<NonNullable<MenuProps["items"]>[number]>(
         (section) => {
             const children = section.items.map(([key, label]) => ({
